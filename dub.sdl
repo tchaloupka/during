@@ -1,0 +1,24 @@
+name "during"
+description "dlang wrapper around linux io_uring API"
+authors "Tomáš Chaloupka"
+license "BSL-1.0"
+homepage "https://github.com/tchaloupka/during"
+copyright "Copyright © 2019, Tomáš Chaloupka"
+targetType "library"
+platforms "linux"
+
+subPackage "tests"
+
+configuration "default" {
+}
+
+configuration "betterC" {
+    buildOptions "betterC"
+}
+
+configuration "unittest" {
+}
+
+configuration "unittestbc" {
+    buildOptions "betterC"
+}
