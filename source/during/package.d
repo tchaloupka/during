@@ -1,5 +1,6 @@
 /**
- *  Dlang easier to use io_uring wrapper.
+ * Simple idiomatic dlang wrapper around linux io_uring
+ * (see: https://kernel.dk/io_uring.pdf) asynchronous API.
  */
 module during;
 
@@ -57,6 +58,9 @@ int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NON
 
 /**
  * Main entry point to work with io_uring.
+ *
+ * It hides `SubmissionQueue` and `CompletionQueue` behind standard range interface.
+ * We put in `SubmissionEntry` entries and take out `CompletionEntry` entries.
  */
 struct Uring
 {
@@ -245,7 +249,7 @@ struct Uring
      *
      * Returns: Number of submitted entries on success, `-errno` on error
      */
-    auto submit(uint want = 0, sigset_t sig = sigset_t.init)
+    auto submit(uint want = 0, const sigset_t* sig = null)
     {
         checkInitialized();
 
@@ -275,7 +279,7 @@ struct Uring
      *
      * Returns: `0` on success, `-errno` on error
      */
-    auto wait(uint want = 1, sigset_t sig = sigset_t.init)
+    auto wait(uint want = 1, const sigset_t* sig = null)
     {
         pragma(inline);
         checkInitialized();

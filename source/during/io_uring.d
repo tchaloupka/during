@@ -461,13 +461,10 @@ int io_uring_setup(uint entries, scope ref SetupParameters p) @trusted
 }
 
 /// See: io_uring_enter(2)
-int io_uring_enter(int fd, uint to_submit, uint min_complete, EnterFlags flags, const sigset_t sig) @trusted
+int io_uring_enter(int fd, uint to_submit, uint min_complete, EnterFlags flags, const sigset_t* sig) @trusted
 {
     pragma(inline);
-    return syscall(
-        SYS_io_uring_enter, fd, to_submit, min_complete, flags,
-        sig == sigset_t.init ? null : &sig, sigset_t.sizeof
-    );
+    return syscall(SYS_io_uring_enter, fd, to_submit, min_complete, flags, null, sigset_t.sizeof);
 }
 
 /// See: io_uring_register(2)

@@ -7,8 +7,6 @@ copyright "Copyright © 2019, Tomáš Chaloupka"
 targetType "library"
 platforms "linux"
 
-subPackage "tests"
-
 configuration "default" {
 }
 
@@ -17,8 +15,5 @@ configuration "betterC" {
 }
 
 configuration "unittest" {
-}
-
-configuration "unittestbc" {
-    buildOptions "betterC"
+    dependency "silly" version="~>1.0.0"
 }
