@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+        <title>Uring.put (during.Uring.put)</title>
+	<meta charset="utf-8" />
+	<meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link href="style.css" rel="stylesheet" />
+        <script src="script.js" type="text/javascript"></script>
+
+	
+	<link href="search-results.html" rel="prefetch" />
+</head>
+<body>
+	<div id="page-header">
+		<div id="logotype">
+		<span>Documentation</span>
+		<nav>
+			<a href="http://dlang.org/">Dlang.org</a>
+		</nav>
+		</div>
+
+		<form action="search-docs.html" id="search">
+			<input name="searchTerm" placeholder="Find a symbol name..." type="search" />
+			<input type="submit" value="Go" />
+		</form>
+	</div>
+	<div id="page-body">
+		<div id="page-content">
+		<h1>Uring.put</h1><div class="breadcrumbs"><a class="breadcrumb" href="during.html">during</a><a class="breadcrumb" href="during.Uring.html">Uring</a></div><div><div class="documentation-comment synopsis"><div><p>Similar to <tt class="inline-code">put(SubmissionEntry)</tt> but in this case we can provide our custom type (args) to be filled
+to next <tt class="inline-code">SubmissionEntry</tt> in queue.</p><p>Fields in the provided type must use the same names as in <tt class="inline-code">SubmissionEntry</tt> to be automagically copied.</p></div></div></div><div class="annotated-prototype"><ol class="overloads"><li class="overload-option"><a href="during.Uring.put.1.html"><span class="overload-signature"><tt class="highlighted"><span class="hid">Uring</span></tt> <span class="name">put</span><tt class="highlighted">(<span class="kwrd">auto</span> <span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>)</tt></span></a></li><li class="active-overload-option"><span class="overload-signature"><tt class="highlighted"><span class="hid">Uring</span></tt> <span class="name">put</span><tt class="highlighted">(<span class="kwrd">auto</span> <span class="kwrd">ref</span> <span class="hid">OP</span> <span class="hid">op</span>)</tt></span><div class="function-prototype"><div class="parent-prototype"><span class="builtin-type">struct</span> <span class="name">Uring</span></div><div><div class="attributes">nothrow @<span class="name" data-ident="nogc">nogc</span> ref </div><div class="return-type"><a class="name" data-ident="Uring" href="during.Uring.html" title="during.Uring">Uring</a></div><div class="function-name">put</div>return <div class="template-parameters">(<div class="parameters-list toplevel"><div class="template-parameter-item parameter-item">	<span><span class="name" data-ident="OP">OP</span></span></div></div>)</div><div class="runtime-parameters">(<div class="parameters-list toplevel"><div class="runtime-parameter-item parameter-item"><span class="parameter-type-holder"><span class="parameter-type"><span class="storage-class">auto</span> <span class="storage-class">ref</span> <span class="name" data-ident="OP">OP</span></span></span> <span class="parameter-name name" data-ident="op"><a href="#param-op">op</a></span></div></div>)</div><div class="template-constraint"> <a class="lang-feature" href="http://dpldocs.info/template-constraints">if</a> (<div class="template-constraint-expression">!<a class="lang-feature" href="http://dpldocs.info/is-expression">is</a>(<span class="name" data-ident="OP">OP</span> == <span class="name" data-ident="SubmissionEntry">SubmissionEntry</span>)</div>)</div><div class="function-contracts"></div></div></div></li></ol></div><div><h2 id="parameters"><a class="header-anchor" href="#parameters">Parameters</a></h2><dl class="parameter-descriptions"><dt id="param-op"><a class="parameter-name" data-ident="op" href="#param-op">op</a></dt><dd><div class="parameter-type-holder">Type: <span class="parameter-type"><span class="name" data-ident="OP">OP</span></span></div><div class="documentation-comment"><div><p>Custom operation definition.</p></div></div></dd></dl><h2 id="returns"><a class="header-anchor" href="#returns">Return Value</a></h2><div><div class="return-type-holder">Type: <span class="return-type"><a class="xref" href="during.Uring.html" title="during.Uring"><span class="name" data-ident="Uring">Uring</span></a></span></div><div class="documentation-comment returns-description"><div></div></div></div><h2 id="meta"><a class="header-anchor" href="#meta">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a class="header-anchor" href="#source">Source</a></h3><div><p><a href="source/during.d.html#L189">See Implementation</a><br /></p></div></div></div></div>
+		<div id="page-nav"><a class="parent" href="during.html">during</a><a class="parent" href="during.Uring.html">Uring</a>
+		<span class="type-separator">constructors</span><ul><li><a class="constructor" href="during.Uring.this.html">this</a></li></ul><span class="type-separator">destructors</span><ul><li><a class="destructor" href="during.Uring.~this.html">~this</a></li></ul><span class="type-separator">functions</span><ul><li><a class="function" href="during.Uring.capacity.html">capacity</a></li><li><a class="function" href="during.Uring.dropped.html">dropped</a></li><li><a class="function" href="during.Uring.empty.html">empty</a></li><li><a class="function" href="during.Uring.fd.html">fd</a></li><li><a class="function" href="during.Uring.finish.html">finish</a></li><li><a class="function" href="during.Uring.finishCq.html">finishCq</a></li><li><a class="function" href="during.Uring.finishSq.html">finishSq</a></li><li><a class="function" href="during.Uring.front.html">front</a></li><li><a class="function" href="during.Uring.full.html">full</a></li><li><a class="function" href="during.Uring.length.html">length</a></li><li><a class="function" href="during.Uring.overflow.html">overflow</a></li><li><a class="function" href="during.Uring.params.html">params</a></li><li><a class="function" href="during.Uring.popFront.html">popFront</a></li><li><a class="function current" href="during.Uring.put.1.html">put</a></li><li><a class="function" href="during.Uring.putWith.html">putWith</a></li><li><a class="function" href="during.Uring.submit.html">submit</a></li><li><a class="function" href="during.Uring.wait.html">wait</a></li></ul></div>
+	</div>
+	<div id="page-footer">Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a></div>
+</body>
+</html>
