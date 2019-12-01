@@ -174,6 +174,11 @@ union SubmissionEntryExtraData
     private ulong[3] __pad2;
 }
 
+/**
+ * Describes the operation to be performed
+ *
+ * See_Also: `io_uring_enter(2)`
+ */
 enum Operation : ubyte
 {
     // available in kernel 5.1
@@ -427,7 +432,7 @@ struct CompletionQueueRingOffsets
 enum RegisterOpCode : uint
 {
     /**
-     * arg points to a struct iovec array of nr_args entries.  The buffers associated with the
+     * `arg` points to a struct iovec array of nr_args entries.  The buffers associated with the
      * iovecs will be locked in memory and charged against the user's RLIMIT_MEMLOCK resource limit.
      * See getrlimit(2) for more  informa‐ tion.   Additionally,  there  is a size limit of 1GiB per
      * buffer.  Currently, the buffers must be anonymous, non-file-backed memory, such as that
@@ -455,13 +460,13 @@ enum RegisterOpCode : uint
     REGISTER_BUFFERS        = 0,    /// `IORING_REGISTER_BUFFERS`
 
     /**
-     * This operation takes no argument, and arg must be passed as NULL.  All previously registered
+     * This operation takes no argument, and `arg` must be passed as NULL. All previously registered
      * buffers associated with the io_uring instance will be released.
      */
     UNREGISTER_BUFFERS      = 1,    /// `IORING_UNREGISTER_BUFFERS`
 
     /**
-     * Register files for I/O.  arg contains a pointer to an array of nr_args file descriptors
+     * Register files for I/O. `arg` contains a pointer to an array of `nr_args` file descriptors
      * (signed 32 bit integers).
      *
      * To make use of the registered files, the IOSQE_FIXED_FILE flag must be set in the flags
@@ -474,7 +479,7 @@ enum RegisterOpCode : uint
     REGISTER_FILES          = 2,    /// `IORING_REGISTER_FILES`
 
     /**
-     * This operation requires no argument, and arg must be passed as NULL.  All previously
+     * This operation requires no argument, and `arg` must be passed as NULL.  All previously
      * registered files associated with the io_uring instance will be unregistered.
      */
     UNREGISTER_FILES        = 3,    /// `IORING_UNREGISTER_FILES`

@@ -8,7 +8,8 @@ version (unittest)
         extern(C) void main()
         {
             runTests!("API tests", during.tests.api);
-            printf("\nAll unit tests have been run successfully.\n");
+            runTests!("RW tests", during.tests.rw);
+            printf("All unit tests have been run successfully.\n");
         }
 
         void runTests(string desc, alias symbol)()
@@ -19,6 +20,7 @@ version (unittest)
                 printf("> testing " ~ __traits(getAttributes, u)[0] ~ "\n");
                 u();
             }
+            printf("\n");
         }
     }
 }

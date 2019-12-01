@@ -292,7 +292,68 @@ struct Uring
         return 0;
     }
 
-    // TODO: register/unregister (buffers, files, eventfd, filesupdate)
+    /**
+     * Register single buffer to be mapped into the kernel for faster buffered operations.
+     *
+     * To use the buffers, the application must specify the fixed variants for of operations,
+     * `READ_FIXED` or `WRITE_FIXED` in the `SubmissionEntry` also with used `buf_index` set
+     * in entry extra data.
+     *
+     * An application can increase or decrease the size or number of registered buffers by first
+     * unregistering the existing buffers, and then issuing a new call to io_uring_register() with
+     * the new buffers.
+     *
+     * Params:
+     *   buffer = Buffers to be registered
+     *
+     * Returns: On success, returns 0.  On error, `-errno` is returned.
+     */
+    auto registerBuffers(T)(T buffers) @trusted
+        if (is(T == ubyte[]) || is(T == ubyte[][])) // TODO: something else?
+    {
+        checkInitialized();
+        assert(buffers.length, "Empty buffer");
+        static if (is(buffers == ubyte[]))
+        {
+            iovec vec;
+            vec.iov_base = cast(void*)&buffers[0];
+            vec.iov_len = buffers.length;
+            auto r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_BUFFERS, cast(const(void)*)&vec, 1);
+        }
+        else
+        {
+            iovec[] vec = cast(iovec*)malloc(buffers.length * iovec.sizeof)[0..buffers.length];
+            if (vec is null) return -errno;
+            scope (exit) free(cast(void*)&vec[0]);
+
+            foreach (i, b; buffers)
+            {
+                assert(b.length, "Empty buffer");
+                vec[i].iov_base = cast(void*)&b[0];
+                vec[i].iov_len = b.length;
+            }
+            auto r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_BUFFERS, cast(const(void)*)&vec[0], 1);
+        }
+        if (r < 0) return -errno;
+        return 0;
+    }
+
+    /**
+     * Releases all previously registered buffers associated with the `io_uring` instance.
+     *
+     * An application need not unregister buffers explicitly before shutting down the io_uring instance.
+     *
+     * Returns: On success, returns 0. On error, `-errno` is returned.
+     */
+    auto unregisterBuffers() @trusted
+    {
+        checkInitialized();
+        auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_BUFFERS, null, 0);
+        if (r < 0) return -errno;
+        return 0;
+    }
+
+    // TODO: register/unregister (files, eventfd, filesupdate)
 }
 
 /**
@@ -324,7 +385,32 @@ struct Nop
     Operation opcode = Operation.NOP;
 }
 
+/// Helper structure to initiate `readv` operations.
+alias Readv = RW!(Operation.READV);
+
+/// Helper structure to initiate `writev` operations.
+alias Writev = RW!(Operation.WRITEV);
+
 private:
+
+struct RW(Operation op)
+{
+    Operation opcode = op;
+    int fd;
+    ulong off;
+    ulong addr;
+    uint len;
+
+    this(int fd, ulong offset, iovec[] buffer...)
+    {
+        assert(buffer.length, "Empty buffer");
+        assert(buffer.length < uint.max, "Too many iovec buffers");
+        this.fd = fd;
+        this.off = offset;
+        this.addr = cast(ulong)(cast(void*)&buffer[0]);
+        this.len = cast(uint)buffer.length;
+    }
+}
 
 // uring cleanup
 void dispose(ref Uring uring)
