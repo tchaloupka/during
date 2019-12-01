@@ -1,0 +1,54 @@
+language: d
+sudo: false
+
+branches:
+  only:
+    - master
+
+notifications:
+  email: true
+
+d:
+  - dmd-2.089.0
+  - dmd-2.088.1
+  - dmd-2.087.1
+  - dmd-2.086.1
+  - dmd-2.085.1
+  - ldc-1.18.0
+  - ldc-1.17.0
+  - ldc-1.16.0
+  - ldc-1.15.0
+  - ldc-1.14.0
+  - dmd-beta
+
+script:
+  - dub test --compiler=${DC}
+
+jobs:
+  include:
+    - stage: betterC
+      script:
+        - ./betterc_ut.sh
+    - stage: codecov
+      script:
+        - dub test -b unittest-cov --compiler=${DC}
+        - bash <(curl -s https://codecov.io/bash)
+    - stage: docs
+      script:
+        - wget https://github.com/adamdruppe/adrdox/archive/master.zip
+        - unzip master.zip
+        - pushd adrdox-master && make && popd
+        - export PATH=$PATH:$PWD/adrdox-master
+        - doc2 --genSearchIndex --genSource -o generated-docs source
+      deploy: &pages
+        provider: pages
+        skip_cleanup: true
+        github_token: $GITHUB_TOKEN  # Set in the settings page of your repository, as a secure variable
+        keep_history: true
+        local_dir: generated-docs
+        on:
+          branch: master
+
+env:
+  global:
+    secure: hNwFLgJSfUjH4foPRWxsnAVDQacqPiFmnMs5LSPohOD95v5IaNhjMJaUDgHXjc49Qmtx0ZXb52uUB3s9EtoEhu5GmDaztIwM7J9q7cpgJLSCun+9mn/vYI2VR2E0/CnjtqE+K93XFE2QQK1PKfefWAv72L2X3oSyHyZRn0QGnN6549KConEO1jU3Bg3sU+Pss6dMIybhtqs66Vg4CCMvrYkx+7OponJJOiNlUwTKmjH083HxPly8gnTzAMtfnxMsmgSR/Rll35Wej1yuUOvd4rSoLQWTwozg0rfORs/BMkl1O+ECeoHB6zTeQtU/CWHj+ANv+q9Yvj8tVkol5Qn79s8NJJNQnTW4N8LPGtE5CFHRtXzyOgMWAfUIRkQ4Ns/Bms3usWFzxCq5iBIHJ3TRBPNIdKhmvCec3Yh0wrl2I5xyjaDsD+XGGnatHU+KPozD11ef1fXWOZfdp6RRxCz6HCsRFvbNtC6Rv8MLyPn0ABCuLCaJPyG5Jm2AjNdiCKsE6Bm0otQbJFluCNNE0c0ED+Z3E8OdFe3z8V3kS08y+lD2UNFxsHkytquc2YFyKboOAaKvxXwN3Y3Y4CZm3dl0aHV6QLQeGY1wM52B+To+zLdcwYheSB3U8zWgpo2iGv3E1ws5ZkjsMYx0m9EegFZJ06THjuA/C7Pi4o3naoYX5yM=
