@@ -49,8 +49,8 @@
 <a class="br" href="#L21" id="L21">21 </a> */</span>
 <a class="br" href="#L22" id="L22">22 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L22" title="during.io_uring.SubmissionEntry">SubmissionEntry</a>
 <a class="br" href="#L23" id="L23">23 </a>{
-<a class="br" href="#L24" id="L24">24 </a>    <a class="hid" href="during.io_uring.d.html#L177" title="during.io_uring.Operation">Operation</a>               <span class="hid">opcode</span>;         <span class="com">/// type of operation for this sqe</span>
-<a class="br" href="#L25" id="L25">25 </a>    <a class="hid" href="during.io_uring.d.html#L210" title="during.io_uring.SubmissionEntryFlags">SubmissionEntryFlags</a>    <span class="hid">flags</span>;          <span class="com">/// IOSQE_ flags</span>
+<a class="br" href="#L24" id="L24">24 </a>    <a class="hid" href="during.io_uring.d.html#L182" title="during.io_uring.Operation">Operation</a>               <span class="hid">opcode</span>;         <span class="com">/// type of operation for this sqe</span>
+<a class="br" href="#L25" id="L25">25 </a>    <a class="hid" href="during.io_uring.d.html#L215" title="during.io_uring.SubmissionEntryFlags">SubmissionEntryFlags</a>    <span class="hid">flags</span>;          <span class="com">/// IOSQE_ flags</span>
 <a class="br" href="#L26" id="L26">26 </a>    <span class="type">ushort</span>                  <span class="hid">ioprio</span>;         <span class="com">/// ioprio for the request</span>
 <a class="br" href="#L27" id="L27">27 </a>    <span class="type">int</span>                     <span class="hid">fd</span>;             <span class="com">/// file descriptor to do IO on</span>
 <a class="br" href="#L28" id="L28">28 </a>    <span class="kwrd">union</span>
@@ -202,470 +202,475 @@
 <a class="br" href="#L174" id="L174">174 </a>    <span class="kwrd">private</span> <span class="type">ulong</span>[<span class="num">3</span>] <span class="hid">__pad2</span>;
 <a class="br" href="#L175" id="L175">175 </a>}
 <a class="br" href="#L176" id="L176">176 </a>
-<a class="br" href="#L177" id="L177">177 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L177" title="during.io_uring.Operation">Operation</a> : <span class="type">ubyte</span>
-<a class="br" href="#L178" id="L178">178 </a>{
-<a class="br" href="#L179" id="L179">179 </a>    <span class="com">// available in kernel 5.1</span>
-<a class="br" href="#L180" id="L180">180 </a>    <span class="hid">NOP</span> = <span class="num">0</span>,                <span class="com">/// IORING_OP_NOP</span>
-<a class="br" href="#L181" id="L181">181 </a>    <span class="hid">READV</span> = <span class="num">1</span>,              <span class="com">/// IORING_OP_READV</span>
-<a class="br" href="#L182" id="L182">182 </a>    <span class="hid">WRITEV</span> = <span class="num">2</span>,             <span class="com">/// IORING_OP_WRITEV</span>
-<a class="br" href="#L183" id="L183">183 </a>    <span class="hid">FSYNC</span> = <span class="num">3</span>,              <span class="com">/// IORING_OP_FSYNC</span>
-<a class="br" href="#L184" id="L184">184 </a>    <span class="hid">READ_FIXED</span> = <span class="num">4</span>,         <span class="com">/// IORING_OP_READ_FIXED</span>
-<a class="br" href="#L185" id="L185">185 </a>    <span class="hid">WRITE_FIXED</span> = <span class="num">5</span>,        <span class="com">/// IORING_OP_WRITE_FIXED</span>
-<a class="br" href="#L186" id="L186">186 </a>    <span class="hid">POLL_ADD</span> = <span class="num">6</span>,           <span class="com">/// IORING_OP_POLL_ADD</span>
-<a class="br" href="#L187" id="L187">187 </a>    <span class="hid">POLL_REMOVE</span> = <span class="num">7</span>,        <span class="com">/// IORING_OP_POLL_REMOVE</span>
-<a class="br" href="#L188" id="L188">188 </a>
-<a class="br" href="#L189" id="L189">189 </a>    <span class="com">// available in kernel 5.2</span>
-<a class="br" href="#L190" id="L190">190 </a>    <span class="hid">SYNC_FILE_RANGE</span> = <span class="num">8</span>,    <span class="com">/// IORING_OP_SYNC_FILE_RANGE</span>
-<a class="br" href="#L191" id="L191">191 </a>
-<a class="br" href="#L192" id="L192">192 </a>    <span class="com">// available in kernel 5.3</span>
-<a class="br" href="#L193" id="L193">193 </a>    <span class="hid">SENDMSG</span> = <span class="num">9</span>,            <span class="com">/// IORING_OP_SENDMSG</span>
-<a class="br" href="#L194" id="L194">194 </a>    <span class="hid">RECVMSG</span> = <span class="num">10</span>,           <span class="com">/// IORING_OP_RECVMSG</span>
-<a class="br" href="#L195" id="L195">195 </a>
-<a class="br" href="#L196" id="L196">196 </a>    <span class="com">// available in kernel 5.4</span>
-<a class="br" href="#L197" id="L197">197 </a>    <span class="hid">TIMEOUT</span> = <span class="num">11</span>,           <span class="com">/// IORING_OP_TIMEOUT</span>
-<a class="br" href="#L198" id="L198">198 </a>
-<a class="br" href="#L199" id="L199">199 </a>    <span class="com">// probably'll be available in kernel 5.5 (in master now)</span>
-<a class="br" href="#L200" id="L200">200 </a>    <span class="hid">TIMEOUT_REMOVE</span> = <span class="num">12</span>,    <span class="com">/// IORING_OP_TIMEOUT_REMOVE</span>
-<a class="br" href="#L201" id="L201">201 </a>    <span class="hid">ACCEPT</span> = <span class="num">13</span>,            <span class="com">/// IORING_OP_ACCEPT</span>
-<a class="br" href="#L202" id="L202">202 </a>    <span class="hid">ASYNC_CANCEL</span> = <span class="num">14</span>,      <span class="com">/// IORING_OP_ASYNC_CANCEL</span>
-<a class="br" href="#L203" id="L203">203 </a>    <span class="hid">LINK_TIMEOUT</span> = <span class="num">15</span>,      <span class="com">/// IORING_OP_LINK_TIMEOUT</span>
-<a class="br" href="#L204" id="L204">204 </a>
-<a class="br" href="#L205" id="L205">205 </a>    <span class="com">// not accepted yet</span>
-<a class="br" href="#L206" id="L206">206 </a>    <span class="hid">CONNECT</span> = <span class="num">16</span>,           <span class="com">/// IORING_OP_CONNECT</span>
-<a class="br" href="#L207" id="L207">207 </a>}
-<a class="br" href="#L208" id="L208">208 </a>
-<a class="br" href="#L209" id="L209">209 </a><span class="com">/// sqe-&gt;flags</span>
-<a class="br" href="#L210" id="L210">210 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L210" title="during.io_uring.SubmissionEntryFlags">SubmissionEntryFlags</a> : <span class="type">ubyte</span>
-<a class="br" href="#L211" id="L211">211 </a>{
-<a class="br" href="#L212" id="L212">212 </a>    <span class="hid">NONE</span>        = <span class="num">0</span>,
-<a class="br" href="#L213" id="L213">213 </a>    <span class="hid">FIXED_FILE</span>  = <span class="num">1U</span> &lt;&lt; <span class="num">0</span>,  <span class="com">/// IOSQE_FIXED_FILE: use fixed fileset</span>
-<a class="br" href="#L214" id="L214">214 </a>    <span class="hid">IO_DRAIN</span>    = <span class="num">1U</span> &lt;&lt; <span class="num">1</span>,  <span class="com">/// IOSQE_IO_DRAIN: issue after inflight IO</span>
-<a class="br" href="#L215" id="L215">215 </a>    <span class="hid">IO_LINK</span>     = <span class="num">1U</span> &lt;&lt; <span class="num">2</span>,  <span class="com">/// IOSQE_IO_LINK: links next sqe</span>
-<a class="br" href="#L216" id="L216">216 </a>}
-<a class="br" href="#L217" id="L217">217 </a>
-<a class="br" href="#L218" id="L218">218 </a><span class="com">/**
-<a class="br" href="#L219" id="L219">219 </a> * IO completion data structure (Completion Queue Entry)
-<a class="br" href="#L220" id="L220">220 </a> *
-<a class="br" href="#L221" id="L221">221 </a> * C API: `struct io_uring_cqe`
-<a class="br" href="#L222" id="L222">222 </a> */</span>
-<a class="br" href="#L223" id="L223">223 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L223" title="during.io_uring.CompletionEntry">CompletionEntry</a>
-<a class="br" href="#L224" id="L224">224 </a>{
-<a class="br" href="#L225" id="L225">225 </a>    <span class="type">ulong</span>   <span class="hid">user_data</span>;  <span class="com">/* sqe-&gt;data submission passed back */</span>
-<a class="br" href="#L226" id="L226">226 </a>    <span class="type">int</span>     <span class="hid">res</span>;        <span class="com">/* result code for this event */</span>
-<a class="br" href="#L227" id="L227">227 </a>    <span class="type">uint</span>    <span class="hid">flags</span>;
-<a class="br" href="#L228" id="L228">228 </a>}
-<a class="br" href="#L229" id="L229">229 </a>
-<a class="br" href="#L230" id="L230">230 </a><span class="com">/**
-<a class="br" href="#L231" id="L231">231 </a> * Passed in for io_uring_setup(2). Copied back with updated info on success.
-<a class="br" href="#L232" id="L232">232 </a> *
-<a class="br" href="#L233" id="L233">233 </a> * C API: `struct io_uring_params`
-<a class="br" href="#L234" id="L234">234 </a> */</span>
-<a class="br" href="#L235" id="L235">235 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L235" title="during.io_uring.SetupParameters">SetupParameters</a>
-<a class="br" href="#L236" id="L236">236 </a>{
-<a class="br" href="#L237" id="L237">237 </a>    <span class="com">// Magic offsets for the application to mmap the data it needs</span>
-<a class="br" href="#L238" id="L238">238 </a>
-<a class="br" href="#L239" id="L239">239 </a>    <span class="com">/// `IORING_OFF_SQ_RING`: mmap offset for submission queue ring</span>
-<a class="br" href="#L240" id="L240">240 </a>    <span class="kwrd">enum</span> <span class="type">ulong</span> <span class="hid">SUBMISSION_QUEUE_RING_OFFSET</span> = <span class="num">0UL</span>;
-<a class="br" href="#L241" id="L241">241 </a>    <span class="com">/// `IORING_OFF_CQ_RING`: mmap offset for completion queue ring</span>
-<a class="br" href="#L242" id="L242">242 </a>    <span class="kwrd">enum</span> <span class="type">ulong</span> <span class="hid">COMPLETION_QUEUE_RING_OFFSET</span> = <span class="num">0x8000000UL</span>;
-<a class="br" href="#L243" id="L243">243 </a>    <span class="com">/// `IORING_OFF_SQES`: mmap offset for submission entries</span>
-<a class="br" href="#L244" id="L244">244 </a>    <span class="kwrd">enum</span> <span class="type">ulong</span> <span class="hid">SUBMISSION_QUEUE_ENTRIES_OFFSET</span> = <span class="num">0x10000000UL</span>;
-<a class="br" href="#L245" id="L245">245 </a>
-<a class="br" href="#L246" id="L246">246 </a>    <span class="com">/// (output) allocated entries in submission queue</span>
-<a class="br" href="#L247" id="L247">247 </a>    <span class="com">/// (both ring index `array` and separate entry array at `SUBMISSION_QUEUE_ENTRIES_OFFSET`).</span>
-<a class="br" href="#L248" id="L248">248 </a>    <span class="type">uint</span>                        <span class="hid">sq_entries</span>;
-<a class="br" href="#L249" id="L249">249 </a>
-<a class="br" href="#L250" id="L250">250 </a>    <span class="com">/// (output) allocated entries in completion queue</span>
-<a class="br" href="#L251" id="L251">251 </a>    <span class="type">uint</span>                        <span class="hid">cq_entries</span>;
-<a class="br" href="#L252" id="L252">252 </a>
-<a class="br" href="#L253" id="L253">253 </a>    <a class="hid" href="during.io_uring.d.html#L269" title="during.io_uring.SetupFlags">SetupFlags</a>                  <span class="hid">flags</span>;          <span class="com">/// (input)</span>
+<a class="br" href="#L177" id="L177">177 </a><span class="com">/**
+<a class="br" href="#L178" id="L178">178 </a> * Describes the operation to be performed
+<a class="br" href="#L179" id="L179">179 </a> *
+<a class="br" href="#L180" id="L180">180 </a> * See_Also: `io_uring_enter(2)`
+<a class="br" href="#L181" id="L181">181 </a> */</span>
+<a class="br" href="#L182" id="L182">182 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L182" title="during.io_uring.Operation">Operation</a> : <span class="type">ubyte</span>
+<a class="br" href="#L183" id="L183">183 </a>{
+<a class="br" href="#L184" id="L184">184 </a>    <span class="com">// available in kernel 5.1</span>
+<a class="br" href="#L185" id="L185">185 </a>    <span class="hid">NOP</span> = <span class="num">0</span>,                <span class="com">/// IORING_OP_NOP</span>
+<a class="br" href="#L186" id="L186">186 </a>    <span class="hid">READV</span> = <span class="num">1</span>,              <span class="com">/// IORING_OP_READV</span>
+<a class="br" href="#L187" id="L187">187 </a>    <span class="hid">WRITEV</span> = <span class="num">2</span>,             <span class="com">/// IORING_OP_WRITEV</span>
+<a class="br" href="#L188" id="L188">188 </a>    <span class="hid">FSYNC</span> = <span class="num">3</span>,              <span class="com">/// IORING_OP_FSYNC</span>
+<a class="br" href="#L189" id="L189">189 </a>    <span class="hid">READ_FIXED</span> = <span class="num">4</span>,         <span class="com">/// IORING_OP_READ_FIXED</span>
+<a class="br" href="#L190" id="L190">190 </a>    <span class="hid">WRITE_FIXED</span> = <span class="num">5</span>,        <span class="com">/// IORING_OP_WRITE_FIXED</span>
+<a class="br" href="#L191" id="L191">191 </a>    <span class="hid">POLL_ADD</span> = <span class="num">6</span>,           <span class="com">/// IORING_OP_POLL_ADD</span>
+<a class="br" href="#L192" id="L192">192 </a>    <span class="hid">POLL_REMOVE</span> = <span class="num">7</span>,        <span class="com">/// IORING_OP_POLL_REMOVE</span>
+<a class="br" href="#L193" id="L193">193 </a>
+<a class="br" href="#L194" id="L194">194 </a>    <span class="com">// available in kernel 5.2</span>
+<a class="br" href="#L195" id="L195">195 </a>    <span class="hid">SYNC_FILE_RANGE</span> = <span class="num">8</span>,    <span class="com">/// IORING_OP_SYNC_FILE_RANGE</span>
+<a class="br" href="#L196" id="L196">196 </a>
+<a class="br" href="#L197" id="L197">197 </a>    <span class="com">// available in kernel 5.3</span>
+<a class="br" href="#L198" id="L198">198 </a>    <span class="hid">SENDMSG</span> = <span class="num">9</span>,            <span class="com">/// IORING_OP_SENDMSG</span>
+<a class="br" href="#L199" id="L199">199 </a>    <span class="hid">RECVMSG</span> = <span class="num">10</span>,           <span class="com">/// IORING_OP_RECVMSG</span>
+<a class="br" href="#L200" id="L200">200 </a>
+<a class="br" href="#L201" id="L201">201 </a>    <span class="com">// available in kernel 5.4</span>
+<a class="br" href="#L202" id="L202">202 </a>    <span class="hid">TIMEOUT</span> = <span class="num">11</span>,           <span class="com">/// IORING_OP_TIMEOUT</span>
+<a class="br" href="#L203" id="L203">203 </a>
+<a class="br" href="#L204" id="L204">204 </a>    <span class="com">// probably'll be available in kernel 5.5 (in master now)</span>
+<a class="br" href="#L205" id="L205">205 </a>    <span class="hid">TIMEOUT_REMOVE</span> = <span class="num">12</span>,    <span class="com">/// IORING_OP_TIMEOUT_REMOVE</span>
+<a class="br" href="#L206" id="L206">206 </a>    <span class="hid">ACCEPT</span> = <span class="num">13</span>,            <span class="com">/// IORING_OP_ACCEPT</span>
+<a class="br" href="#L207" id="L207">207 </a>    <span class="hid">ASYNC_CANCEL</span> = <span class="num">14</span>,      <span class="com">/// IORING_OP_ASYNC_CANCEL</span>
+<a class="br" href="#L208" id="L208">208 </a>    <span class="hid">LINK_TIMEOUT</span> = <span class="num">15</span>,      <span class="com">/// IORING_OP_LINK_TIMEOUT</span>
+<a class="br" href="#L209" id="L209">209 </a>
+<a class="br" href="#L210" id="L210">210 </a>    <span class="com">// not accepted yet</span>
+<a class="br" href="#L211" id="L211">211 </a>    <span class="hid">CONNECT</span> = <span class="num">16</span>,           <span class="com">/// IORING_OP_CONNECT</span>
+<a class="br" href="#L212" id="L212">212 </a>}
+<a class="br" href="#L213" id="L213">213 </a>
+<a class="br" href="#L214" id="L214">214 </a><span class="com">/// sqe-&gt;flags</span>
+<a class="br" href="#L215" id="L215">215 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L215" title="during.io_uring.SubmissionEntryFlags">SubmissionEntryFlags</a> : <span class="type">ubyte</span>
+<a class="br" href="#L216" id="L216">216 </a>{
+<a class="br" href="#L217" id="L217">217 </a>    <span class="hid">NONE</span>        = <span class="num">0</span>,
+<a class="br" href="#L218" id="L218">218 </a>    <span class="hid">FIXED_FILE</span>  = <span class="num">1U</span> &lt;&lt; <span class="num">0</span>,  <span class="com">/// IOSQE_FIXED_FILE: use fixed fileset</span>
+<a class="br" href="#L219" id="L219">219 </a>    <span class="hid">IO_DRAIN</span>    = <span class="num">1U</span> &lt;&lt; <span class="num">1</span>,  <span class="com">/// IOSQE_IO_DRAIN: issue after inflight IO</span>
+<a class="br" href="#L220" id="L220">220 </a>    <span class="hid">IO_LINK</span>     = <span class="num">1U</span> &lt;&lt; <span class="num">2</span>,  <span class="com">/// IOSQE_IO_LINK: links next sqe</span>
+<a class="br" href="#L221" id="L221">221 </a>}
+<a class="br" href="#L222" id="L222">222 </a>
+<a class="br" href="#L223" id="L223">223 </a><span class="com">/**
+<a class="br" href="#L224" id="L224">224 </a> * IO completion data structure (Completion Queue Entry)
+<a class="br" href="#L225" id="L225">225 </a> *
+<a class="br" href="#L226" id="L226">226 </a> * C API: `struct io_uring_cqe`
+<a class="br" href="#L227" id="L227">227 </a> */</span>
+<a class="br" href="#L228" id="L228">228 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L228" title="during.io_uring.CompletionEntry">CompletionEntry</a>
+<a class="br" href="#L229" id="L229">229 </a>{
+<a class="br" href="#L230" id="L230">230 </a>    <span class="type">ulong</span>   <span class="hid">user_data</span>;  <span class="com">/* sqe-&gt;data submission passed back */</span>
+<a class="br" href="#L231" id="L231">231 </a>    <span class="type">int</span>     <span class="hid">res</span>;        <span class="com">/* result code for this event */</span>
+<a class="br" href="#L232" id="L232">232 </a>    <span class="type">uint</span>    <span class="hid">flags</span>;
+<a class="br" href="#L233" id="L233">233 </a>}
+<a class="br" href="#L234" id="L234">234 </a>
+<a class="br" href="#L235" id="L235">235 </a><span class="com">/**
+<a class="br" href="#L236" id="L236">236 </a> * Passed in for io_uring_setup(2). Copied back with updated info on success.
+<a class="br" href="#L237" id="L237">237 </a> *
+<a class="br" href="#L238" id="L238">238 </a> * C API: `struct io_uring_params`
+<a class="br" href="#L239" id="L239">239 </a> */</span>
+<a class="br" href="#L240" id="L240">240 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L240" title="during.io_uring.SetupParameters">SetupParameters</a>
+<a class="br" href="#L241" id="L241">241 </a>{
+<a class="br" href="#L242" id="L242">242 </a>    <span class="com">// Magic offsets for the application to mmap the data it needs</span>
+<a class="br" href="#L243" id="L243">243 </a>
+<a class="br" href="#L244" id="L244">244 </a>    <span class="com">/// `IORING_OFF_SQ_RING`: mmap offset for submission queue ring</span>
+<a class="br" href="#L245" id="L245">245 </a>    <span class="kwrd">enum</span> <span class="type">ulong</span> <span class="hid">SUBMISSION_QUEUE_RING_OFFSET</span> = <span class="num">0UL</span>;
+<a class="br" href="#L246" id="L246">246 </a>    <span class="com">/// `IORING_OFF_CQ_RING`: mmap offset for completion queue ring</span>
+<a class="br" href="#L247" id="L247">247 </a>    <span class="kwrd">enum</span> <span class="type">ulong</span> <span class="hid">COMPLETION_QUEUE_RING_OFFSET</span> = <span class="num">0x8000000UL</span>;
+<a class="br" href="#L248" id="L248">248 </a>    <span class="com">/// `IORING_OFF_SQES`: mmap offset for submission entries</span>
+<a class="br" href="#L249" id="L249">249 </a>    <span class="kwrd">enum</span> <span class="type">ulong</span> <span class="hid">SUBMISSION_QUEUE_ENTRIES_OFFSET</span> = <span class="num">0x10000000UL</span>;
+<a class="br" href="#L250" id="L250">250 </a>
+<a class="br" href="#L251" id="L251">251 </a>    <span class="com">/// (output) allocated entries in submission queue</span>
+<a class="br" href="#L252" id="L252">252 </a>    <span class="com">/// (both ring index `array` and separate entry array at `SUBMISSION_QUEUE_ENTRIES_OFFSET`).</span>
+<a class="br" href="#L253" id="L253">253 </a>    <span class="type">uint</span>                        <span class="hid">sq_entries</span>;
 <a class="br" href="#L254" id="L254">254 </a>
-<a class="br" href="#L255" id="L255">255 </a>    <span class="com">/// (input) used if SQ_AFF and SQPOLL flags are active to pin poll thread to specific cpu.</span>
-<a class="br" href="#L256" id="L256">256 </a>    <span class="com">/// right now always checked in kernel for &quot;possible cpu&quot;.</span>
-<a class="br" href="#L257" id="L257">257 </a>    <span class="type">uint</span>                        <span class="hid">sq_thread_cpu</span>;
-<a class="br" href="#L258" id="L258">258 </a>
-<a class="br" href="#L259" id="L259">259 </a>    <span class="com">/// (input) used if SQPOLL flag is active; timeout in milliseconds</span>
-<a class="br" href="#L260" id="L260">260 </a>    <span class="com">/// until kernel poll thread goes to sleep.</span>
-<a class="br" href="#L261" id="L261">261 </a>    <span class="type">uint</span>                        <span class="hid">sq_thread_idle</span>;
-<a class="br" href="#L262" id="L262">262 </a>    <a class="hid" href="during.io_uring.d.html#L337" title="during.io_uring.SetupFeatures">SetupFeatures</a>               <span class="hid">features</span>;
-<a class="br" href="#L263" id="L263">263 </a>    <span class="kwrd">private</span> <span class="type">uint</span>[<span class="num">4</span>]             <span class="hid">resv</span>;           <span class="com">// reserved</span>
-<a class="br" href="#L264" id="L264">264 </a>    <a class="hid" href="during.io_uring.d.html#L349" title="during.io_uring.SubmissionQueueRingOffsets">SubmissionQueueRingOffsets</a>  <span class="hid">sq_off</span>;         <span class="com">/// (output) submission queue ring data field offsets</span>
-<a class="br" href="#L265" id="L265">265 </a>    <a class="hid" href="during.io_uring.d.html#L396" title="during.io_uring.CompletionQueueRingOffsets">CompletionQueueRingOffsets</a>  <span class="hid">cq_off</span>;         <span class="com">/// (output) completion queue ring data field offsets</span>
-<a class="br" href="#L266" id="L266">266 </a>}
-<a class="br" href="#L267" id="L267">267 </a>
-<a class="br" href="#L268" id="L268">268 </a><span class="com">/// `io_uring_setup()` flags</span>
-<a class="br" href="#L269" id="L269">269 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L269" title="during.io_uring.SetupFlags">SetupFlags</a> : <span class="type">uint</span>
-<a class="br" href="#L270" id="L270">270 </a>{
-<a class="br" href="#L271" id="L271">271 </a>    <span class="com">/// No flags set</span>
-<a class="br" href="#L272" id="L272">272 </a>    <span class="hid">NONE</span>    = <span class="num">0</span>,
-<a class="br" href="#L273" id="L273">273 </a>
-<a class="br" href="#L274" id="L274">274 </a>    <span class="com">/**
-<a class="br" href="#L275" id="L275">275 </a>     * `IORING_SETUP_IOPOLL`
-<a class="br" href="#L276" id="L276">276 </a>     *
-<a class="br" href="#L277" id="L277">277 </a>     * Perform busy-waiting for an I/O completion, as opposed to getting notifications via an
-<a class="br" href="#L278" id="L278">278 </a>     * asynchronous IRQ (Interrupt Request).  The file system (if any) and block device must
-<a class="br" href="#L279" id="L279">279 </a>     * support polling in order for  this  to  work. Busy-waiting  provides  lower latency, but may
-<a class="br" href="#L280" id="L280">280 </a>     * consume more CPU resources than interrupt driven I/O.  Currently, this feature is usable
-<a class="br" href="#L281" id="L281">281 </a>     * only on a file descriptor opened using the O_DIRECT flag.  When a read or write is submitted
-<a class="br" href="#L282" id="L282">282 </a>     * to a polled context, the application must poll for completions on the CQ ring by calling
-<a class="br" href="#L283" id="L283">283 </a>     * io_uring_enter(2).  It is illegal to mix and match polled and non-polled I/O on an io_uring
-<a class="br" href="#L284" id="L284">284 </a>     * instance.
-<a class="br" href="#L285" id="L285">285 </a>     */</span>
-<a class="br" href="#L286" id="L286">286 </a>    <span class="hid">IOPOLL</span>  = <span class="num">1U</span> &lt;&lt; <span class="num">0</span>,
-<a class="br" href="#L287" id="L287">287 </a>
-<a class="br" href="#L288" id="L288">288 </a>    <span class="com">/**
-<a class="br" href="#L289" id="L289">289 </a>     * `IORING_SETUP_SQPOLL`
-<a class="br" href="#L290" id="L290">290 </a>     *
-<a class="br" href="#L291" id="L291">291 </a>     * When this flag is specified, a kernel thread is created to perform submission queue polling.
-<a class="br" href="#L292" id="L292">292 </a>     * An io_uring instance configured in this way enables an application to issue I/O without ever
-<a class="br" href="#L293" id="L293">293 </a>     * context switching into the kernel.
-<a class="br" href="#L294" id="L294">294 </a>     * By using the submission queue to fill in new submission queue entries and watching for
-<a class="br" href="#L295" id="L295">295 </a>     * completions on the completion queue, the application can submit and reap I/Os without doing
-<a class="br" href="#L296" id="L296">296 </a>     * a single system call.
-<a class="br" href="#L297" id="L297">297 </a>     * If the kernel thread is idle for more than sq_thread_idle microseconds, it will set the
-<a class="br" href="#L298" id="L298">298 </a>     * IORING_SQ_NEED_WAKEUP bit in the flags field of the struct io_sq_ring. When this happens,
-<a class="br" href="#L299" id="L299">299 </a>     * the application must call io_uring_enter(2) to wake the kernel thread. If I/O is kept busy,
-<a class="br" href="#L300" id="L300">300 </a>     * the kernel thread will never sleep. An application making use of this feature will need to
-<a class="br" href="#L301" id="L301">301 </a>     * guard the io_uring_enter(2) call with  the  following  code sequence:
-<a class="br" href="#L302" id="L302">302 </a>     *
-<a class="br" href="#L303" id="L303">303 </a>     *     ````
-<a class="br" href="#L304" id="L304">304 </a>     *     // Ensure that the wakeup flag is read after the tail pointer has been written.
-<a class="br" href="#L305" id="L305">305 </a>     *     smp_mb();
-<a class="br" href="#L306" id="L306">306 </a>     *     if (*sq_ring-&gt;flags &amp; IORING_SQ_NEED_WAKEUP)
-<a class="br" href="#L307" id="L307">307 </a>     *         io_uring_enter(fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
-<a class="br" href="#L308" id="L308">308 </a>     *     ```
-<a class="br" href="#L309" id="L309">309 </a>     *
-<a class="br" href="#L310" id="L310">310 </a>     * where sq_ring is a submission queue ring setup using the struct io_sqring_offsets described below.
-<a class="br" href="#L311" id="L311">311 </a>     *
-<a class="br" href="#L312" id="L312">312 </a>     * To  successfully  use this feature, the application must register a set of files to be used for
-<a class="br" href="#L313" id="L313">313 </a>     * IO through io_uring_register(2) using the IORING_REGISTER_FILES opcode. Failure to do so will
-<a class="br" href="#L314" id="L314">314 </a>     * result in submitted IO being errored with EBADF.
-<a class="br" href="#L315" id="L315">315 </a>     */</span>
-<a class="br" href="#L316" id="L316">316 </a>    <span class="hid">SQPOLL</span>  = <span class="num">1U</span> &lt;&lt; <span class="num">1</span>,
-<a class="br" href="#L317" id="L317">317 </a>
-<a class="br" href="#L318" id="L318">318 </a>    <span class="com">/**
-<a class="br" href="#L319" id="L319">319 </a>     * `IORING_SETUP_SQ_AFF`
-<a class="br" href="#L320" id="L320">320 </a>     *
-<a class="br" href="#L321" id="L321">321 </a>     *  If this flag is specified, then the poll thread will be bound to the cpu set in the
-<a class="br" href="#L322" id="L322">322 </a>     *  sq_thread_cpu field of the struct io_uring_params.  This flag is only meaningful when
-<a class="br" href="#L323" id="L323">323 </a>     *  IORING_SETUP_SQPOLL is specified.
-<a class="br" href="#L324" id="L324">324 </a>     */</span>
-<a class="br" href="#L325" id="L325">325 </a>    <span class="hid">SQ_AFF</span>  = <span class="num">1U</span> &lt;&lt; <span class="num">2</span>,
-<a class="br" href="#L326" id="L326">326 </a>
-<a class="br" href="#L327" id="L327">327 </a>    <span class="com">/**
-<a class="br" href="#L328" id="L328">328 </a>     * `IORING_SETUP_CQSIZE`
-<a class="br" href="#L329" id="L329">329 </a>     *
-<a class="br" href="#L330" id="L330">330 </a>     * Create the completion queue with struct io_uring_params.cq_entries entries.  The value must
-<a class="br" href="#L331" id="L331">331 </a>     * be greater than entries, and may be rounded up to the next power-of-two.
-<a class="br" href="#L332" id="L332">332 </a>     */</span>
-<a class="br" href="#L333" id="L333">333 </a>    <span class="hid">CQSIZE</span>  = <span class="num">1U</span> &lt;&lt; <span class="num">3</span>,
-<a class="br" href="#L334" id="L334">334 </a>}
-<a class="br" href="#L335" id="L335">335 </a>
-<a class="br" href="#L336" id="L336">336 </a><span class="com">/// `io_uring_params-&gt;features` flags</span>
-<a class="br" href="#L337" id="L337">337 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L337" title="during.io_uring.SetupFeatures">SetupFeatures</a> : <span class="type">uint</span>
-<a class="br" href="#L338" id="L338">338 </a>{
-<a class="br" href="#L339" id="L339">339 </a>    <span class="hid">NONE</span>        = <span class="num">0</span>,
-<a class="br" href="#L340" id="L340">340 </a>    <span class="hid">SINGLE_MMAP</span> = <span class="num">1U</span> &lt;&lt; <span class="num">0</span>,  <span class="com">/// `IORING_FEAT_SINGLE_MMAP`</span>
-<a class="br" href="#L341" id="L341">341 </a>    <span class="hid">NODROP</span>      = <span class="num">1U</span> &lt;&lt; <span class="num">1</span>   <span class="com">/// `IORING_FEAT_NODROP`</span>
-<a class="br" href="#L342" id="L342">342 </a>}
-<a class="br" href="#L343" id="L343">343 </a>
-<a class="br" href="#L344" id="L344">344 </a><span class="com">/**
-<a class="br" href="#L345" id="L345">345 </a> * Filled with the offset for mmap(2)
-<a class="br" href="#L346" id="L346">346 </a> *
-<a class="br" href="#L347" id="L347">347 </a> * C API: `struct io_sqring_offsets`
-<a class="br" href="#L348" id="L348">348 </a> */</span>
-<a class="br" href="#L349" id="L349">349 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L349" title="during.io_uring.SubmissionQueueRingOffsets">SubmissionQueueRingOffsets</a>
-<a class="br" href="#L350" id="L350">350 </a>{
-<a class="br" href="#L351" id="L351">351 </a>    <span class="com">/// Incremented by kernel after entry at `head` was processed.</span>
-<a class="br" href="#L352" id="L352">352 </a>    <span class="com">/// Pending submissions: [head..tail]</span>
-<a class="br" href="#L353" id="L353">353 </a>    <span class="type">uint</span> <span class="hid">head</span>;
-<a class="br" href="#L354" id="L354">354 </a>
-<a class="br" href="#L355" id="L355">355 </a>    <span class="com">/// Modified by user space when new entry was queued; points to next</span>
-<a class="br" href="#L356" id="L356">356 </a>    <span class="com">/// entry user space is going to fill.</span>
-<a class="br" href="#L357" id="L357">357 </a>    <span class="type">uint</span> <span class="hid">tail</span>;
-<a class="br" href="#L358" id="L358">358 </a>
-<a class="br" href="#L359" id="L359">359 </a>    <span class="com">/// value `value_at(self.ring_entries) - 1`</span>
-<a class="br" href="#L360" id="L360">360 </a>    <span class="com">/// mask for indices at `head` and `tail` (don't delete masked bits!</span>
-<a class="br" href="#L361" id="L361">361 </a>    <span class="com">/// `head` and `tail` can point to the same entry, but if they are</span>
-<a class="br" href="#L362" id="L362">362 </a>    <span class="com">/// not exactly equal it implies the ring is full, and if they are</span>
-<a class="br" href="#L363" id="L363">363 </a>    <span class="com">/// exactly equal the ring is empty.)</span>
-<a class="br" href="#L364" id="L364">364 </a>    <span class="type">uint</span> <span class="hid">ring_mask</span>;
-<a class="br" href="#L365" id="L365">365 </a>
-<a class="br" href="#L366" id="L366">366 </a>    <span class="com">/// value same as SetupParameters.sq_entries, power of 2.</span>
-<a class="br" href="#L367" id="L367">367 </a>    <span class="type">uint</span> <span class="hid">ring_entries</span>;
-<a class="br" href="#L368" id="L368">368 </a>
-<a class="br" href="#L369" id="L369">369 </a>    <span class="com">/// SubmissionQueueFlags</span>
-<a class="br" href="#L370" id="L370">370 </a>    <a class="hid" href="during.io_uring.d.html#L382" title="during.io_uring.SubmissionQueueFlags">SubmissionQueueFlags</a> <span class="hid">flags</span>;
-<a class="br" href="#L371" id="L371">371 </a>
-<a class="br" href="#L372" id="L372">372 </a>    <span class="com">/// number of (invalid) entries that were dropped; entries are</span>
-<a class="br" href="#L373" id="L373">373 </a>    <span class="com">/// invalid if their index (in `array`) is out of bounds.</span>
-<a class="br" href="#L374" id="L374">374 </a>    <span class="type">uint</span> <span class="hid">dropped</span>;
-<a class="br" href="#L375" id="L375">375 </a>
-<a class="br" href="#L376" id="L376">376 </a>    <span class="com">/// index into array of `SubmissionEntry`s at offset `SUBMISSION_QUEUE_ENTRIES_OFFSET` in mmap()</span>
-<a class="br" href="#L377" id="L377">377 </a>    <span class="type">uint</span> <span class="hid">array</span>;
-<a class="br" href="#L378" id="L378">378 </a>
-<a class="br" href="#L379" id="L379">379 </a>    <span class="kwrd">private</span> <span class="type">uint</span>[<span class="num">3</span>] <span class="hid">resv</span>; <span class="com">// reserved</span>
-<a class="br" href="#L380" id="L380">380 </a>}
-<a class="br" href="#L381" id="L381">381 </a>
-<a class="br" href="#L382" id="L382">382 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L382" title="during.io_uring.SubmissionQueueFlags">SubmissionQueueFlags</a>: <span class="type">uint</span>
-<a class="br" href="#L383" id="L383">383 </a>{
-<a class="br" href="#L384" id="L384">384 </a>    <span class="hid">NONE</span>        = <span class="num">0</span>,
-<a class="br" href="#L385" id="L385">385 </a>
-<a class="br" href="#L386" id="L386">386 </a>    <span class="com">/// `IORING_SQ_NEED_WAKEUP`: needs io_uring_enter wakeup</span>
-<a class="br" href="#L387" id="L387">387 </a>    <span class="com">/// set by kernel poll thread when it goes sleeping, and reset on wakeup</span>
-<a class="br" href="#L388" id="L388">388 </a>    <span class="hid">NEED_WAKEUP</span> = <span class="num">1U</span> &lt;&lt; <span class="num">0</span>
-<a class="br" href="#L389" id="L389">389 </a>}
+<a class="br" href="#L255" id="L255">255 </a>    <span class="com">/// (output) allocated entries in completion queue</span>
+<a class="br" href="#L256" id="L256">256 </a>    <span class="type">uint</span>                        <span class="hid">cq_entries</span>;
+<a class="br" href="#L257" id="L257">257 </a>
+<a class="br" href="#L258" id="L258">258 </a>    <a class="hid" href="during.io_uring.d.html#L274" title="during.io_uring.SetupFlags">SetupFlags</a>                  <span class="hid">flags</span>;          <span class="com">/// (input)</span>
+<a class="br" href="#L259" id="L259">259 </a>
+<a class="br" href="#L260" id="L260">260 </a>    <span class="com">/// (input) used if SQ_AFF and SQPOLL flags are active to pin poll thread to specific cpu.</span>
+<a class="br" href="#L261" id="L261">261 </a>    <span class="com">/// right now always checked in kernel for &quot;possible cpu&quot;.</span>
+<a class="br" href="#L262" id="L262">262 </a>    <span class="type">uint</span>                        <span class="hid">sq_thread_cpu</span>;
+<a class="br" href="#L263" id="L263">263 </a>
+<a class="br" href="#L264" id="L264">264 </a>    <span class="com">/// (input) used if SQPOLL flag is active; timeout in milliseconds</span>
+<a class="br" href="#L265" id="L265">265 </a>    <span class="com">/// until kernel poll thread goes to sleep.</span>
+<a class="br" href="#L266" id="L266">266 </a>    <span class="type">uint</span>                        <span class="hid">sq_thread_idle</span>;
+<a class="br" href="#L267" id="L267">267 </a>    <a class="hid" href="during.io_uring.d.html#L342" title="during.io_uring.SetupFeatures">SetupFeatures</a>               <span class="hid">features</span>;
+<a class="br" href="#L268" id="L268">268 </a>    <span class="kwrd">private</span> <span class="type">uint</span>[<span class="num">4</span>]             <span class="hid">resv</span>;           <span class="com">// reserved</span>
+<a class="br" href="#L269" id="L269">269 </a>    <a class="hid" href="during.io_uring.d.html#L354" title="during.io_uring.SubmissionQueueRingOffsets">SubmissionQueueRingOffsets</a>  <span class="hid">sq_off</span>;         <span class="com">/// (output) submission queue ring data field offsets</span>
+<a class="br" href="#L270" id="L270">270 </a>    <a class="hid" href="during.io_uring.d.html#L401" title="during.io_uring.CompletionQueueRingOffsets">CompletionQueueRingOffsets</a>  <span class="hid">cq_off</span>;         <span class="com">/// (output) completion queue ring data field offsets</span>
+<a class="br" href="#L271" id="L271">271 </a>}
+<a class="br" href="#L272" id="L272">272 </a>
+<a class="br" href="#L273" id="L273">273 </a><span class="com">/// `io_uring_setup()` flags</span>
+<a class="br" href="#L274" id="L274">274 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L274" title="during.io_uring.SetupFlags">SetupFlags</a> : <span class="type">uint</span>
+<a class="br" href="#L275" id="L275">275 </a>{
+<a class="br" href="#L276" id="L276">276 </a>    <span class="com">/// No flags set</span>
+<a class="br" href="#L277" id="L277">277 </a>    <span class="hid">NONE</span>    = <span class="num">0</span>,
+<a class="br" href="#L278" id="L278">278 </a>
+<a class="br" href="#L279" id="L279">279 </a>    <span class="com">/**
+<a class="br" href="#L280" id="L280">280 </a>     * `IORING_SETUP_IOPOLL`
+<a class="br" href="#L281" id="L281">281 </a>     *
+<a class="br" href="#L282" id="L282">282 </a>     * Perform busy-waiting for an I/O completion, as opposed to getting notifications via an
+<a class="br" href="#L283" id="L283">283 </a>     * asynchronous IRQ (Interrupt Request).  The file system (if any) and block device must
+<a class="br" href="#L284" id="L284">284 </a>     * support polling in order for  this  to  work. Busy-waiting  provides  lower latency, but may
+<a class="br" href="#L285" id="L285">285 </a>     * consume more CPU resources than interrupt driven I/O.  Currently, this feature is usable
+<a class="br" href="#L286" id="L286">286 </a>     * only on a file descriptor opened using the O_DIRECT flag.  When a read or write is submitted
+<a class="br" href="#L287" id="L287">287 </a>     * to a polled context, the application must poll for completions on the CQ ring by calling
+<a class="br" href="#L288" id="L288">288 </a>     * io_uring_enter(2).  It is illegal to mix and match polled and non-polled I/O on an io_uring
+<a class="br" href="#L289" id="L289">289 </a>     * instance.
+<a class="br" href="#L290" id="L290">290 </a>     */</span>
+<a class="br" href="#L291" id="L291">291 </a>    <span class="hid">IOPOLL</span>  = <span class="num">1U</span> &lt;&lt; <span class="num">0</span>,
+<a class="br" href="#L292" id="L292">292 </a>
+<a class="br" href="#L293" id="L293">293 </a>    <span class="com">/**
+<a class="br" href="#L294" id="L294">294 </a>     * `IORING_SETUP_SQPOLL`
+<a class="br" href="#L295" id="L295">295 </a>     *
+<a class="br" href="#L296" id="L296">296 </a>     * When this flag is specified, a kernel thread is created to perform submission queue polling.
+<a class="br" href="#L297" id="L297">297 </a>     * An io_uring instance configured in this way enables an application to issue I/O without ever
+<a class="br" href="#L298" id="L298">298 </a>     * context switching into the kernel.
+<a class="br" href="#L299" id="L299">299 </a>     * By using the submission queue to fill in new submission queue entries and watching for
+<a class="br" href="#L300" id="L300">300 </a>     * completions on the completion queue, the application can submit and reap I/Os without doing
+<a class="br" href="#L301" id="L301">301 </a>     * a single system call.
+<a class="br" href="#L302" id="L302">302 </a>     * If the kernel thread is idle for more than sq_thread_idle microseconds, it will set the
+<a class="br" href="#L303" id="L303">303 </a>     * IORING_SQ_NEED_WAKEUP bit in the flags field of the struct io_sq_ring. When this happens,
+<a class="br" href="#L304" id="L304">304 </a>     * the application must call io_uring_enter(2) to wake the kernel thread. If I/O is kept busy,
+<a class="br" href="#L305" id="L305">305 </a>     * the kernel thread will never sleep. An application making use of this feature will need to
+<a class="br" href="#L306" id="L306">306 </a>     * guard the io_uring_enter(2) call with  the  following  code sequence:
+<a class="br" href="#L307" id="L307">307 </a>     *
+<a class="br" href="#L308" id="L308">308 </a>     *     ````
+<a class="br" href="#L309" id="L309">309 </a>     *     // Ensure that the wakeup flag is read after the tail pointer has been written.
+<a class="br" href="#L310" id="L310">310 </a>     *     smp_mb();
+<a class="br" href="#L311" id="L311">311 </a>     *     if (*sq_ring-&gt;flags &amp; IORING_SQ_NEED_WAKEUP)
+<a class="br" href="#L312" id="L312">312 </a>     *         io_uring_enter(fd, 0, 0, IORING_ENTER_SQ_WAKEUP);
+<a class="br" href="#L313" id="L313">313 </a>     *     ```
+<a class="br" href="#L314" id="L314">314 </a>     *
+<a class="br" href="#L315" id="L315">315 </a>     * where sq_ring is a submission queue ring setup using the struct io_sqring_offsets described below.
+<a class="br" href="#L316" id="L316">316 </a>     *
+<a class="br" href="#L317" id="L317">317 </a>     * To  successfully  use this feature, the application must register a set of files to be used for
+<a class="br" href="#L318" id="L318">318 </a>     * IO through io_uring_register(2) using the IORING_REGISTER_FILES opcode. Failure to do so will
+<a class="br" href="#L319" id="L319">319 </a>     * result in submitted IO being errored with EBADF.
+<a class="br" href="#L320" id="L320">320 </a>     */</span>
+<a class="br" href="#L321" id="L321">321 </a>    <span class="hid">SQPOLL</span>  = <span class="num">1U</span> &lt;&lt; <span class="num">1</span>,
+<a class="br" href="#L322" id="L322">322 </a>
+<a class="br" href="#L323" id="L323">323 </a>    <span class="com">/**
+<a class="br" href="#L324" id="L324">324 </a>     * `IORING_SETUP_SQ_AFF`
+<a class="br" href="#L325" id="L325">325 </a>     *
+<a class="br" href="#L326" id="L326">326 </a>     *  If this flag is specified, then the poll thread will be bound to the cpu set in the
+<a class="br" href="#L327" id="L327">327 </a>     *  sq_thread_cpu field of the struct io_uring_params.  This flag is only meaningful when
+<a class="br" href="#L328" id="L328">328 </a>     *  IORING_SETUP_SQPOLL is specified.
+<a class="br" href="#L329" id="L329">329 </a>     */</span>
+<a class="br" href="#L330" id="L330">330 </a>    <span class="hid">SQ_AFF</span>  = <span class="num">1U</span> &lt;&lt; <span class="num">2</span>,
+<a class="br" href="#L331" id="L331">331 </a>
+<a class="br" href="#L332" id="L332">332 </a>    <span class="com">/**
+<a class="br" href="#L333" id="L333">333 </a>     * `IORING_SETUP_CQSIZE`
+<a class="br" href="#L334" id="L334">334 </a>     *
+<a class="br" href="#L335" id="L335">335 </a>     * Create the completion queue with struct io_uring_params.cq_entries entries.  The value must
+<a class="br" href="#L336" id="L336">336 </a>     * be greater than entries, and may be rounded up to the next power-of-two.
+<a class="br" href="#L337" id="L337">337 </a>     */</span>
+<a class="br" href="#L338" id="L338">338 </a>    <span class="hid">CQSIZE</span>  = <span class="num">1U</span> &lt;&lt; <span class="num">3</span>,
+<a class="br" href="#L339" id="L339">339 </a>}
+<a class="br" href="#L340" id="L340">340 </a>
+<a class="br" href="#L341" id="L341">341 </a><span class="com">/// `io_uring_params-&gt;features` flags</span>
+<a class="br" href="#L342" id="L342">342 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L342" title="during.io_uring.SetupFeatures">SetupFeatures</a> : <span class="type">uint</span>
+<a class="br" href="#L343" id="L343">343 </a>{
+<a class="br" href="#L344" id="L344">344 </a>    <span class="hid">NONE</span>        = <span class="num">0</span>,
+<a class="br" href="#L345" id="L345">345 </a>    <span class="hid">SINGLE_MMAP</span> = <span class="num">1U</span> &lt;&lt; <span class="num">0</span>,  <span class="com">/// `IORING_FEAT_SINGLE_MMAP`</span>
+<a class="br" href="#L346" id="L346">346 </a>    <span class="hid">NODROP</span>      = <span class="num">1U</span> &lt;&lt; <span class="num">1</span>   <span class="com">/// `IORING_FEAT_NODROP`</span>
+<a class="br" href="#L347" id="L347">347 </a>}
+<a class="br" href="#L348" id="L348">348 </a>
+<a class="br" href="#L349" id="L349">349 </a><span class="com">/**
+<a class="br" href="#L350" id="L350">350 </a> * Filled with the offset for mmap(2)
+<a class="br" href="#L351" id="L351">351 </a> *
+<a class="br" href="#L352" id="L352">352 </a> * C API: `struct io_sqring_offsets`
+<a class="br" href="#L353" id="L353">353 </a> */</span>
+<a class="br" href="#L354" id="L354">354 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L354" title="during.io_uring.SubmissionQueueRingOffsets">SubmissionQueueRingOffsets</a>
+<a class="br" href="#L355" id="L355">355 </a>{
+<a class="br" href="#L356" id="L356">356 </a>    <span class="com">/// Incremented by kernel after entry at `head` was processed.</span>
+<a class="br" href="#L357" id="L357">357 </a>    <span class="com">/// Pending submissions: [head..tail]</span>
+<a class="br" href="#L358" id="L358">358 </a>    <span class="type">uint</span> <span class="hid">head</span>;
+<a class="br" href="#L359" id="L359">359 </a>
+<a class="br" href="#L360" id="L360">360 </a>    <span class="com">/// Modified by user space when new entry was queued; points to next</span>
+<a class="br" href="#L361" id="L361">361 </a>    <span class="com">/// entry user space is going to fill.</span>
+<a class="br" href="#L362" id="L362">362 </a>    <span class="type">uint</span> <span class="hid">tail</span>;
+<a class="br" href="#L363" id="L363">363 </a>
+<a class="br" href="#L364" id="L364">364 </a>    <span class="com">/// value `value_at(self.ring_entries) - 1`</span>
+<a class="br" href="#L365" id="L365">365 </a>    <span class="com">/// mask for indices at `head` and `tail` (don't delete masked bits!</span>
+<a class="br" href="#L366" id="L366">366 </a>    <span class="com">/// `head` and `tail` can point to the same entry, but if they are</span>
+<a class="br" href="#L367" id="L367">367 </a>    <span class="com">/// not exactly equal it implies the ring is full, and if they are</span>
+<a class="br" href="#L368" id="L368">368 </a>    <span class="com">/// exactly equal the ring is empty.)</span>
+<a class="br" href="#L369" id="L369">369 </a>    <span class="type">uint</span> <span class="hid">ring_mask</span>;
+<a class="br" href="#L370" id="L370">370 </a>
+<a class="br" href="#L371" id="L371">371 </a>    <span class="com">/// value same as SetupParameters.sq_entries, power of 2.</span>
+<a class="br" href="#L372" id="L372">372 </a>    <span class="type">uint</span> <span class="hid">ring_entries</span>;
+<a class="br" href="#L373" id="L373">373 </a>
+<a class="br" href="#L374" id="L374">374 </a>    <span class="com">/// SubmissionQueueFlags</span>
+<a class="br" href="#L375" id="L375">375 </a>    <a class="hid" href="during.io_uring.d.html#L387" title="during.io_uring.SubmissionQueueFlags">SubmissionQueueFlags</a> <span class="hid">flags</span>;
+<a class="br" href="#L376" id="L376">376 </a>
+<a class="br" href="#L377" id="L377">377 </a>    <span class="com">/// number of (invalid) entries that were dropped; entries are</span>
+<a class="br" href="#L378" id="L378">378 </a>    <span class="com">/// invalid if their index (in `array`) is out of bounds.</span>
+<a class="br" href="#L379" id="L379">379 </a>    <span class="type">uint</span> <span class="hid">dropped</span>;
+<a class="br" href="#L380" id="L380">380 </a>
+<a class="br" href="#L381" id="L381">381 </a>    <span class="com">/// index into array of `SubmissionEntry`s at offset `SUBMISSION_QUEUE_ENTRIES_OFFSET` in mmap()</span>
+<a class="br" href="#L382" id="L382">382 </a>    <span class="type">uint</span> <span class="hid">array</span>;
+<a class="br" href="#L383" id="L383">383 </a>
+<a class="br" href="#L384" id="L384">384 </a>    <span class="kwrd">private</span> <span class="type">uint</span>[<span class="num">3</span>] <span class="hid">resv</span>; <span class="com">// reserved</span>
+<a class="br" href="#L385" id="L385">385 </a>}
+<a class="br" href="#L386" id="L386">386 </a>
+<a class="br" href="#L387" id="L387">387 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L387" title="during.io_uring.SubmissionQueueFlags">SubmissionQueueFlags</a>: <span class="type">uint</span>
+<a class="br" href="#L388" id="L388">388 </a>{
+<a class="br" href="#L389" id="L389">389 </a>    <span class="hid">NONE</span>        = <span class="num">0</span>,
 <a class="br" href="#L390" id="L390">390 </a>
-<a class="br" href="#L391" id="L391">391 </a><span class="com">/**
-<a class="br" href="#L392" id="L392">392 </a> * Field offsets used to map kernel structure to our.
-<a class="br" href="#L393" id="L393">393 </a> *
-<a class="br" href="#L394" id="L394">394 </a> * C API: `struct io_cqring_offsets`
-<a class="br" href="#L395" id="L395">395 </a> */</span>
-<a class="br" href="#L396" id="L396">396 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L396" title="during.io_uring.CompletionQueueRingOffsets">CompletionQueueRingOffsets</a>
-<a class="br" href="#L397" id="L397">397 </a>{
-<a class="br" href="#L398" id="L398">398 </a>    <span class="com">/// incremented by user space after entry at `head` was processed.</span>
-<a class="br" href="#L399" id="L399">399 </a>    <span class="com">/// available entries for processing: [head..tail]</span>
-<a class="br" href="#L400" id="L400">400 </a>    <span class="type">uint</span> <span class="hid">head</span>;
-<a class="br" href="#L401" id="L401">401 </a>
-<a class="br" href="#L402" id="L402">402 </a>    <span class="com">/// modified by kernel when new entry was created; points to next</span>
-<a class="br" href="#L403" id="L403">403 </a>    <span class="com">/// entry kernel is going to fill.</span>
-<a class="br" href="#L404" id="L404">404 </a>    <span class="type">uint</span> <span class="hid">tail</span>;
-<a class="br" href="#L405" id="L405">405 </a>
-<a class="br" href="#L406" id="L406">406 </a>    <span class="com">/// value `value_at(ring_entries) - 1`</span>
-<a class="br" href="#L407" id="L407">407 </a>    <span class="com">/// mask for indices at `head` and `tail` (don't delete masked bits!</span>
-<a class="br" href="#L408" id="L408">408 </a>    <span class="com">/// `head` and `tail` can point to the same entry, but if they are</span>
-<a class="br" href="#L409" id="L409">409 </a>    <span class="com">/// not exactly equal it implies the ring is full, and if they are</span>
-<a class="br" href="#L410" id="L410">410 </a>    <span class="com">/// exactly equal the ring is empty.)</span>
-<a class="br" href="#L411" id="L411">411 </a>    <span class="type">uint</span> <span class="hid">ring_mask</span>;
-<a class="br" href="#L412" id="L412">412 </a>
-<a class="br" href="#L413" id="L413">413 </a>    <span class="com">/// value same as SetupParameters.cq_entries, power of 2.</span>
-<a class="br" href="#L414" id="L414">414 </a>    <span class="type">uint</span> <span class="hid">ring_entries</span>;
-<a class="br" href="#L415" id="L415">415 </a>
-<a class="br" href="#L416" id="L416">416 </a>    <span class="com">/// incremented by the kernel every time it failed to queue a</span>
-<a class="br" href="#L417" id="L417">417 </a>	<span class="com">/// completion event because the ring was full.</span>
-<a class="br" href="#L418" id="L418">418 </a>    <span class="type">uint</span> <span class="hid">overflow</span>;
-<a class="br" href="#L419" id="L419">419 </a>
-<a class="br" href="#L420" id="L420">420 </a>    <span class="com">/// Offset to array of completion queue entries</span>
-<a class="br" href="#L421" id="L421">421 </a>    <span class="type">uint</span> <span class="hid">cqes</span>;
-<a class="br" href="#L422" id="L422">422 </a>
-<a class="br" href="#L423" id="L423">423 </a>    <span class="kwrd">private</span> <span class="type">ulong</span>[<span class="num">2</span>] <span class="hid">resv</span>; <span class="com">// reserved</span>
-<a class="br" href="#L424" id="L424">424 </a>}
-<a class="br" href="#L425" id="L425">425 </a>
-<a class="br" href="#L426" id="L426">426 </a><span class="com">/// io_uring_register(2) opcodes and arguments</span>
-<a class="br" href="#L427" id="L427">427 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L427" title="during.io_uring.RegisterOpCode">RegisterOpCode</a> : <span class="type">uint</span>
-<a class="br" href="#L428" id="L428">428 </a>{
-<a class="br" href="#L429" id="L429">429 </a>    <span class="com">/**
-<a class="br" href="#L430" id="L430">430 </a>     * arg points to a struct iovec array of nr_args entries.  The buffers associated with the
-<a class="br" href="#L431" id="L431">431 </a>     * iovecs will be locked in memory and charged against the user's RLIMIT_MEMLOCK resource limit.
-<a class="br" href="#L432" id="L432">432 </a>     * See getrlimit(2) for more  informa&#8208; tion.   Additionally,  there  is a size limit of 1GiB per
-<a class="br" href="#L433" id="L433">433 </a>     * buffer.  Currently, the buffers must be anonymous, non-file-backed memory, such as that
-<a class="br" href="#L434" id="L434">434 </a>     * returned by malloc(3) or mmap(2) with the MAP_ANONYMOUS flag set.  It is expected that this
-<a class="br" href="#L435" id="L435">435 </a>     * limitation will be lifted in the future. Huge pages are supported as well. Note that the
-<a class="br" href="#L436" id="L436">436 </a>     * entire huge page will be pinned in the kernel, even if only a portion of it is used.
-<a class="br" href="#L437" id="L437">437 </a>     *
-<a class="br" href="#L438" id="L438">438 </a>     * After a successful call, the supplied buffers are mapped into the kernel and eligible for
-<a class="br" href="#L439" id="L439">439 </a>     * I/O.  To make use of them, the application must specify the IORING_OP_READ_FIXED or
-<a class="br" href="#L440" id="L440">440 </a>     * IORING_OP_WRITE_FIXED opcodes in the submis&#8208; sion  queue  entry (see the struct io_uring_sqe
-<a class="br" href="#L441" id="L441">441 </a>     * definition in io_uring_enter(2)), and set the buf_index field to the desired buffer index.
-<a class="br" href="#L442" id="L442">442 </a>     * The memory range described by the submission queue entry's addr and len fields must fall
-<a class="br" href="#L443" id="L443">443 </a>     * within the indexed buffer.
-<a class="br" href="#L444" id="L444">444 </a>     *
-<a class="br" href="#L445" id="L445">445 </a>     * It is perfectly valid to setup a large buffer and then only use part of it for an I/O, as
-<a class="br" href="#L446" id="L446">446 </a>     * long as the range is within the originally mapped region.
-<a class="br" href="#L447" id="L447">447 </a>     *
-<a class="br" href="#L448" id="L448">448 </a>     * An application can increase or decrease the size or number of registered buffers by first
-<a class="br" href="#L449" id="L449">449 </a>     * unregistering the existing buffers, and then issuing a new call to io_uring_register() with
-<a class="br" href="#L450" id="L450">450 </a>     * the new buffers.
-<a class="br" href="#L451" id="L451">451 </a>     *
-<a class="br" href="#L452" id="L452">452 </a>     * An application need not unregister buffers explicitly before shutting down the io_uring
-<a class="br" href="#L453" id="L453">453 </a>     * instance.
-<a class="br" href="#L454" id="L454">454 </a>     */</span>
-<a class="br" href="#L455" id="L455">455 </a>    <span class="hid">REGISTER_BUFFERS</span>        = <span class="num">0</span>,    <span class="com">/// `IORING_REGISTER_BUFFERS`</span>
-<a class="br" href="#L456" id="L456">456 </a>
-<a class="br" href="#L457" id="L457">457 </a>    <span class="com">/**
-<a class="br" href="#L458" id="L458">458 </a>     * This operation takes no argument, and arg must be passed as NULL.  All previously registered
-<a class="br" href="#L459" id="L459">459 </a>     * buffers associated with the io_uring instance will be released.
-<a class="br" href="#L460" id="L460">460 </a>     */</span>
-<a class="br" href="#L461" id="L461">461 </a>    <span class="hid">UNREGISTER_BUFFERS</span>      = <span class="num">1</span>,    <span class="com">/// `IORING_UNREGISTER_BUFFERS`</span>
-<a class="br" href="#L462" id="L462">462 </a>
-<a class="br" href="#L463" id="L463">463 </a>    <span class="com">/**
-<a class="br" href="#L464" id="L464">464 </a>     * Register files for I/O.  arg contains a pointer to an array of nr_args file descriptors
-<a class="br" href="#L465" id="L465">465 </a>     * (signed 32 bit integers).
-<a class="br" href="#L466" id="L466">466 </a>     *
-<a class="br" href="#L467" id="L467">467 </a>     * To make use of the registered files, the IOSQE_FIXED_FILE flag must be set in the flags
-<a class="br" href="#L468" id="L468">468 </a>     * member of the struct io_uring_sqe, and the fd member is set to the index of the file in the
-<a class="br" href="#L469" id="L469">469 </a>     * file descriptor array.
-<a class="br" href="#L470" id="L470">470 </a>     *
-<a class="br" href="#L471" id="L471">471 </a>     * Files are automatically unregistered when the io_uring instance is torn down. An application
-<a class="br" href="#L472" id="L472">472 </a>     * need only unregister if it wishes to register a new set of fds.
-<a class="br" href="#L473" id="L473">473 </a>     */</span>
-<a class="br" href="#L474" id="L474">474 </a>    <span class="hid">REGISTER_FILES</span>          = <span class="num">2</span>,    <span class="com">/// `IORING_REGISTER_FILES`</span>
-<a class="br" href="#L475" id="L475">475 </a>
-<a class="br" href="#L476" id="L476">476 </a>    <span class="com">/**
-<a class="br" href="#L477" id="L477">477 </a>     * This operation requires no argument, and arg must be passed as NULL.  All previously
-<a class="br" href="#L478" id="L478">478 </a>     * registered files associated with the io_uring instance will be unregistered.
-<a class="br" href="#L479" id="L479">479 </a>     */</span>
-<a class="br" href="#L480" id="L480">480 </a>    <span class="hid">UNREGISTER_FILES</span>        = <span class="num">3</span>,    <span class="com">/// `IORING_UNREGISTER_FILES`</span>
-<a class="br" href="#L481" id="L481">481 </a>
-<a class="br" href="#L482" id="L482">482 </a>    <span class="com">///</span>
-<a class="br" href="#L483" id="L483">483 </a>    <span class="hid">REGISTER_EVENTFD</span>        = <span class="num">4</span>,    <span class="com">/// `IORING_REGISTER_EVENTFD`</span>
-<a class="br" href="#L484" id="L484">484 </a>
-<a class="br" href="#L485" id="L485">485 </a>    <span class="com">///</span>
-<a class="br" href="#L486" id="L486">486 </a>    <span class="hid">UNREGISTER_EVENTFD</span>      = <span class="num">5</span>,    <span class="com">/// `IORING_UNREGISTER_EVENTFD`</span>
-<a class="br" href="#L487" id="L487">487 </a>
-<a class="br" href="#L488" id="L488">488 </a>    <span class="com">///</span>
-<a class="br" href="#L489" id="L489">489 </a>    <span class="hid">REGISTER_FILES_UPDATE</span>   = <span class="num">6</span>,    <span class="com">/// `IORING_REGISTER_FILES_UPDATE`</span>
-<a class="br" href="#L490" id="L490">490 </a>}
-<a class="br" href="#L491" id="L491">491 </a>
-<a class="br" href="#L492" id="L492">492 </a><span class="com">/// io_uring_enter(2) flags</span>
-<a class="br" href="#L493" id="L493">493 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L493" title="during.io_uring.EnterFlags">EnterFlags</a>: <span class="type">uint</span>
-<a class="br" href="#L494" id="L494">494 </a>{
-<a class="br" href="#L495" id="L495">495 </a>    <span class="hid">NONE</span>        = <span class="num">0</span>,
-<a class="br" href="#L496" id="L496">496 </a>    <span class="hid">GETEVENTS</span>   = (<span class="num">1</span> &lt;&lt; <span class="num">0</span>), <span class="com">/// `IORING_ENTER_GETEVENTS`</span>
-<a class="br" href="#L497" id="L497">497 </a>    <span class="hid">SQ_WAKEUP</span>   = (<span class="num">1</span> &lt;&lt; <span class="num">1</span>), <span class="com">/// `IORING_ENTER_SQ_WAKEUP`</span>
-<a class="br" href="#L498" id="L498">498 </a>}
-<a class="br" href="#L499" id="L499">499 </a>
-<a class="br" href="#L500" id="L500">500 </a><span class="com">//TODO: Used with io_uring_register(REGISTER_FILES_UPDATE)</span>
-<a class="br" href="#L501" id="L501">501 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L501" title="during.io_uring.io_uring_files_update">io_uring_files_update</a>
-<a class="br" href="#L502" id="L502">502 </a>{
-<a class="br" href="#L503" id="L503">503 </a>    <span class="type">uint</span> <span class="hid">offset</span>;
-<a class="br" href="#L504" id="L504">504 </a>    <span class="type">int</span>* <span class="hid">fds</span>;
-<a class="br" href="#L505" id="L505">505 </a>}
-<a class="br" href="#L506" id="L506">506 </a>
-<a class="br" href="#L507" id="L507">507 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L223" title="during.io_uring.CompletionEntry">CompletionEntry.sizeof</a> == <span class="num">16</span>);
-<a class="br" href="#L508" id="L508">508 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L396" title="during.io_uring.CompletionQueueRingOffsets">CompletionQueueRingOffsets.sizeof</a> == <span class="num">40</span>);
-<a class="br" href="#L509" id="L509">509 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L235" title="during.io_uring.SetupParameters">SetupParameters.sizeof</a> == <span class="num">120</span>);
-<a class="br" href="#L510" id="L510">510 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L22" title="during.io_uring.SubmissionEntry">SubmissionEntry.sizeof</a> == <span class="num">64</span>);
-<a class="br" href="#L511" id="L511">511 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L171" title="during.io_uring.SubmissionEntryExtraData">SubmissionEntryExtraData.sizeof</a> == <span class="num">24</span>);
-<a class="br" href="#L512" id="L512">512 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L47" title="during.io_uring.SubmissionEntryOperationFlags">SubmissionEntryOperationFlags.sizeof</a> == <span class="num">4</span>);
-<a class="br" href="#L513" id="L513">513 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L349" title="during.io_uring.SubmissionQueueRingOffsets">SubmissionQueueRingOffsets.sizeof</a> == <span class="num">40</span>);
-<a class="br" href="#L514" id="L514">514 </a>
-<a class="br" href="#L515" id="L515">515 </a><span class="kwrd">private</span>
-<a class="br" href="#L516" id="L516">516 </a>{
-<a class="br" href="#L517" id="L517">517 </a>    <span class="com">// Syscalls</span>
-<a class="br" href="#L518" id="L518">518 </a>    <span class="kwrd">enum</span>
-<a class="br" href="#L519" id="L519">519 </a>    {
-<a class="br" href="#L520" id="L520">520 </a>        <a class="hid" href="during.io_uring.d.html#L518" title="during.io_uring.SYS_io_uring_setup">SYS_io_uring_setup</a>       = <span class="num">425</span>,
-<a class="br" href="#L521" id="L521">521 </a>        <span class="hid">SYS_io_uring_enter</span>       = <span class="num">426</span>,
-<a class="br" href="#L522" id="L522">522 </a>        <span class="hid">SYS_io_uring_register</span>    = <span class="num">427</span>
-<a class="br" href="#L523" id="L523">523 </a>    }
-<a class="br" href="#L524" id="L524">524 </a>}
-<a class="br" href="#L525" id="L525">525 </a>
-<a class="br" href="#L526" id="L526">526 </a><span class="com">/**
-<a class="br" href="#L527" id="L527">527 </a> * Setup a context for performing asynchronous I/O.
-<a class="br" href="#L528" id="L528">528 </a> *
-<a class="br" href="#L529" id="L529">529 </a> * The `io_uring_setup()` system call sets up a submission queue (SQ) and completion queue (CQ) with
-<a class="br" href="#L530" id="L530">530 </a> * at least entries entries, and returns a file descriptor which can be used to perform subsequent
-<a class="br" href="#L531" id="L531">531 </a> * operations on the io_uring instance. The submission and completion queues are shared between
-<a class="br" href="#L532" id="L532">532 </a> * userspace and the kernel, which eliminates the need to copy data when initiating and completing
-<a class="br" href="#L533" id="L533">533 </a> * I/O.
-<a class="br" href="#L534" id="L534">534 </a> *
-<a class="br" href="#L535" id="L535">535 </a> * See_Also: `io_uring_setup(2)`
-<a class="br" href="#L536" id="L536">536 </a> *
-<a class="br" href="#L537" id="L537">537 </a> * Params:
-<a class="br" href="#L538" id="L538">538 </a> *   entries = Defines how many entries can submission queue hold.
-<a class="br" href="#L539" id="L539">539 </a> *   p = `SetupParameters`
-<a class="br" href="#L540" id="L540">540 </a> *
-<a class="br" href="#L541" id="L541">541 </a> * Returns:
-<a class="br" href="#L542" id="L542">542 </a> *     `io_uring_setup(2)` returns a new file descriptor on success. The application may then provide
-<a class="br" href="#L543" id="L543">543 </a> *     the file descriptor in a subsequent `mmap(2)` call to map the submission and completion queues,
-<a class="br" href="#L544" id="L544">544 </a> *     or to the `io_uring_register(2)` or `io_uring_enter(2)` system calls.
+<a class="br" href="#L391" id="L391">391 </a>    <span class="com">/// `IORING_SQ_NEED_WAKEUP`: needs io_uring_enter wakeup</span>
+<a class="br" href="#L392" id="L392">392 </a>    <span class="com">/// set by kernel poll thread when it goes sleeping, and reset on wakeup</span>
+<a class="br" href="#L393" id="L393">393 </a>    <span class="hid">NEED_WAKEUP</span> = <span class="num">1U</span> &lt;&lt; <span class="num">0</span>
+<a class="br" href="#L394" id="L394">394 </a>}
+<a class="br" href="#L395" id="L395">395 </a>
+<a class="br" href="#L396" id="L396">396 </a><span class="com">/**
+<a class="br" href="#L397" id="L397">397 </a> * Field offsets used to map kernel structure to our.
+<a class="br" href="#L398" id="L398">398 </a> *
+<a class="br" href="#L399" id="L399">399 </a> * C API: `struct io_cqring_offsets`
+<a class="br" href="#L400" id="L400">400 </a> */</span>
+<a class="br" href="#L401" id="L401">401 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L401" title="during.io_uring.CompletionQueueRingOffsets">CompletionQueueRingOffsets</a>
+<a class="br" href="#L402" id="L402">402 </a>{
+<a class="br" href="#L403" id="L403">403 </a>    <span class="com">/// incremented by user space after entry at `head` was processed.</span>
+<a class="br" href="#L404" id="L404">404 </a>    <span class="com">/// available entries for processing: [head..tail]</span>
+<a class="br" href="#L405" id="L405">405 </a>    <span class="type">uint</span> <span class="hid">head</span>;
+<a class="br" href="#L406" id="L406">406 </a>
+<a class="br" href="#L407" id="L407">407 </a>    <span class="com">/// modified by kernel when new entry was created; points to next</span>
+<a class="br" href="#L408" id="L408">408 </a>    <span class="com">/// entry kernel is going to fill.</span>
+<a class="br" href="#L409" id="L409">409 </a>    <span class="type">uint</span> <span class="hid">tail</span>;
+<a class="br" href="#L410" id="L410">410 </a>
+<a class="br" href="#L411" id="L411">411 </a>    <span class="com">/// value `value_at(ring_entries) - 1`</span>
+<a class="br" href="#L412" id="L412">412 </a>    <span class="com">/// mask for indices at `head` and `tail` (don't delete masked bits!</span>
+<a class="br" href="#L413" id="L413">413 </a>    <span class="com">/// `head` and `tail` can point to the same entry, but if they are</span>
+<a class="br" href="#L414" id="L414">414 </a>    <span class="com">/// not exactly equal it implies the ring is full, and if they are</span>
+<a class="br" href="#L415" id="L415">415 </a>    <span class="com">/// exactly equal the ring is empty.)</span>
+<a class="br" href="#L416" id="L416">416 </a>    <span class="type">uint</span> <span class="hid">ring_mask</span>;
+<a class="br" href="#L417" id="L417">417 </a>
+<a class="br" href="#L418" id="L418">418 </a>    <span class="com">/// value same as SetupParameters.cq_entries, power of 2.</span>
+<a class="br" href="#L419" id="L419">419 </a>    <span class="type">uint</span> <span class="hid">ring_entries</span>;
+<a class="br" href="#L420" id="L420">420 </a>
+<a class="br" href="#L421" id="L421">421 </a>    <span class="com">/// incremented by the kernel every time it failed to queue a</span>
+<a class="br" href="#L422" id="L422">422 </a>	<span class="com">/// completion event because the ring was full.</span>
+<a class="br" href="#L423" id="L423">423 </a>    <span class="type">uint</span> <span class="hid">overflow</span>;
+<a class="br" href="#L424" id="L424">424 </a>
+<a class="br" href="#L425" id="L425">425 </a>    <span class="com">/// Offset to array of completion queue entries</span>
+<a class="br" href="#L426" id="L426">426 </a>    <span class="type">uint</span> <span class="hid">cqes</span>;
+<a class="br" href="#L427" id="L427">427 </a>
+<a class="br" href="#L428" id="L428">428 </a>    <span class="kwrd">private</span> <span class="type">ulong</span>[<span class="num">2</span>] <span class="hid">resv</span>; <span class="com">// reserved</span>
+<a class="br" href="#L429" id="L429">429 </a>}
+<a class="br" href="#L430" id="L430">430 </a>
+<a class="br" href="#L431" id="L431">431 </a><span class="com">/// io_uring_register(2) opcodes and arguments</span>
+<a class="br" href="#L432" id="L432">432 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L432" title="during.io_uring.RegisterOpCode">RegisterOpCode</a> : <span class="type">uint</span>
+<a class="br" href="#L433" id="L433">433 </a>{
+<a class="br" href="#L434" id="L434">434 </a>    <span class="com">/**
+<a class="br" href="#L435" id="L435">435 </a>     * `arg` points to a struct iovec array of nr_args entries.  The buffers associated with the
+<a class="br" href="#L436" id="L436">436 </a>     * iovecs will be locked in memory and charged against the user's RLIMIT_MEMLOCK resource limit.
+<a class="br" href="#L437" id="L437">437 </a>     * See getrlimit(2) for more  informa&#8208; tion.   Additionally,  there  is a size limit of 1GiB per
+<a class="br" href="#L438" id="L438">438 </a>     * buffer.  Currently, the buffers must be anonymous, non-file-backed memory, such as that
+<a class="br" href="#L439" id="L439">439 </a>     * returned by malloc(3) or mmap(2) with the MAP_ANONYMOUS flag set.  It is expected that this
+<a class="br" href="#L440" id="L440">440 </a>     * limitation will be lifted in the future. Huge pages are supported as well. Note that the
+<a class="br" href="#L441" id="L441">441 </a>     * entire huge page will be pinned in the kernel, even if only a portion of it is used.
+<a class="br" href="#L442" id="L442">442 </a>     *
+<a class="br" href="#L443" id="L443">443 </a>     * After a successful call, the supplied buffers are mapped into the kernel and eligible for
+<a class="br" href="#L444" id="L444">444 </a>     * I/O.  To make use of them, the application must specify the IORING_OP_READ_FIXED or
+<a class="br" href="#L445" id="L445">445 </a>     * IORING_OP_WRITE_FIXED opcodes in the submis&#8208; sion  queue  entry (see the struct io_uring_sqe
+<a class="br" href="#L446" id="L446">446 </a>     * definition in io_uring_enter(2)), and set the buf_index field to the desired buffer index.
+<a class="br" href="#L447" id="L447">447 </a>     * The memory range described by the submission queue entry's addr and len fields must fall
+<a class="br" href="#L448" id="L448">448 </a>     * within the indexed buffer.
+<a class="br" href="#L449" id="L449">449 </a>     *
+<a class="br" href="#L450" id="L450">450 </a>     * It is perfectly valid to setup a large buffer and then only use part of it for an I/O, as
+<a class="br" href="#L451" id="L451">451 </a>     * long as the range is within the originally mapped region.
+<a class="br" href="#L452" id="L452">452 </a>     *
+<a class="br" href="#L453" id="L453">453 </a>     * An application can increase or decrease the size or number of registered buffers by first
+<a class="br" href="#L454" id="L454">454 </a>     * unregistering the existing buffers, and then issuing a new call to io_uring_register() with
+<a class="br" href="#L455" id="L455">455 </a>     * the new buffers.
+<a class="br" href="#L456" id="L456">456 </a>     *
+<a class="br" href="#L457" id="L457">457 </a>     * An application need not unregister buffers explicitly before shutting down the io_uring
+<a class="br" href="#L458" id="L458">458 </a>     * instance.
+<a class="br" href="#L459" id="L459">459 </a>     */</span>
+<a class="br" href="#L460" id="L460">460 </a>    <span class="hid">REGISTER_BUFFERS</span>        = <span class="num">0</span>,    <span class="com">/// `IORING_REGISTER_BUFFERS`</span>
+<a class="br" href="#L461" id="L461">461 </a>
+<a class="br" href="#L462" id="L462">462 </a>    <span class="com">/**
+<a class="br" href="#L463" id="L463">463 </a>     * This operation takes no argument, and `arg` must be passed as NULL. All previously registered
+<a class="br" href="#L464" id="L464">464 </a>     * buffers associated with the io_uring instance will be released.
+<a class="br" href="#L465" id="L465">465 </a>     */</span>
+<a class="br" href="#L466" id="L466">466 </a>    <span class="hid">UNREGISTER_BUFFERS</span>      = <span class="num">1</span>,    <span class="com">/// `IORING_UNREGISTER_BUFFERS`</span>
+<a class="br" href="#L467" id="L467">467 </a>
+<a class="br" href="#L468" id="L468">468 </a>    <span class="com">/**
+<a class="br" href="#L469" id="L469">469 </a>     * Register files for I/O. `arg` contains a pointer to an array of `nr_args` file descriptors
+<a class="br" href="#L470" id="L470">470 </a>     * (signed 32 bit integers).
+<a class="br" href="#L471" id="L471">471 </a>     *
+<a class="br" href="#L472" id="L472">472 </a>     * To make use of the registered files, the IOSQE_FIXED_FILE flag must be set in the flags
+<a class="br" href="#L473" id="L473">473 </a>     * member of the struct io_uring_sqe, and the fd member is set to the index of the file in the
+<a class="br" href="#L474" id="L474">474 </a>     * file descriptor array.
+<a class="br" href="#L475" id="L475">475 </a>     *
+<a class="br" href="#L476" id="L476">476 </a>     * Files are automatically unregistered when the io_uring instance is torn down. An application
+<a class="br" href="#L477" id="L477">477 </a>     * need only unregister if it wishes to register a new set of fds.
+<a class="br" href="#L478" id="L478">478 </a>     */</span>
+<a class="br" href="#L479" id="L479">479 </a>    <span class="hid">REGISTER_FILES</span>          = <span class="num">2</span>,    <span class="com">/// `IORING_REGISTER_FILES`</span>
+<a class="br" href="#L480" id="L480">480 </a>
+<a class="br" href="#L481" id="L481">481 </a>    <span class="com">/**
+<a class="br" href="#L482" id="L482">482 </a>     * This operation requires no argument, and `arg` must be passed as NULL.  All previously
+<a class="br" href="#L483" id="L483">483 </a>     * registered files associated with the io_uring instance will be unregistered.
+<a class="br" href="#L484" id="L484">484 </a>     */</span>
+<a class="br" href="#L485" id="L485">485 </a>    <span class="hid">UNREGISTER_FILES</span>        = <span class="num">3</span>,    <span class="com">/// `IORING_UNREGISTER_FILES`</span>
+<a class="br" href="#L486" id="L486">486 </a>
+<a class="br" href="#L487" id="L487">487 </a>    <span class="com">///</span>
+<a class="br" href="#L488" id="L488">488 </a>    <span class="hid">REGISTER_EVENTFD</span>        = <span class="num">4</span>,    <span class="com">/// `IORING_REGISTER_EVENTFD`</span>
+<a class="br" href="#L489" id="L489">489 </a>
+<a class="br" href="#L490" id="L490">490 </a>    <span class="com">///</span>
+<a class="br" href="#L491" id="L491">491 </a>    <span class="hid">UNREGISTER_EVENTFD</span>      = <span class="num">5</span>,    <span class="com">/// `IORING_UNREGISTER_EVENTFD`</span>
+<a class="br" href="#L492" id="L492">492 </a>
+<a class="br" href="#L493" id="L493">493 </a>    <span class="com">///</span>
+<a class="br" href="#L494" id="L494">494 </a>    <span class="hid">REGISTER_FILES_UPDATE</span>   = <span class="num">6</span>,    <span class="com">/// `IORING_REGISTER_FILES_UPDATE`</span>
+<a class="br" href="#L495" id="L495">495 </a>}
+<a class="br" href="#L496" id="L496">496 </a>
+<a class="br" href="#L497" id="L497">497 </a><span class="com">/// io_uring_enter(2) flags</span>
+<a class="br" href="#L498" id="L498">498 </a><span class="kwrd">enum</span> <a class="hid" href="during.io_uring.d.html#L498" title="during.io_uring.EnterFlags">EnterFlags</a>: <span class="type">uint</span>
+<a class="br" href="#L499" id="L499">499 </a>{
+<a class="br" href="#L500" id="L500">500 </a>    <span class="hid">NONE</span>        = <span class="num">0</span>,
+<a class="br" href="#L501" id="L501">501 </a>    <span class="hid">GETEVENTS</span>   = (<span class="num">1</span> &lt;&lt; <span class="num">0</span>), <span class="com">/// `IORING_ENTER_GETEVENTS`</span>
+<a class="br" href="#L502" id="L502">502 </a>    <span class="hid">SQ_WAKEUP</span>   = (<span class="num">1</span> &lt;&lt; <span class="num">1</span>), <span class="com">/// `IORING_ENTER_SQ_WAKEUP`</span>
+<a class="br" href="#L503" id="L503">503 </a>}
+<a class="br" href="#L504" id="L504">504 </a>
+<a class="br" href="#L505" id="L505">505 </a><span class="com">//TODO: Used with io_uring_register(REGISTER_FILES_UPDATE)</span>
+<a class="br" href="#L506" id="L506">506 </a><span class="kwrd">struct</span> <a class="hid" href="during.io_uring.d.html#L506" title="during.io_uring.io_uring_files_update">io_uring_files_update</a>
+<a class="br" href="#L507" id="L507">507 </a>{
+<a class="br" href="#L508" id="L508">508 </a>    <span class="type">uint</span> <span class="hid">offset</span>;
+<a class="br" href="#L509" id="L509">509 </a>    <span class="type">int</span>* <span class="hid">fds</span>;
+<a class="br" href="#L510" id="L510">510 </a>}
+<a class="br" href="#L511" id="L511">511 </a>
+<a class="br" href="#L512" id="L512">512 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L228" title="during.io_uring.CompletionEntry">CompletionEntry.sizeof</a> == <span class="num">16</span>);
+<a class="br" href="#L513" id="L513">513 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L401" title="during.io_uring.CompletionQueueRingOffsets">CompletionQueueRingOffsets.sizeof</a> == <span class="num">40</span>);
+<a class="br" href="#L514" id="L514">514 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L240" title="during.io_uring.SetupParameters">SetupParameters.sizeof</a> == <span class="num">120</span>);
+<a class="br" href="#L515" id="L515">515 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L22" title="during.io_uring.SubmissionEntry">SubmissionEntry.sizeof</a> == <span class="num">64</span>);
+<a class="br" href="#L516" id="L516">516 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L171" title="during.io_uring.SubmissionEntryExtraData">SubmissionEntryExtraData.sizeof</a> == <span class="num">24</span>);
+<a class="br" href="#L517" id="L517">517 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L47" title="during.io_uring.SubmissionEntryOperationFlags">SubmissionEntryOperationFlags.sizeof</a> == <span class="num">4</span>);
+<a class="br" href="#L518" id="L518">518 </a><span class="kwrd">static</span> <span class="kwrd">assert</span>(<a class="hid" href="during.io_uring.d.html#L354" title="during.io_uring.SubmissionQueueRingOffsets">SubmissionQueueRingOffsets.sizeof</a> == <span class="num">40</span>);
+<a class="br" href="#L519" id="L519">519 </a>
+<a class="br" href="#L520" id="L520">520 </a><span class="kwrd">private</span>
+<a class="br" href="#L521" id="L521">521 </a>{
+<a class="br" href="#L522" id="L522">522 </a>    <span class="com">// Syscalls</span>
+<a class="br" href="#L523" id="L523">523 </a>    <span class="kwrd">enum</span>
+<a class="br" href="#L524" id="L524">524 </a>    {
+<a class="br" href="#L525" id="L525">525 </a>        <a class="hid" href="during.io_uring.d.html#L523" title="during.io_uring.SYS_io_uring_setup">SYS_io_uring_setup</a>       = <span class="num">425</span>,
+<a class="br" href="#L526" id="L526">526 </a>        <span class="hid">SYS_io_uring_enter</span>       = <span class="num">426</span>,
+<a class="br" href="#L527" id="L527">527 </a>        <span class="hid">SYS_io_uring_register</span>    = <span class="num">427</span>
+<a class="br" href="#L528" id="L528">528 </a>    }
+<a class="br" href="#L529" id="L529">529 </a>}
+<a class="br" href="#L530" id="L530">530 </a>
+<a class="br" href="#L531" id="L531">531 </a><span class="com">/**
+<a class="br" href="#L532" id="L532">532 </a> * Setup a context for performing asynchronous I/O.
+<a class="br" href="#L533" id="L533">533 </a> *
+<a class="br" href="#L534" id="L534">534 </a> * The `io_uring_setup()` system call sets up a submission queue (SQ) and completion queue (CQ) with
+<a class="br" href="#L535" id="L535">535 </a> * at least entries entries, and returns a file descriptor which can be used to perform subsequent
+<a class="br" href="#L536" id="L536">536 </a> * operations on the io_uring instance. The submission and completion queues are shared between
+<a class="br" href="#L537" id="L537">537 </a> * userspace and the kernel, which eliminates the need to copy data when initiating and completing
+<a class="br" href="#L538" id="L538">538 </a> * I/O.
+<a class="br" href="#L539" id="L539">539 </a> *
+<a class="br" href="#L540" id="L540">540 </a> * See_Also: `io_uring_setup(2)`
+<a class="br" href="#L541" id="L541">541 </a> *
+<a class="br" href="#L542" id="L542">542 </a> * Params:
+<a class="br" href="#L543" id="L543">543 </a> *   entries = Defines how many entries can submission queue hold.
+<a class="br" href="#L544" id="L544">544 </a> *   p = `SetupParameters`
 <a class="br" href="#L545" id="L545">545 </a> *
-<a class="br" href="#L546" id="L546">546 </a> *     On error, -1 is returned and `errno` is set appropriately.
-<a class="br" href="#L547" id="L547">547 </a> */</span>
-<a class="br" href="#L548" id="L548">548 </a><span class="type">int</span> <a class="hid" href="during.io_uring.d.html#L548" title="during.io_uring.io_uring_setup">io_uring_setup</a>(<span class="type">uint</span> <span class="hid">entries</span>, <span class="kwrd">scope</span> <span class="kwrd">ref</span> <a class="hid" href="during.io_uring.d.html#L235" title="during.io_uring.SetupParameters">SetupParameters</a> <span class="hid">p</span>) @<span class="hid">trusted</span>
-<a class="br" href="#L549" id="L549">549 </a>{
-<a class="br" href="#L550" id="L550">550 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
-<a class="br" href="#L551" id="L551">551 </a>    <span class="kwrd">return</span> <a class="hid" href="during.io_uring.d.html#L638" title="during.io_uring.syscall">syscall</a>(<a class="hid" href="during.io_uring.d.html#L518" title="during.io_uring.SYS_io_uring_setup">SYS_io_uring_setup</a>, <span class="hid">entries</span>, &amp;<span class="hid">p</span>);
-<a class="br" href="#L552" id="L552">552 </a>}
-<a class="br" href="#L553" id="L553">553 </a>
-<a class="br" href="#L554" id="L554">554 </a><span class="com">/**
-<a class="br" href="#L555" id="L555">555 </a> * Initiate and/or complete asynchronous I/O
-<a class="br" href="#L556" id="L556">556 </a> *
-<a class="br" href="#L557" id="L557">557 </a> * `io_uring_enter()` is used to initiate and complete I/O using the shared submission and
-<a class="br" href="#L558" id="L558">558 </a> * completion queues setup by a call to `io_uring_setup(2)`. A single call can both submit new I/O
-<a class="br" href="#L559" id="L559">559 </a> * and wait for completions of I/O initiated by this call or previous calls to `io_uring_enter()``.
-<a class="br" href="#L560" id="L560">560 </a> *
-<a class="br" href="#L561" id="L561">561 </a> * When the system call returns that a certain amount of SQEs have been consumed and submitted, it's
-<a class="br" href="#L562" id="L562">562 </a> * safe to reuse SQE entries in the ring. This is true even if the actual IO submission had to be
-<a class="br" href="#L563" id="L563">563 </a> * punted to async context, which means that the SQE may in fact not have been submitted yet. If the
-<a class="br" href="#L564" id="L564">564 </a> * kernel requires later use of a particular SQE entry, it will have made a private copy of it.
+<a class="br" href="#L546" id="L546">546 </a> * Returns:
+<a class="br" href="#L547" id="L547">547 </a> *     `io_uring_setup(2)` returns a new file descriptor on success. The application may then provide
+<a class="br" href="#L548" id="L548">548 </a> *     the file descriptor in a subsequent `mmap(2)` call to map the submission and completion queues,
+<a class="br" href="#L549" id="L549">549 </a> *     or to the `io_uring_register(2)` or `io_uring_enter(2)` system calls.
+<a class="br" href="#L550" id="L550">550 </a> *
+<a class="br" href="#L551" id="L551">551 </a> *     On error, -1 is returned and `errno` is set appropriately.
+<a class="br" href="#L552" id="L552">552 </a> */</span>
+<a class="br" href="#L553" id="L553">553 </a><span class="type">int</span> <a class="hid" href="during.io_uring.d.html#L553" title="during.io_uring.io_uring_setup">io_uring_setup</a>(<span class="type">uint</span> <span class="hid">entries</span>, <span class="kwrd">scope</span> <span class="kwrd">ref</span> <a class="hid" href="during.io_uring.d.html#L240" title="during.io_uring.SetupParameters">SetupParameters</a> <span class="hid">p</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L554" id="L554">554 </a>{
+<a class="br" href="#L555" id="L555">555 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
+<a class="br" href="#L556" id="L556">556 </a>    <span class="kwrd">return</span> <a class="hid" href="during.io_uring.d.html#L643" title="during.io_uring.syscall">syscall</a>(<a class="hid" href="during.io_uring.d.html#L523" title="during.io_uring.SYS_io_uring_setup">SYS_io_uring_setup</a>, <span class="hid">entries</span>, &amp;<span class="hid">p</span>);
+<a class="br" href="#L557" id="L557">557 </a>}
+<a class="br" href="#L558" id="L558">558 </a>
+<a class="br" href="#L559" id="L559">559 </a><span class="com">/**
+<a class="br" href="#L560" id="L560">560 </a> * Initiate and/or complete asynchronous I/O
+<a class="br" href="#L561" id="L561">561 </a> *
+<a class="br" href="#L562" id="L562">562 </a> * `io_uring_enter()` is used to initiate and complete I/O using the shared submission and
+<a class="br" href="#L563" id="L563">563 </a> * completion queues setup by a call to `io_uring_setup(2)`. A single call can both submit new I/O
+<a class="br" href="#L564" id="L564">564 </a> * and wait for completions of I/O initiated by this call or previous calls to `io_uring_enter()``.
 <a class="br" href="#L565" id="L565">565 </a> *
-<a class="br" href="#L566" id="L566">566 </a> * Note: For interrupt driven I/O (where `IORING_SETUP_IOPOLL` was not specified in the call to
-<a class="br" href="#L567" id="L567">567 </a> *     `io_uring_setup(2)`), an application may check the completion queue for event completions without
-<a class="br" href="#L568" id="L568">568 </a> *     entering the kernel at all.
-<a class="br" href="#L569" id="L569">569 </a> *
-<a class="br" href="#L570" id="L570">570 </a> * See_Also: `io_uring_enter(2)`
-<a class="br" href="#L571" id="L571">571 </a> *
-<a class="br" href="#L572" id="L572">572 </a> * Params:
-<a class="br" href="#L573" id="L573">573 </a> *   fd = the file descriptor returned by io_uring_setup(2).
-<a class="br" href="#L574" id="L574">574 </a> *   to_submit = specifies the number of I/Os to submit from the submission queue.
-<a class="br" href="#L575" id="L575">575 </a> *   min_complete = If the `IORING_ENTER_GETEVENTS` bit is set in flags, then the system call will attempt
-<a class="br" href="#L576" id="L576">576 </a> *        to wait for `min_complete` event completions before returning. If the io_uring instance was configured
-<a class="br" href="#L577" id="L577">577 </a> *        for polling, by specifying IORING_SETUP_IOPOLL in the call to io_uring_setup(2), then
-<a class="br" href="#L578" id="L578">578 </a> *        min_complete has a slightly different meaning.  Passing a value of 0 instructs the kernel to
-<a class="br" href="#L579" id="L579">579 </a> *        return any events which are already complete, without blocking. If min_complete is a non-zero
-<a class="br" href="#L580" id="L580">580 </a> *        value, the kernel will still return immediately if  any completion  events are available.  If
-<a class="br" href="#L581" id="L581">581 </a> *        no event completions are available, then the call will poll either until one or more
-<a class="br" href="#L582" id="L582">582 </a> *        completions become available, or until the process has exceeded its scheduler time slice.
-<a class="br" href="#L583" id="L583">583 </a> *   flags = Behavior modification flags - `EnterFlags`
-<a class="br" href="#L584" id="L584">584 </a> *   sig = a pointer to a signal mask (see `sigprocmask(2)`); if sig is not `null`, `io_uring_enter()`
-<a class="br" href="#L585" id="L585">585 </a> *         first replaces the current signal mask by the one pointed to by sig, then waits for events to
-<a class="br" href="#L586" id="L586">586 </a> *         become available in the completion queue, and then restores the original signal mask. The
-<a class="br" href="#L587" id="L587">587 </a> *         following `io_uring_enter()` call:
-<a class="br" href="#L588" id="L588">588 </a> *
-<a class="br" href="#L589" id="L589">589 </a> *         ```
-<a class="br" href="#L590" id="L590">590 </a> *         ret = io_uring_enter(fd, 0, 1, IORING_ENTER_GETEVENTS, &amp;sig);
-<a class="br" href="#L591" id="L591">591 </a> *         ```
-<a class="br" href="#L592" id="L592">592 </a> *
-<a class="br" href="#L593" id="L593">593 </a> *         is equivalent to atomically executing the following calls:
-<a class="br" href="#L594" id="L594">594 </a> *
-<a class="br" href="#L595" id="L595">595 </a> *         ```
-<a class="br" href="#L596" id="L596">596 </a> *         pthread_sigmask(SIG_SETMASK, &amp;sig, &amp;orig);
-<a class="br" href="#L597" id="L597">597 </a> *         ret = io_uring_enter(fd, 0, 1, IORING_ENTER_GETEVENTS, NULL);
-<a class="br" href="#L598" id="L598">598 </a> *         pthread_sigmask(SIG_SETMASK, &amp;orig, NULL);
-<a class="br" href="#L599" id="L599">599 </a> *         ```
-<a class="br" href="#L600" id="L600">600 </a> *
-<a class="br" href="#L601" id="L601">601 </a> *         See the description of `pselect(2)` for an explanation of why the sig parameter is necessary.
-<a class="br" href="#L602" id="L602">602 </a> *
-<a class="br" href="#L603" id="L603">603 </a> * Returns:
-<a class="br" href="#L604" id="L604">604 </a> */</span>
-<a class="br" href="#L605" id="L605">605 </a><span class="type">int</span> <a class="hid" href="during.io_uring.d.html#L605" title="during.io_uring.io_uring_enter">io_uring_enter</a>(<span class="type">int</span> <span class="hid">fd</span>, <span class="type">uint</span> <span class="hid">to_submit</span>, <span class="type">uint</span> <span class="hid">min_complete</span>, <a class="hid" href="during.io_uring.d.html#L493" title="during.io_uring.EnterFlags">EnterFlags</a> <span class="hid">flags</span>, <span class="kwrd">const</span> <span class="hid">sigset_t</span>* <span class="hid">sig</span> = <span class="kwrd">null</span>) @<span class="hid">trusted</span>
-<a class="br" href="#L606" id="L606">606 </a>{
-<a class="br" href="#L607" id="L607">607 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
-<a class="br" href="#L608" id="L608">608 </a>    <span class="kwrd">return</span> <a class="hid" href="during.io_uring.d.html#L638" title="during.io_uring.syscall">syscall</a>(<span class="hid">SYS_io_uring_enter</span>, <span class="hid">fd</span>, <span class="hid">to_submit</span>, <span class="hid">min_complete</span>, <span class="hid">flags</span>, <span class="hid">sig</span>, <span class="hid">sigset_t.sizeof</span>);
-<a class="br" href="#L609" id="L609">609 </a>}
-<a class="br" href="#L610" id="L610">610 </a>
-<a class="br" href="#L611" id="L611">611 </a><span class="com">/**
-<a class="br" href="#L612" id="L612">612 </a> * Register files or user buffers for asynchronous I/O.
-<a class="br" href="#L613" id="L613">613 </a> *
-<a class="br" href="#L614" id="L614">614 </a> * The `io_uring_register()` system call registers user buffers or files for use in an `io_uring(7)`
-<a class="br" href="#L615" id="L615">615 </a> * instance referenced by fd.  Registering files or user buffers allows the kernel to take long term
-<a class="br" href="#L616" id="L616">616 </a> * references to internal data structures or create long term mappings of application memory,
-<a class="br" href="#L617" id="L617">617 </a> * greatly reducing per-I/O overhead.
+<a class="br" href="#L566" id="L566">566 </a> * When the system call returns that a certain amount of SQEs have been consumed and submitted, it's
+<a class="br" href="#L567" id="L567">567 </a> * safe to reuse SQE entries in the ring. This is true even if the actual IO submission had to be
+<a class="br" href="#L568" id="L568">568 </a> * punted to async context, which means that the SQE may in fact not have been submitted yet. If the
+<a class="br" href="#L569" id="L569">569 </a> * kernel requires later use of a particular SQE entry, it will have made a private copy of it.
+<a class="br" href="#L570" id="L570">570 </a> *
+<a class="br" href="#L571" id="L571">571 </a> * Note: For interrupt driven I/O (where `IORING_SETUP_IOPOLL` was not specified in the call to
+<a class="br" href="#L572" id="L572">572 </a> *     `io_uring_setup(2)`), an application may check the completion queue for event completions without
+<a class="br" href="#L573" id="L573">573 </a> *     entering the kernel at all.
+<a class="br" href="#L574" id="L574">574 </a> *
+<a class="br" href="#L575" id="L575">575 </a> * See_Also: `io_uring_enter(2)`
+<a class="br" href="#L576" id="L576">576 </a> *
+<a class="br" href="#L577" id="L577">577 </a> * Params:
+<a class="br" href="#L578" id="L578">578 </a> *   fd = the file descriptor returned by io_uring_setup(2).
+<a class="br" href="#L579" id="L579">579 </a> *   to_submit = specifies the number of I/Os to submit from the submission queue.
+<a class="br" href="#L580" id="L580">580 </a> *   min_complete = If the `IORING_ENTER_GETEVENTS` bit is set in flags, then the system call will attempt
+<a class="br" href="#L581" id="L581">581 </a> *        to wait for `min_complete` event completions before returning. If the io_uring instance was configured
+<a class="br" href="#L582" id="L582">582 </a> *        for polling, by specifying IORING_SETUP_IOPOLL in the call to io_uring_setup(2), then
+<a class="br" href="#L583" id="L583">583 </a> *        min_complete has a slightly different meaning.  Passing a value of 0 instructs the kernel to
+<a class="br" href="#L584" id="L584">584 </a> *        return any events which are already complete, without blocking. If min_complete is a non-zero
+<a class="br" href="#L585" id="L585">585 </a> *        value, the kernel will still return immediately if  any completion  events are available.  If
+<a class="br" href="#L586" id="L586">586 </a> *        no event completions are available, then the call will poll either until one or more
+<a class="br" href="#L587" id="L587">587 </a> *        completions become available, or until the process has exceeded its scheduler time slice.
+<a class="br" href="#L588" id="L588">588 </a> *   flags = Behavior modification flags - `EnterFlags`
+<a class="br" href="#L589" id="L589">589 </a> *   sig = a pointer to a signal mask (see `sigprocmask(2)`); if sig is not `null`, `io_uring_enter()`
+<a class="br" href="#L590" id="L590">590 </a> *         first replaces the current signal mask by the one pointed to by sig, then waits for events to
+<a class="br" href="#L591" id="L591">591 </a> *         become available in the completion queue, and then restores the original signal mask. The
+<a class="br" href="#L592" id="L592">592 </a> *         following `io_uring_enter()` call:
+<a class="br" href="#L593" id="L593">593 </a> *
+<a class="br" href="#L594" id="L594">594 </a> *         ```
+<a class="br" href="#L595" id="L595">595 </a> *         ret = io_uring_enter(fd, 0, 1, IORING_ENTER_GETEVENTS, &amp;sig);
+<a class="br" href="#L596" id="L596">596 </a> *         ```
+<a class="br" href="#L597" id="L597">597 </a> *
+<a class="br" href="#L598" id="L598">598 </a> *         is equivalent to atomically executing the following calls:
+<a class="br" href="#L599" id="L599">599 </a> *
+<a class="br" href="#L600" id="L600">600 </a> *         ```
+<a class="br" href="#L601" id="L601">601 </a> *         pthread_sigmask(SIG_SETMASK, &amp;sig, &amp;orig);
+<a class="br" href="#L602" id="L602">602 </a> *         ret = io_uring_enter(fd, 0, 1, IORING_ENTER_GETEVENTS, NULL);
+<a class="br" href="#L603" id="L603">603 </a> *         pthread_sigmask(SIG_SETMASK, &amp;orig, NULL);
+<a class="br" href="#L604" id="L604">604 </a> *         ```
+<a class="br" href="#L605" id="L605">605 </a> *
+<a class="br" href="#L606" id="L606">606 </a> *         See the description of `pselect(2)` for an explanation of why the sig parameter is necessary.
+<a class="br" href="#L607" id="L607">607 </a> *
+<a class="br" href="#L608" id="L608">608 </a> * Returns:
+<a class="br" href="#L609" id="L609">609 </a> */</span>
+<a class="br" href="#L610" id="L610">610 </a><span class="type">int</span> <a class="hid" href="during.io_uring.d.html#L610" title="during.io_uring.io_uring_enter">io_uring_enter</a>(<span class="type">int</span> <span class="hid">fd</span>, <span class="type">uint</span> <span class="hid">to_submit</span>, <span class="type">uint</span> <span class="hid">min_complete</span>, <a class="hid" href="during.io_uring.d.html#L498" title="during.io_uring.EnterFlags">EnterFlags</a> <span class="hid">flags</span>, <span class="kwrd">const</span> <span class="hid">sigset_t</span>* <span class="hid">sig</span> = <span class="kwrd">null</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L611" id="L611">611 </a>{
+<a class="br" href="#L612" id="L612">612 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
+<a class="br" href="#L613" id="L613">613 </a>    <span class="kwrd">return</span> <a class="hid" href="during.io_uring.d.html#L643" title="during.io_uring.syscall">syscall</a>(<span class="hid">SYS_io_uring_enter</span>, <span class="hid">fd</span>, <span class="hid">to_submit</span>, <span class="hid">min_complete</span>, <span class="hid">flags</span>, <span class="hid">sig</span>, <span class="hid">sigset_t.sizeof</span>);
+<a class="br" href="#L614" id="L614">614 </a>}
+<a class="br" href="#L615" id="L615">615 </a>
+<a class="br" href="#L616" id="L616">616 </a><span class="com">/**
+<a class="br" href="#L617" id="L617">617 </a> * Register files or user buffers for asynchronous I/O.
 <a class="br" href="#L618" id="L618">618 </a> *
-<a class="br" href="#L619" id="L619">619 </a> * See_Also: `io_uring_register(2)
-<a class="br" href="#L620" id="L620">620 </a> *
-<a class="br" href="#L621" id="L621">621 </a> * Params:
-<a class="br" href="#L622" id="L622">622 </a> *   fd = the file descriptor returned by a call to io_uring_setup(2)
-<a class="br" href="#L623" id="L623">623 </a> *   opcode = code of operation to execute on args
-<a class="br" href="#L624" id="L624">624 </a> *   arg = Args used by specified operation. See `RegisterOpCode` for usage details.
-<a class="br" href="#L625" id="L625">625 </a> *   nr_args = number of provided arguments
-<a class="br" href="#L626" id="L626">626 </a> *
-<a class="br" href="#L627" id="L627">627 </a> * Returns: On success, io_uring_register() returns 0.  On error, -1 is returned, and errno is set accordingly.
-<a class="br" href="#L628" id="L628">628 </a> */</span>
-<a class="br" href="#L629" id="L629">629 </a><span class="type">int</span> <a class="hid" href="during.io_uring.d.html#L629" title="during.io_uring.io_uring_register">io_uring_register</a>(<span class="type">int</span> <span class="hid">fd</span>, <a class="hid" href="during.io_uring.d.html#L427" title="during.io_uring.RegisterOpCode">RegisterOpCode</a> <span class="hid">opcode</span>, <span class="kwrd">const</span>(<span class="type">void</span>)* <span class="hid">arg</span>, <span class="type">uint</span> <span class="hid">nr_args</span>)
-<a class="br" href="#L630" id="L630">630 </a>{
-<a class="br" href="#L631" id="L631">631 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
-<a class="br" href="#L632" id="L632">632 </a>    <span class="kwrd">return</span> <a class="hid" href="during.io_uring.d.html#L638" title="during.io_uring.syscall">syscall</a>(<span class="hid">SYS_io_uring_register</span>, <span class="hid">fd</span>, <span class="hid">opcode</span>, <span class="hid">arg</span>, <span class="hid">nr_args</span>);
-<a class="br" href="#L633" id="L633">633 </a>}
-<a class="br" href="#L634" id="L634">634 </a>
-<a class="br" href="#L635" id="L635">635 </a><span class="kwrd">extern</span> (<span class="hid">C</span>):
-<a class="br" href="#L636" id="L636">636 </a>
-<a class="br" href="#L637" id="L637">637 </a><span class="com">/// Invoke `system call' number `sysno`, passing it the remaining arguments.</span>
-<a class="br" href="#L638" id="L638">638 </a><span class="type">int</span> <a class="hid" href="during.io_uring.d.html#L638" title="during.io_uring.syscall">syscall</a>(<span class="type">int</span> <span class="hid">sysno</span>, ...);</pre></div>
+<a class="br" href="#L619" id="L619">619 </a> * The `io_uring_register()` system call registers user buffers or files for use in an `io_uring(7)`
+<a class="br" href="#L620" id="L620">620 </a> * instance referenced by fd.  Registering files or user buffers allows the kernel to take long term
+<a class="br" href="#L621" id="L621">621 </a> * references to internal data structures or create long term mappings of application memory,
+<a class="br" href="#L622" id="L622">622 </a> * greatly reducing per-I/O overhead.
+<a class="br" href="#L623" id="L623">623 </a> *
+<a class="br" href="#L624" id="L624">624 </a> * See_Also: `io_uring_register(2)
+<a class="br" href="#L625" id="L625">625 </a> *
+<a class="br" href="#L626" id="L626">626 </a> * Params:
+<a class="br" href="#L627" id="L627">627 </a> *   fd = the file descriptor returned by a call to io_uring_setup(2)
+<a class="br" href="#L628" id="L628">628 </a> *   opcode = code of operation to execute on args
+<a class="br" href="#L629" id="L629">629 </a> *   arg = Args used by specified operation. See `RegisterOpCode` for usage details.
+<a class="br" href="#L630" id="L630">630 </a> *   nr_args = number of provided arguments
+<a class="br" href="#L631" id="L631">631 </a> *
+<a class="br" href="#L632" id="L632">632 </a> * Returns: On success, io_uring_register() returns 0.  On error, -1 is returned, and errno is set accordingly.
+<a class="br" href="#L633" id="L633">633 </a> */</span>
+<a class="br" href="#L634" id="L634">634 </a><span class="type">int</span> <a class="hid" href="during.io_uring.d.html#L634" title="during.io_uring.io_uring_register">io_uring_register</a>(<span class="type">int</span> <span class="hid">fd</span>, <a class="hid" href="during.io_uring.d.html#L432" title="during.io_uring.RegisterOpCode">RegisterOpCode</a> <span class="hid">opcode</span>, <span class="kwrd">const</span>(<span class="type">void</span>)* <span class="hid">arg</span>, <span class="type">uint</span> <span class="hid">nr_args</span>)
+<a class="br" href="#L635" id="L635">635 </a>{
+<a class="br" href="#L636" id="L636">636 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
+<a class="br" href="#L637" id="L637">637 </a>    <span class="kwrd">return</span> <a class="hid" href="during.io_uring.d.html#L643" title="during.io_uring.syscall">syscall</a>(<span class="hid">SYS_io_uring_register</span>, <span class="hid">fd</span>, <span class="hid">opcode</span>, <span class="hid">arg</span>, <span class="hid">nr_args</span>);
+<a class="br" href="#L638" id="L638">638 </a>}
+<a class="br" href="#L639" id="L639">639 </a>
+<a class="br" href="#L640" id="L640">640 </a><span class="kwrd">extern</span> (<span class="hid">C</span>):
+<a class="br" href="#L641" id="L641">641 </a>
+<a class="br" href="#L642" id="L642">642 </a><span class="com">/// Invoke `system call' number `sysno`, passing it the remaining arguments.</span>
+<a class="br" href="#L643" id="L643">643 </a><span class="type">int</span> <a class="hid" href="during.io_uring.d.html#L643" title="during.io_uring.syscall">syscall</a>(<span class="type">int</span> <span class="hid">sysno</span>, ...);</pre></div>
 		<div id="page-nav">
-		<div id="source-navigation"><div class="list-holder"><ul><li><a class="docs" href="../during.io_uring.html">[Docs] </a><a href="#L1">during.io_uring</a><ul><li><a href="#L12">core.sys.posix.poll</a></li><li><a href="#L13">core.sys.posix.signal</a></li><li><a class="docs" href="../during.io_uring.SubmissionEntry.html">[Docs] </a><a href="#L22">SubmissionEntry</a><ul><li><a href="#L24">opcode</a></li><li><a href="#L25">flags</a></li><li><a href="#L26">ioprio</a></li><li><a href="#L27">fd</a></li><li><a href="#L28">__anonymous</a><ul><li><a href="#L30">off</a></li><li><a href="#L31">addr2</a></li></ul></li><li><a href="#L34">addr</a></li><li><a href="#L35">len</a></li><li><a href="#L36">op_flags</a></li><li><a href="#L37">user_data</a></li><li><a href="#L38">extra</a></li><li><a class="docs" href="../during.io_uring.SubmissionEntry.clear.html">[Docs] </a><a href="#L41">clear</a></li></ul></li><li><a href="#L47">SubmissionEntryOperationFlags</a><ul><li><a href="#L49">rw_flags</a></li><li><a href="#L50">fsync_flags</a></li><li><a href="#L51">poll_events</a></li><li><a href="#L52">sync_range_flags</a></li><li><a href="#L53">msg_flags</a></li><li><a href="#L54">timeout_flags</a></li><li><a href="#L55">accept_flags</a></li><li><a href="#L56">cancel_flags</a></li></ul></li><li><a href="#L59">ReadWriteFlags</a></li><li><a href="#L110">FsyncFlags</a></li><li><a class="docs" href="../during.io_uring.PollEvents.html">[Docs] </a><a href="#L119">PollEvents</a></li><li><a class="docs" href="../during.io_uring.TimeoutFlags.html">[Docs] </a><a href="#L165">TimeoutFlags</a></li><li><a href="#L171">SubmissionEntryExtraData</a><ul><li><a href="#L173">buf_index</a></li><li><a href="#L174">__pad2</a></li></ul></li><li><a href="#L177">Operation</a></li><li><a class="docs" href="../during.io_uring.SubmissionEntryFlags.html">[Docs] </a><a href="#L210">SubmissionEntryFlags</a></li><li><a class="docs" href="../during.io_uring.CompletionEntry.html">[Docs] </a><a href="#L223">CompletionEntry</a><ul><li><a href="#L225">user_data</a></li><li><a href="#L226">res</a></li><li><a href="#L227">flags</a></li></ul></li><li><a class="docs" href="../during.io_uring.SetupParameters.html">[Docs] </a><a href="#L235">SetupParameters</a><ul><li><a class="docs" href="../during.io_uring.SetupParameters.SUBMISSION_QUEUE_RING_OFFSET.html">[Docs] </a><a href="#L240">SUBMISSION_QUEUE_RING_OFFSET</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.COMPLETION_QUEUE_RING_OFFSET.html">[Docs] </a><a href="#L242">COMPLETION_QUEUE_RING_OFFSET</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.SUBMISSION_QUEUE_ENTRIES_OFFSET.html">[Docs] </a><a href="#L244">SUBMISSION_QUEUE_ENTRIES_OFFSET</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.sq_entries.html">[Docs] </a><a href="#L248">sq_entries</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.cq_entries.html">[Docs] </a><a href="#L251">cq_entries</a></li><li><a href="#L253">flags</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.sq_thread_cpu.html">[Docs] </a><a href="#L257">sq_thread_cpu</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.sq_thread_idle.html">[Docs] </a><a href="#L261">sq_thread_idle</a></li><li><a href="#L262">features</a></li><li><a href="#L263">resv</a></li><li><a href="#L264">sq_off</a></li><li><a href="#L265">cq_off</a></li></ul></li><li><a class="docs" href="../during.io_uring.SetupFlags.html">[Docs] </a><a href="#L269">SetupFlags</a></li><li><a class="docs" href="../during.io_uring.SetupFeatures.html">[Docs] </a><a href="#L337">SetupFeatures</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.html">[Docs] </a><a href="#L349">SubmissionQueueRingOffsets</a><ul><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.head.html">[Docs] </a><a href="#L353">head</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.tail.html">[Docs] </a><a href="#L357">tail</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.ring_mask.html">[Docs] </a><a href="#L364">ring_mask</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.ring_entries.html">[Docs] </a><a href="#L367">ring_entries</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.flags.html">[Docs] </a><a href="#L370">flags</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.dropped.html">[Docs] </a><a href="#L374">dropped</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.array.html">[Docs] </a><a href="#L377">array</a></li><li><a href="#L379">resv</a></li></ul></li><li><a href="#L382">SubmissionQueueFlags</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.html">[Docs] </a><a href="#L396">CompletionQueueRingOffsets</a><ul><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.head.html">[Docs] </a><a href="#L400">head</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.tail.html">[Docs] </a><a href="#L404">tail</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.ring_mask.html">[Docs] </a><a href="#L411">ring_mask</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.ring_entries.html">[Docs] </a><a href="#L414">ring_entries</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.overflow.html">[Docs] </a><a href="#L418">overflow</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.cqes.html">[Docs] </a><a href="#L421">cqes</a></li><li><a href="#L423">resv</a></li></ul></li><li><a class="docs" href="../during.io_uring.RegisterOpCode.html">[Docs] </a><a href="#L427">RegisterOpCode</a></li><li><a class="docs" href="../during.io_uring.EnterFlags.html">[Docs] </a><a href="#L493">EnterFlags</a></li><li><a href="#L501">io_uring_files_update</a><ul><li><a href="#L503">offset</a></li><li><a href="#L504">fds</a></li></ul></li><li><a href="#L518">SYS_io_uring_setup</a></li><li><a class="docs" href="../during.io_uring.io_uring_setup.html">[Docs] </a><a href="#L548">io_uring_setup</a></li><li><a class="docs" href="../during.io_uring.io_uring_enter.html">[Docs] </a><a href="#L605">io_uring_enter</a></li><li><a class="docs" href="../during.io_uring.io_uring_register.html">[Docs] </a><a href="#L629">io_uring_register</a></li><li><a class="docs" href="../during.io_uring.syscall.html">[Docs] </a><a href="#L638">syscall</a></li></ul></li></ul></div></div></div>
+		<div id="source-navigation"><div class="list-holder"><ul><li><a class="docs" href="../during.io_uring.html">[Docs] </a><a href="#L1">during.io_uring</a><ul><li><a href="#L12">core.sys.posix.poll</a></li><li><a href="#L13">core.sys.posix.signal</a></li><li><a class="docs" href="../during.io_uring.SubmissionEntry.html">[Docs] </a><a href="#L22">SubmissionEntry</a><ul><li><a href="#L24">opcode</a></li><li><a href="#L25">flags</a></li><li><a href="#L26">ioprio</a></li><li><a href="#L27">fd</a></li><li><a href="#L28">__anonymous</a><ul><li><a href="#L30">off</a></li><li><a href="#L31">addr2</a></li></ul></li><li><a href="#L34">addr</a></li><li><a href="#L35">len</a></li><li><a href="#L36">op_flags</a></li><li><a href="#L37">user_data</a></li><li><a href="#L38">extra</a></li><li><a class="docs" href="../during.io_uring.SubmissionEntry.clear.html">[Docs] </a><a href="#L41">clear</a></li></ul></li><li><a href="#L47">SubmissionEntryOperationFlags</a><ul><li><a href="#L49">rw_flags</a></li><li><a href="#L50">fsync_flags</a></li><li><a href="#L51">poll_events</a></li><li><a href="#L52">sync_range_flags</a></li><li><a href="#L53">msg_flags</a></li><li><a href="#L54">timeout_flags</a></li><li><a href="#L55">accept_flags</a></li><li><a href="#L56">cancel_flags</a></li></ul></li><li><a href="#L59">ReadWriteFlags</a></li><li><a href="#L110">FsyncFlags</a></li><li><a class="docs" href="../during.io_uring.PollEvents.html">[Docs] </a><a href="#L119">PollEvents</a></li><li><a class="docs" href="../during.io_uring.TimeoutFlags.html">[Docs] </a><a href="#L165">TimeoutFlags</a></li><li><a href="#L171">SubmissionEntryExtraData</a><ul><li><a href="#L173">buf_index</a></li><li><a href="#L174">__pad2</a></li></ul></li><li><a class="docs" href="../during.io_uring.Operation.html">[Docs] </a><a href="#L182">Operation</a></li><li><a class="docs" href="../during.io_uring.SubmissionEntryFlags.html">[Docs] </a><a href="#L215">SubmissionEntryFlags</a></li><li><a class="docs" href="../during.io_uring.CompletionEntry.html">[Docs] </a><a href="#L228">CompletionEntry</a><ul><li><a href="#L230">user_data</a></li><li><a href="#L231">res</a></li><li><a href="#L232">flags</a></li></ul></li><li><a class="docs" href="../during.io_uring.SetupParameters.html">[Docs] </a><a href="#L240">SetupParameters</a><ul><li><a class="docs" href="../during.io_uring.SetupParameters.SUBMISSION_QUEUE_RING_OFFSET.html">[Docs] </a><a href="#L245">SUBMISSION_QUEUE_RING_OFFSET</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.COMPLETION_QUEUE_RING_OFFSET.html">[Docs] </a><a href="#L247">COMPLETION_QUEUE_RING_OFFSET</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.SUBMISSION_QUEUE_ENTRIES_OFFSET.html">[Docs] </a><a href="#L249">SUBMISSION_QUEUE_ENTRIES_OFFSET</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.sq_entries.html">[Docs] </a><a href="#L253">sq_entries</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.cq_entries.html">[Docs] </a><a href="#L256">cq_entries</a></li><li><a href="#L258">flags</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.sq_thread_cpu.html">[Docs] </a><a href="#L262">sq_thread_cpu</a></li><li><a class="docs" href="../during.io_uring.SetupParameters.sq_thread_idle.html">[Docs] </a><a href="#L266">sq_thread_idle</a></li><li><a href="#L267">features</a></li><li><a href="#L268">resv</a></li><li><a href="#L269">sq_off</a></li><li><a href="#L270">cq_off</a></li></ul></li><li><a class="docs" href="../during.io_uring.SetupFlags.html">[Docs] </a><a href="#L274">SetupFlags</a></li><li><a class="docs" href="../during.io_uring.SetupFeatures.html">[Docs] </a><a href="#L342">SetupFeatures</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.html">[Docs] </a><a href="#L354">SubmissionQueueRingOffsets</a><ul><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.head.html">[Docs] </a><a href="#L358">head</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.tail.html">[Docs] </a><a href="#L362">tail</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.ring_mask.html">[Docs] </a><a href="#L369">ring_mask</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.ring_entries.html">[Docs] </a><a href="#L372">ring_entries</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.flags.html">[Docs] </a><a href="#L375">flags</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.dropped.html">[Docs] </a><a href="#L379">dropped</a></li><li><a class="docs" href="../during.io_uring.SubmissionQueueRingOffsets.array.html">[Docs] </a><a href="#L382">array</a></li><li><a href="#L384">resv</a></li></ul></li><li><a href="#L387">SubmissionQueueFlags</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.html">[Docs] </a><a href="#L401">CompletionQueueRingOffsets</a><ul><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.head.html">[Docs] </a><a href="#L405">head</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.tail.html">[Docs] </a><a href="#L409">tail</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.ring_mask.html">[Docs] </a><a href="#L416">ring_mask</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.ring_entries.html">[Docs] </a><a href="#L419">ring_entries</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.overflow.html">[Docs] </a><a href="#L423">overflow</a></li><li><a class="docs" href="../during.io_uring.CompletionQueueRingOffsets.cqes.html">[Docs] </a><a href="#L426">cqes</a></li><li><a href="#L428">resv</a></li></ul></li><li><a class="docs" href="../during.io_uring.RegisterOpCode.html">[Docs] </a><a href="#L432">RegisterOpCode</a></li><li><a class="docs" href="../during.io_uring.EnterFlags.html">[Docs] </a><a href="#L498">EnterFlags</a></li><li><a href="#L506">io_uring_files_update</a><ul><li><a href="#L508">offset</a></li><li><a href="#L509">fds</a></li></ul></li><li><a href="#L523">SYS_io_uring_setup</a></li><li><a class="docs" href="../during.io_uring.io_uring_setup.html">[Docs] </a><a href="#L553">io_uring_setup</a></li><li><a class="docs" href="../during.io_uring.io_uring_enter.html">[Docs] </a><a href="#L610">io_uring_enter</a></li><li><a class="docs" href="../during.io_uring.io_uring_register.html">[Docs] </a><a href="#L634">io_uring_register</a></li><li><a class="docs" href="../during.io_uring.syscall.html">[Docs] </a><a href="#L643">syscall</a></li></ul></li></ul></div></div></div>
 	</div>
 	<div id="page-footer">Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a></div>
 </body>
