@@ -517,17 +517,6 @@ static assert(SubmissionEntryExtraData.sizeof == 24);
 static assert(SubmissionEntryOperationFlags.sizeof == 4);
 static assert(SubmissionQueueRingOffsets.sizeof == 40);
 
-private
-{
-    // Syscalls
-    enum
-    {
-        SYS_io_uring_setup       = 425,
-        SYS_io_uring_enter       = 426,
-        SYS_io_uring_register    = 427
-    }
-}
-
 /**
  * Setup a context for performing asynchronous I/O.
  *
@@ -635,6 +624,16 @@ int io_uring_register(int fd, RegisterOpCode opcode, const(void)* arg, uint nr_a
 {
     pragma(inline);
     return syscall(SYS_io_uring_register, fd, opcode, arg, nr_args);
+}
+
+private:
+
+// Syscalls
+enum
+{
+    SYS_io_uring_setup       = 425,
+    SYS_io_uring_enter       = 426,
+    SYS_io_uring_register    = 427
 }
 
 extern (C):
