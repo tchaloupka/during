@@ -11,29 +11,29 @@ notifications:
 
 d:
   - dmd-2.089.0
-  - dmd-2.088.1
-  - dmd-2.087.1
-  - dmd-2.086.1
-  - dmd-2.085.1
-  - ldc-1.18.0
-  - ldc-1.17.0
-  - ldc-1.16.0
-  - ldc-1.15.0
-  - ldc-1.14.0
-  - dmd-beta
+  # - dmd-2.088.1
+  # - dmd-2.087.1
+  # - dmd-2.086.1
+  # - dmd-2.085.1
+  # - ldc-1.18.0
+  # - ldc-1.17.0
+  # - ldc-1.16.0
+  # - ldc-1.15.0
+  # - ldc-1.14.0
+  # - dmd-beta
 
-script:
-  - dub test --compiler=${DC}
+# script:
+#   - dub test --compiler=${DC}
 
 jobs:
   include:
-    - stage: betterC
-      script:
-        - ./betterc_ut.sh
-    - stage: codecov
-      script:
-        - dub test -b unittest-cov --compiler=${DC}
-        - bash <(curl -s https://codecov.io/bash)
+    # - stage: betterC
+    #   script:
+    #     - ./betterc_ut.sh
+    # - stage: codecov
+    #   script:
+    #     - dub test -b unittest-cov --compiler=${DC}
+    #     - bash <(curl -s https://codecov.io/bash)
     - stage: docs
       script:
         - wget https://github.com/adamdruppe/adrdox/archive/master.zip
@@ -52,4 +52,4 @@ jobs:
 
 env:
   global:
-    secure: hNwFLgJSfUjH4foPRWxsnAVDQacqPiFmnMs5LSPohOD95v5IaNhjMJaUDgHXjc49Qmtx0ZXb52uUB3s9EtoEhu5GmDaztIwM7J9q7cpgJLSCun+9mn/vYI2VR2E0/CnjtqE+K93XFE2QQK1PKfefWAv72L2X3oSyHyZRn0QGnN6549KConEO1jU3Bg3sU+Pss6dMIybhtqs66Vg4CCMvrYkx+7OponJJOiNlUwTKmjH083HxPly8gnTzAMtfnxMsmgSR/Rll35Wej1yuUOvd4rSoLQWTwozg0rfORs/BMkl1O+ECeoHB6zTeQtU/CWHj+ANv+q9Yvj8tVkol5Qn79s8NJJNQnTW4N8LPGtE5CFHRtXzyOgMWAfUIRkQ4Ns/Bms3usWFzxCq5iBIHJ3TRBPNIdKhmvCec3Yh0wrl2I5xyjaDsD+XGGnatHU+KPozD11ef1fXWOZfdp6RRxCz6HCsRFvbNtC6Rv8MLyPn0ABCuLCaJPyG5Jm2AjNdiCKsE6Bm0otQbJFluCNNE0c0ED+Z3E8OdFe3z8V3kS08y+lD2UNFxsHkytquc2YFyKboOAaKvxXwN3Y3Y4CZm3dl0aHV6QLQeGY1wM52B+To+zLdcwYheSB3U8zWgpo2iGv3E1ws5ZkjsMYx0m9EegFZJ06THjuA/C7Pi4o3naoYX5yM=
+    secure: MoYZ74GYCq3aeoNSklsZ9TK4BdGWJSem4oRSb9XLxJMX07dWhCKrTFGoi7xYbRZd4I+rZaHCW7SCOn3YFaskpt+uL5+pryN/g0gWnVwVs+1DfHAwOgqt+sp6TgV/xueYqmXNiie2y9XK2iN75/wPXrh3yitxfRqSymzcmEwsniPFGLg2wqu+RCS+PBY9NYQiO7ySYxS+AqOiwelzTMPBd+tQcMxF9lvjaJNX+xP92m7gemZ/CeStyC3T+ySxsVjFjlkHW/neZ3e7sontSqqCmt95lHo3ujsC8P94AW0t1FsCwgoeyo/QpPhpp180z7LqkRC5Ud2vsLQKT1BlY6SooPsVeK7foXHh6r7zHXS3yL1oqFUJeJGO/fApXmckQdyZlh+FIpy0sLczOc9ug4jmdtpiNsX8u0D+frMIhj5cAJxb1qoDIIvxQFh57jCqEr6XvjcsKNfnWQuPKYPBOn4/LFp1L7LcjWrg7PeSpUPiTXAXRUujh7lzuPrefWfDYs4Q0ThxBKuUlz5iJNqzbS3B6A6x3M09nBgvZ9AsfQA9mTdqOE/pij6nXQHJO0TfIU27BOmKIEz+sbPzDiktAYsX8ut4wCwB0dHTUIyQrnbzC7pxxhNc8iuUUGdgng0Jzr8+OoVkO3SrHgS+v9WgWI+TzAkmLk7CC8I7Z3UBi1wdVJo=
