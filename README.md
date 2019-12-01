@@ -5,7 +5,7 @@
 Simple idiomatic [dlang](https://dlang.org) wrapper around linux [io_uring](https://kernel.dk/io_uring.pdf)
 asynchronous API.
 
-It's just a low level wrapper, doesn't try to do fancy higher level stuff, but attempts to provide building block for it.
+It's just a low level wrapper, doesn't try to do fancy higher level stuff, but attempts to provide building blocks for it.
 
 Main features:
 
