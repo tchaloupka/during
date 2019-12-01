@@ -1,5 +1,6 @@
 language: d
 sudo: false
+dist: bionic
 
 branches:
   only:
