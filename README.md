@@ -25,7 +25,14 @@ Main features:
 
 ## Docs
 
-> TODO
+[View online on Github Pages](https://tchaloupka.github.io/during/during.html)
+
+`during` uses [adrdox](https://github.com/adamdruppe/adrdox) to generate it's documentation. To build your own
+copy, run the following command from the root of the `during` repository:
+
+```BASH
+path/to/adrdox/doc2 --genSearchIndex --genSource -o generated-docs source
+```
 
 ## Usage example
 
