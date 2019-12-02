@@ -33,8 +33,21 @@ struct SubmissionEntry
 
     ulong addr;                             /// pointer to buffer or iovecs
     uint len;                               /// buffer size or number of iovecs
-    SubmissionEntryOperationFlags op_flags;
+
+    union
+    {
+        ReadWriteFlags  rw_flags;
+        FsyncFlags      fsync_flags;
+        PollEvents      poll_events;
+        uint            sync_range_flags;
+        uint            msg_flags;
+        TimeoutFlags    timeout_flags;
+        uint            accept_flags;
+        uint            cancel_flags;
+    }
+
     ulong user_data;                        /// data to be passed back at completion time
+
     union
     {
         ushort buf_index;                   /// index into fixed buffers, if used
@@ -46,18 +59,6 @@ struct SubmissionEntry
     {
         this = SubmissionEntry.init;
     }
-}
-
-union SubmissionEntryOperationFlags
-{
-    ReadWriteFlags  rw_flags;
-    FsyncFlags      fsync_flags;
-    PollEvents      poll_events;
-    uint            sync_range_flags;
-    uint            msg_flags;
-    TimeoutFlags    timeout_flags;
-    uint            accept_flags;
-    uint            cancel_flags;
 }
 
 enum ReadWriteFlags : int
@@ -511,7 +512,6 @@ static assert(CompletionEntry.sizeof == 16);
 static assert(CompletionQueueRingOffsets.sizeof == 40);
 static assert(SetupParameters.sizeof == 120);
 static assert(SubmissionEntry.sizeof == 64);
-static assert(SubmissionEntryOperationFlags.sizeof == 4);
 static assert(SubmissionQueueRingOffsets.sizeof == 40);
 
 /**

@@ -18,6 +18,7 @@ import core.sys.linux.unistd;
 import core.sys.posix.signal;
 import core.sys.posix.sys.socket;
 import core.sys.posix.sys.uio;
+import std.algorithm.comparison : among;
 
 @trusted: //TODO: remove this and use selectively where it makes sense
 nothrow @nogc:
@@ -498,6 +499,8 @@ alias WriteFixed = RWFixed!(Operation.WRITE_FIXED);
  */
 struct RW(Operation op)
 {
+    static assert (op.among(Operation.READV, Operation.WRITEV), "Invalid operation");
+
     Operation opcode = op;
     int fd;
     ulong off;
@@ -512,7 +515,7 @@ struct RW(Operation op)
      *      offset = offset
      *      buffer = iovec buffers to be used by the operation
      */
-    this(int fd, ulong offset, iovec[] buffer...)
+    this(int fd, ulong offset, iovec[] buffer...) @safe
     {
         assert(buffer.length, "Empty buffer");
         assert(buffer.length < uint.max, "Too many iovec buffers");
@@ -530,6 +533,8 @@ struct RW(Operation op)
  */
 struct RWFixed(Operation op)
 {
+    static assert (op.among(Operation.READ_FIXED, Operation.WRITE_FIXED), "Invalid operation");
+
     Operation opcode = op;
     int fd;
     ulong off;
@@ -555,6 +560,44 @@ struct RWFixed(Operation op)
         this.addr = cast(ulong)(cast(void*)&buffer[0]);
         this.len = cast(uint)buffer.length;
         this.buf_index = bufferIndex;
+    }
+}
+
+/// Helper structure to initiate `sendmsg` operations.
+alias SendMsg = RWMsg!(Operation.SENDMSG);
+
+/// Helper structure to initiate `recvmsg` operations.
+alias RecvMsg = RWMsg!(Operation.RECVMSG);
+
+/**
+ * Template for message sending/receiving operations
+ *
+ * Type of operation is defined by `op` template parameter.
+ */
+struct RWMsg(Operation op)
+{
+    static assert (op.among(Operation.SENDMSG, Operation.RECVMSG), "Invalid operation");
+
+    Operation opcode = op;
+    int fd;
+    ulong off = 0;
+    ulong addr;
+    uint len = 1;
+    uint msg_flags;
+
+    /**
+     * Read/write operation constructor.
+     *
+     * Params:
+     *      fd = file descriptor of file we are operating on
+     *      msg = message to operate with
+     *      flags = sendmsg/recvmsg operation flags
+     */
+    this(int fd, ref msghdr msg, uint flags)
+    {
+        this.fd = fd;
+        this.addr = cast(ulong)(cast(void*)&msg);
+        this.msg_flags = flags;
     }
 }
 
