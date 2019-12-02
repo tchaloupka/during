@@ -13,7 +13,7 @@ unittest
     assert(res >= 0, "Error initializing IO");
 
     SubmissionEntry entry;
-    entry.fill(Nop());
+    entry.opcode = Operation.NOP;
     entry.user_data = 1;
 
     struct MyOp
@@ -26,7 +26,7 @@ unittest
     io
         .put(entry)
         .put(MyOp(Operation.NOP, 2))
-        .putWith((ref SubmissionEntry e) { e.fill(Nop()); e.user_data = 42; })
+        .putWith((ref SubmissionEntry e) { e.prepNop(); e.user_data = 42; })
         .submit(1); // submit operations and wait for at least 1 completed
 
     // check completions
@@ -45,6 +45,8 @@ unittest
 @("Limits")
 unittest
 {
+    struct Nop { Operation opcode = Operation.NOP; }
+
     Uring io;
     auto res = io.setup(16);
     assert(res >= 0, "Error initializing IO");

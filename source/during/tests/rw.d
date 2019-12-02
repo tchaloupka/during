@@ -39,7 +39,12 @@ unittest
     v.iov_len = readbuf.length;
     foreach (i; 0..8) // 8 operations must complete to read whole file
     {
-        io.put(Readv(file, i*32, v)).submit(1);
+        io
+            .putWith(
+                (ref SubmissionEntry e, int f, int i, iovec v)
+                    => e.prepReadv(f, i*32, v),
+                file, i, v
+            ).submit(1);
         assert(io.front.res == 32); // number of bytes read
         assert(readbuf[] == buf[i*32..(i+1)*32]);
         io.popFront();
@@ -47,7 +52,12 @@ unittest
 
     // try to read after the file content too
     assert(io.empty);
-    io.put(Readv(file, 256, v)).submit(1);
+    io
+        .putWith(
+            (ref SubmissionEntry e, int f, iovec v)
+                => e.prepReadv(f, 256, v),
+            file, v
+        ).submit(1);
     assert(io.front.res == 0); // ok we've reached the EOF
 }
 
@@ -76,7 +86,7 @@ unittest
         {
             foreach (j; 0..32) buffer[j] = cast(ubyte)(i*32 + j);
             SubmissionEntry entry;
-            entry.fill(Writev(f, i*32, v));
+            entry.prepWritev(f, i*32, v);
             entry.user_data = i;
             io.put(entry).submit(1);
 

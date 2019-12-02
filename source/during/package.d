@@ -62,6 +62,13 @@ int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NON
  *
  * It hides `SubmissionQueue` and `CompletionQueue` behind standard range interface.
  * We put in `SubmissionEntry` entries and take out `CompletionEntry` entries.
+ *
+ * Use predefined `prepXX` methods to fill required fields of `SubmissionEntry` before `put` or during `putWith`.
+ *
+ * Note: `prepXX` functions doesn't touch previous entry state, just fills in operation properties. This is because for
+ * less error prone interface it is cleared automatically when prepared using `putWith`. So when using on own `SubmissionEntry`
+ * (outside submission queue), that would be added to the submission queue using `put`, be sure its cleared if it's
+ * reused for multiple operations.
  */
 struct Uring
 {
@@ -170,7 +177,7 @@ struct Uring
     }
 
     /// ditto
-    ref Uring putWith(ARGS...)(void function(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args) return
+    ref Uring putWith(ARGS...)(void delegate(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args) return
     {
         checkInitialized();
         payload.sq.putWith(fn, args);
@@ -449,7 +456,10 @@ struct Uring
 }
 
 /**
- * Fills parameters of `SubmissionEntry` with a specified operation fields.
+ * Uses custom operation definition to fill fields of `SubmissionEntry`.
+ * Can be used in cases, when builtin prep* functions aren't enough.
+ *
+ * Custom definition fields must correspond to fields of `SubmissionEntry` for this to work.
  *
  * Note: This doesn't touch previous state of the entry, just fills the corresponding fields.
  *       So it might be needed to call `clear` first on the entry (depends on usage).
@@ -471,135 +481,148 @@ void fill(E)(ref SubmissionEntry entry, auto ref E op)
     }
 }
 
-/// Helper structure to post NOP operations
-struct Nop
+/**
+ * Prepares `nop` operation.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ */
+void prepNop(ref SubmissionEntry entry) @safe
 {
-    Operation opcode = Operation.NOP;
+    entry.opcode = Operation.NOP;
 }
-
-/// Helper structure to initiate `readv` operations.
-alias Readv = RW!(Operation.READV);
-
-/// Helper structure to initiate `writev` operations.
-alias Writev = RW!(Operation.WRITEV);
-
-/// Helper structure to initiate `read_fixed` operations.
-alias ReadFixed = RWFixed!(Operation.READ_FIXED);
-
-/// Helper structure to initiate `write_fixed` operations.
-alias WriteFixed = RWFixed!(Operation.WRITE_FIXED);
 
 // TODO: check offset behavior, preadv2/pwritev2 should accept -1 to work on the current file offset,
 // but it doesn't seem to work here.
 
 /**
- * Template for read/write operations
+ * Prepares `readv` operation.
  *
- * Type of operation is defined by `op` template parameter.
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      fd = file descriptor of file we are operating on
+ *      offset = offset
+ *      buffer = iovec buffers to be used by the operation
  */
-struct RW(Operation op)
+void prepReadv(ref SubmissionEntry entry, int fd, ulong offset, iovec[] buffer...)
 {
-    static assert (op.among(Operation.READV, Operation.WRITEV), "Invalid operation");
-
-    Operation opcode = op;
-    int fd;
-    ulong off;
-    ulong addr;
-    uint len;
-
-    /**
-     * Read/write operation constructor.
-     *
-     * Params:
-     *      fd = file descriptor of file we are operating on
-     *      offset = offset
-     *      buffer = iovec buffers to be used by the operation
-     */
-    this(int fd, ulong offset, iovec[] buffer...) @safe
-    {
-        assert(buffer.length, "Empty buffer");
-        assert(buffer.length < uint.max, "Too many iovec buffers");
-        this.fd = fd;
-        this.off = offset;
-        this.addr = cast(ulong)(cast(void*)&buffer[0]);
-        this.len = cast(uint)buffer.length;
-    }
+    assert(buffer.length, "Empty buffer");
+    assert(buffer.length < uint.max, "Too many iovec buffers");
+    entry.opcode = Operation.READV;
+    entry.fd = fd;
+    entry.off = offset;
+    entry.addr = cast(ulong)(cast(void*)&buffer[0]);
+    entry.len = cast(uint)buffer.length;
 }
 
 /**
- * Template for fixed read/write operations (using preregistered buffer)
+ * Prepares `writev` operation.
  *
- * Type of operation is defined by `op` template parameter.
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      fd = file descriptor of file we are operating on
+ *      offset = offset
+ *      buffer = iovec buffers to be used by the operation
  */
-struct RWFixed(Operation op)
+void prepWritev(ref SubmissionEntry entry, int fd, ulong offset, iovec[] buffer...)
 {
-    static assert (op.among(Operation.READ_FIXED, Operation.WRITE_FIXED), "Invalid operation");
-
-    Operation opcode = op;
-    int fd;
-    ulong off;
-    ulong addr;
-    uint len;
-    ushort buf_index;
-
-    /**
-     * Fixed read/write operation constructor.
-     *
-     * Params:
-     *      fd = file descriptor of file we are operating on
-     *      offset = offset
-     *      buffer = slice to preregistered buffer
-     *      bufferIndex = index to the preregistered buffers array buffer belongs to
-     */
-    this(int fd, ulong offset, ubyte[] buffer, ushort bufferIndex) @safe
-    {
-        assert(buffer.length, "Empty buffer");
-        assert(buffer.length < uint.max, "Buffer too large");
-        this.fd = fd;
-        this.off = offset;
-        this.addr = cast(ulong)(cast(void*)&buffer[0]);
-        this.len = cast(uint)buffer.length;
-        this.buf_index = bufferIndex;
-    }
+    assert(buffer.length, "Empty buffer");
+    assert(buffer.length < uint.max, "Too many iovec buffers");
+    entry.opcode = Operation.WRITEV;
+    entry.fd = fd;
+    entry.off = offset;
+    entry.addr = cast(ulong)(cast(void*)&buffer[0]);
+    entry.len = cast(uint)buffer.length;
 }
-
-/// Helper structure to initiate `sendmsg` operations.
-alias SendMsg = RWMsg!(Operation.SENDMSG);
-
-/// Helper structure to initiate `recvmsg` operations.
-alias RecvMsg = RWMsg!(Operation.RECVMSG);
 
 /**
- * Template for message sending/receiving operations
+ * Prepares `read_fixed` operation.
  *
- * Type of operation is defined by `op` template parameter.
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      fd = file descriptor of file we are operating on
+ *      offset = offset
+ *      buffer = slice to preregistered buffer
+ *      bufferIndex = index to the preregistered buffers array buffer belongs to
  */
-struct RWMsg(Operation op)
+void prepReadFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex)
 {
-    static assert (op.among(Operation.SENDMSG, Operation.RECVMSG), "Invalid operation");
-
-    Operation opcode = op;
-    int fd;
-    ulong off = 0;
-    ulong addr;
-    uint len = 1;
-    uint msg_flags;
-
-    /**
-     * sendmsg/recvmsg operation constructor.
-     *
-     * Params:
-     *      fd = file descriptor of file we are operating on
-     *      msg = message to operate with
-     *      flags = sendmsg/recvmsg operation flags
-     */
-    this(int fd, ref msghdr msg, uint flags)
-    {
-        this.fd = fd;
-        this.addr = cast(ulong)(cast(void*)&msg);
-        this.msg_flags = flags;
-    }
+    assert(buffer.length, "Empty buffer");
+    assert(buffer.length < uint.max, "Buffer too large");
+    entry.opcode = Operation.READ_FIXED;
+    entry.fd = fd;
+    entry.off = offset;
+    entry.addr = cast(ulong)(cast(void*)&buffer[0]);
+    entry.len = cast(uint)buffer.length;
+    entry.buf_index = bufferIndex;
 }
+
+/**
+ * Prepares `write_fixed` operation.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      fd = file descriptor of file we are operating on
+ *      offset = offset
+ *      buffer = slice to preregistered buffer
+ *      bufferIndex = index to the preregistered buffers array buffer belongs to
+ */
+void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex)
+{
+    assert(buffer.length, "Empty buffer");
+    assert(buffer.length < uint.max, "Buffer too large");
+    entry.opcode = Operation.WRITE_FIXED;
+    entry.fd = fd;
+    entry.off = offset;
+    entry.addr = cast(ulong)(cast(void*)&buffer[0]);
+    entry.len = cast(uint)buffer.length;
+    entry.buf_index = bufferIndex;
+}
+
+/**
+ * Prepares `sendmsg` operation.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      fd = file descriptor of file we are operating on
+ *      msg = message to operate with
+ *      flags = `sendmsg` operation flags
+ */
+void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags)
+{
+    entry.opcode = Operation.SENDMSG;
+    entry.fd = fd;
+    entry.addr = cast(ulong)(cast(void*)&msg);
+    entry.msg_flags = flags;
+}
+
+/**
+ * Prepares `recvmsg` operation.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      fd = file descriptor of file we are operating on
+ *      msg = message to operate with
+ *      flags = `recvmsg` operation flags
+ */
+void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags)
+{
+    entry.opcode = Operation.RECVMSG;
+    entry.fd = fd;
+    entry.addr = cast(ulong)(cast(void*)&msg);
+    entry.msg_flags = flags;
+}
+
+// void prepPollAdd(ref SubmissionEntry entry, ...)
+// void prepPollRemove(ref SubmissionEntry entry, ...)
+// void prepFsync(ref SubmissionEntry entry, ...)
+// void prepSyncFileRange(ref SubmissionEntry entry, ...)
+// void prepTimeout(ref SubmissionEntry entry, ...)
+// void prepTimeoutRemove(ref SubmissionEntry entry, ...)
+// void prepAccept(ref SubmissionEntry entry, ...)
+// void prepAsyncCancel(ref SubmissionEntry entry, ...)
+// void prepLinkTimeout(ref SubmissionEntry entry, ...)
+// void prepConnect(ref SubmissionEntry entry, ...)
 
 private:
 
@@ -772,7 +795,7 @@ struct SubmissionQueue
         localTail++;
     }
 
-    void putWith(ARGS...)(void function(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args)
+    void putWith(ARGS...)(void delegate(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args)
     {
         assert(!full, "SumbissionQueue is full");
         sqes[tail & ringMask].clear();
