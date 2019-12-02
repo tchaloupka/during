@@ -76,7 +76,7 @@ struct Uring
     this(ref return scope Uring rhs)
     {
         assert(rhs.payload !is null, "rhs payload is null");
-        debug printf("uring(%d): copy\n", rhs.payload.fd);
+        // debug printf("uring(%d): copy\n", rhs.payload.fd);
         this.payload = rhs.payload;
         this.payload.refs++;
     }
@@ -391,8 +391,11 @@ alias Readv = RW!(Operation.READV);
 /// Helper structure to initiate `writev` operations.
 alias Writev = RW!(Operation.WRITEV);
 
-private:
-
+/**
+ * Template for read/write operations
+ *
+ * Type of operation is defined by `op` template parameter.
+ */
 struct RW(Operation op)
 {
     Operation opcode = op;
@@ -401,6 +404,16 @@ struct RW(Operation op)
     ulong addr;
     uint len;
 
+    // TODO: check offset behavior, preadv2/pwritev2 should accept -1 to work on the current file offset,
+    // but it doesn't seem to work here.
+
+    /**
+     * Read/write operation constructor.
+     *
+     * Params:
+     *      fd = file descriptor of file we are operating on
+     *      offset = offset
+     */
     this(int fd, ulong offset, iovec[] buffer...)
     {
         assert(buffer.length, "Empty buffer");
@@ -412,11 +425,13 @@ struct RW(Operation op)
     }
 }
 
+private:
+
 // uring cleanup
 void dispose(ref Uring uring)
 {
     if (uring.payload is null) return;
-    debug printf("uring(%d): dispose(%d)\n", uring.payload.fd, uring.payload.refs);
+    // debug printf("uring(%d): dispose(%d)\n", uring.payload.fd, uring.payload.refs);
     if (--uring.payload.refs == 0)
     {
         import std.traits : hasElaborateDestructor;
@@ -547,7 +562,7 @@ struct SubmissionQueue
 
     void flushTail()
     {
-        debug printf("SQ updating tail: %d\n", localTail);
+        // debug printf("SQ updating tail: %d\n", localTail);
         atomicStore!(MemoryOrder.rel)(*ktail, localTail);
     }
 
@@ -612,7 +627,7 @@ struct CompletionQueue
 
     void flushHead()
     {
-        debug printf("CQ updating head: %d\n", localHead);
+        // debug printf("CQ updating head: %d\n", localHead);
         atomicStore!(MemoryOrder.rel)(*khead, localHead);
     }
 

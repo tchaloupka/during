@@ -19,8 +19,9 @@ version (unittest)
             {
                 printf("> testing " ~ __traits(getAttributes, u)[0] ~ "\n");
                 u();
+                printf("> " ~ __traits(getAttributes, u)[0] ~ ": passed\n\n");
             }
-            printf("\n");
+            printf(">> " ~ desc ~ ": passed\n\n");
         }
     }
 }

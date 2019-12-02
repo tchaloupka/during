@@ -5,8 +5,8 @@ import during;
 import core.stdc.stdio : remove;
 import core.sys.linux.fcntl;
 import core.sys.posix.sys.uio : iovec;
-import core.sys.posix.unistd : close, write;
-import std.algorithm : copy, map;
+import core.sys.posix.unistd : close, read, write;
+import std.algorithm : copy, equal, map;
 import std.range : iota;
 
 // NOTE that we're using direct linux/posix API to be able to run these tests in betterC too
@@ -18,7 +18,6 @@ unittest
     auto fname = getTestFileName!"readv_test";
     ubyte[256] buf;
     iota(0, 256).map!(a => cast(ubyte)a).copy(buf[]);
-    //buf[].toFile(cast(string)(fname[]));
     auto file = openFile(fname, O_CREAT | O_WRONLY);
     auto wr = write(file, &buf[0], buf.length);
     assert(wr == buf.length);
@@ -43,7 +42,61 @@ unittest
         io.put(Readv(file, i*32, v)).finishSq().submit(1);
         assert(io.front.res == 32); // number of bytes read
         assert(readbuf[] == buf[i*32..(i+1)*32]);
+        io.popFront();
     }
+    io.finishSq();
+
+    // try to read after the file content too
+    assert(io.empty);
+    io.put(Readv(file, 256, v)).finishSq().submit(1);
+    assert(io.front.res == 0); // ok we've reached the EOF
+}
+
+@("writev")
+unittest
+{
+    // prepare file to write to
+    auto fname = getTestFileName!"writev_test";
+    auto f = openFile(fname, O_CREAT | O_WRONLY);
+
+    {
+        scope (exit) close(f);
+        // prepare chunk buffer
+        ubyte[32] buffer;
+        iovec v;
+        v.iov_base = cast(void*)&buffer[0];
+        v.iov_len = buffer.length;
+
+        // prepare uring
+        Uring io;
+        auto res = io.setup(16);
+        assert(res >= 0, "Error initializing IO");
+
+        // write some data to file
+        foreach (i; 0..8)
+        {
+            foreach (j; 0..32) buffer[j] = cast(ubyte)(i*32 + j);
+            SubmissionEntry entry;
+            entry.fill(Writev(f, i*32, v));
+            entry.user_data = i;
+            io.put(entry).finishSq.submit(1);
+
+            assert(io.front.user_data == i);
+            assert(io.front.res == 32);
+            io.popFront();
+            io.finishCq();
+        }
+        assert(io.empty);
+    }
+
+    // now check back file content
+    ubyte[257] readbuf;
+    f = openFile(fname, O_RDONLY);
+    auto r = read(f, cast(void*)&readbuf[0], 257);
+    assert(r == 256);
+    assert(readbuf[0..256].equal(iota(0, 256)));
+    close(f);
+    remove(&fname[0]);
 }
 
 private:
@@ -52,7 +105,7 @@ auto getTestFileName(string baseName)()
 {
     import core.stdc.stdlib : rand;
     static immutable ubyte[] let = cast(immutable(ubyte[]))"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    char[baseName.length + 16] fname = baseName ~ "_...........dat\0";
+    char[baseName.length + 16] fname = baseName ~ "_**********.dat\0";
 
     foreach (i; 0..10)
     {
