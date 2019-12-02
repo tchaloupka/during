@@ -41,7 +41,7 @@
 <a class="br" href="#L13" id="L13">13 </a>    <span class="kwrd">assert</span>(<span class="hid">res</span> &gt;= <span class="num">0</span>, <span class="str">&quot;Error initializing IO&quot;</span>);
 <a class="br" href="#L14" id="L14">14 </a>
 <a class="br" href="#L15" id="L15">15 </a>    <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>;
-<a class="br" href="#L16" id="L16">16 </a>    <span class="hid">entry.fill</span>(<a class="hid" href="during.d.html#L358" title="during.Nop">Nop</a>());
+<a class="br" href="#L16" id="L16">16 </a>    <span class="hid">entry.fill</span>(<a class="hid" href="during.d.html#L474" title="during.Nop">Nop</a>());
 <a class="br" href="#L17" id="L17">17 </a>    <span class="hid">entry.user_data</span> = <span class="num">1</span>;
 <a class="br" href="#L18" id="L18">18 </a>
 <a class="br" href="#L19" id="L19">19 </a>    <span class="kwrd">struct</span> <span class="hid">MyOp</span>
@@ -54,7 +54,7 @@
 <a class="br" href="#L26" id="L26">26 </a>    <span class="hid">io</span>
 <a class="br" href="#L27" id="L27">27 </a>        .<span class="hid">put</span>(<span class="hid">entry</span>)
 <a class="br" href="#L28" id="L28">28 </a>        .<span class="hid">put</span>(<span class="hid">MyOp</span>(<span class="hid">Operation.NOP</span>, <span class="num">2</span>))
-<a class="br" href="#L29" id="L29">29 </a>        .<span class="hid">putWith</span>((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>) { <span class="hid">e.fill</span>(<a class="hid" href="during.d.html#L358" title="during.Nop">Nop</a>()); <span class="hid">e.user_data</span> = <span class="num">42</span>; })
+<a class="br" href="#L29" id="L29">29 </a>        .<span class="hid">putWith</span>((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>) { <span class="hid">e.fill</span>(<a class="hid" href="during.d.html#L474" title="during.Nop">Nop</a>()); <span class="hid">e.user_data</span> = <span class="num">42</span>; })
 <a class="br" href="#L30" id="L30">30 </a>        .<span class="hid">submit</span>(<span class="num">1</span>); <span class="com">// submit operations and wait for at least 1 completed</span>
 <a class="br" href="#L31" id="L31">31 </a>
 <a class="br" href="#L32" id="L32">32 </a>    <span class="com">// check completions</span>
@@ -84,14 +84,14 @@
 <a class="br" href="#L56" id="L56">56 </a>    <span class="kwrd">assert</span>(<span class="hid">io.params.cq_entries</span> == <span class="num">32</span>);
 <a class="br" href="#L57" id="L57">57 </a>
 <a class="br" href="#L58" id="L58">58 </a>    <span class="com">// fill submission queue</span>
-<a class="br" href="#L59" id="L59">59 </a>    <span class="kwrd">foreach</span> (<span class="hid">_</span>; <span class="num">0</span>..<span class="num">16</span>) <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L358" title="during.Nop">Nop</a>());
+<a class="br" href="#L59" id="L59">59 </a>    <span class="kwrd">foreach</span> (<span class="hid">_</span>; <span class="num">0</span>..<span class="num">16</span>) <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L474" title="during.Nop">Nop</a>());
 <a class="br" href="#L60" id="L60">60 </a>    <span class="kwrd">assert</span>(<span class="hid">io.capacity</span> == <span class="num">0</span>);
 <a class="br" href="#L61" id="L61">61 </a>    <span class="kwrd">assert</span>(<span class="hid">io.full</span>);
 <a class="br" href="#L62" id="L62">62 </a>    <span class="kwrd">assert</span>(<span class="hid">io.empty</span>);
 <a class="br" href="#L63" id="L63">63 </a>    <span class="kwrd">assert</span>(!<span class="hid">io.length</span>);
 <a class="br" href="#L64" id="L64">64 </a>    <span class="kwrd">assert</span>(!<span class="hid">io.overflow</span>);
 <a class="br" href="#L65" id="L65">65 </a>    <span class="kwrd">assert</span>(!<span class="hid">io.dropped</span>);
-<a class="br" href="#L66" id="L66">66 </a>    <span class="kwrd">version</span>(<span class="hid">D_Exceptions</span>) <span class="hid">assertThrown</span>!<span class="hid">Throwable</span>(<span class="hid">io.put</span>(<a class="hid" href="during.d.html#L358" title="during.Nop">Nop</a>()));
+<a class="br" href="#L66" id="L66">66 </a>    <span class="kwrd">version</span>(<span class="hid">D_Exceptions</span>) <span class="hid">assertThrown</span>!<span class="hid">Throwable</span>(<span class="hid">io.put</span>(<a class="hid" href="during.d.html#L474" title="during.Nop">Nop</a>()));
 <a class="br" href="#L67" id="L67">67 </a>
 <a class="br" href="#L68" id="L68">68 </a>    <span class="hid">io.submit</span>(<span class="num">0</span>); <span class="com">// submit them all</span>
 <a class="br" href="#L69" id="L69">69 </a>    <span class="kwrd">assert</span>(<span class="hid">io.capacity</span> == <span class="num">16</span>);
@@ -109,13 +109,13 @@
 <a class="br" href="#L81" id="L81">81 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">15</span>);
 <a class="br" href="#L82" id="L82">82 </a>
 <a class="br" href="#L83" id="L83">83 </a>    <span class="com">// fill up completion queue</span>
-<a class="br" href="#L84" id="L84">84 </a>    <span class="kwrd">foreach</span> (<span class="hid">_</span>; <span class="num">0</span>..<span class="num">16</span>) <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L358" title="during.Nop">Nop</a>());
+<a class="br" href="#L84" id="L84">84 </a>    <span class="kwrd">foreach</span> (<span class="hid">_</span>; <span class="num">0</span>..<span class="num">16</span>) <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L474" title="during.Nop">Nop</a>());
 <a class="br" href="#L85" id="L85">85 </a>    <span class="hid">io.submit</span>(<span class="num">16</span>); <span class="com">// submit them and wait for all</span>
 <a class="br" href="#L86" id="L86">86 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">31</span>);
 <a class="br" href="#L87" id="L87">87 </a>    <span class="kwrd">assert</span>(!<span class="hid">io.overflow</span>); <span class="com">// still no overflow</span>
 <a class="br" href="#L88" id="L88">88 </a>
 <a class="br" href="#L89" id="L89">89 </a>    <span class="com">// cause overflow</span>
-<a class="br" href="#L90" id="L90">90 </a>    <span class="kwrd">foreach</span> (<span class="hid">_</span>; <span class="num">0</span>..<span class="num">2</span>) <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L358" title="during.Nop">Nop</a>());
+<a class="br" href="#L90" id="L90">90 </a>    <span class="kwrd">foreach</span> (<span class="hid">_</span>; <span class="num">0</span>..<span class="num">2</span>) <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L474" title="during.Nop">Nop</a>());
 <a class="br" href="#L91" id="L91">91 </a>    <span class="hid">io.submit</span>(<span class="num">2</span>);
 <a class="br" href="#L92" id="L92">92 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">32</span>);
 <a class="br" href="#L93" id="L93">93 </a>    <span class="kwrd">assert</span>(<span class="hid">io.overflow</span> == <span class="num">1</span>); <span class="com">// oops</span>
@@ -125,7 +125,7 @@
 <a class="br" href="#L97" id="L97">97 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">0</span>);
 <a class="br" href="#L98" id="L98">98 </a>
 <a class="br" href="#L99" id="L99">99 </a>    <span class="com">// put there another batch</span>
-<a class="br" href="#L100" id="L100">100 </a>    <span class="kwrd">foreach</span> (<span class="hid">_</span>; <span class="num">0</span>..<span class="num">16</span>) <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L358" title="during.Nop">Nop</a>());
+<a class="br" href="#L100" id="L100">100 </a>    <span class="kwrd">foreach</span> (<span class="hid">_</span>; <span class="num">0</span>..<span class="num">16</span>) <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L474" title="during.Nop">Nop</a>());
 <a class="br" href="#L101" id="L101">101 </a>    <span class="hid">io.submit</span>(<span class="num">0</span>);
 <a class="br" href="#L102" id="L102">102 </a>    <span class="hid">io.wait</span>(<span class="num">16</span>);
 <a class="br" href="#L103" id="L103">103 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">16</span>);
