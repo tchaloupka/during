@@ -81,7 +81,7 @@ unittest
     assert(io.length == 16);
     assert(!io.overflow);
     io.popFront();
-    assert(io.length == 15); // note that kernel still things it's 16
+    assert(io.length == 15); // note that kernel still thinks it's 16
 
     // fill up completion queue
     foreach (_; 0..16) io.put(Nop());
