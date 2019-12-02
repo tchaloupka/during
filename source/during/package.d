@@ -51,7 +51,7 @@ int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NON
         return -errno;
     }
 
-    debug printf("uring(%d): setup\n", uring.payload.fd);
+    // debug printf("uring(%d): setup\n", uring.payload.fd);
 
     return 0;
 }
@@ -410,7 +410,7 @@ void dispose(ref Uring uring)
     if (--uring.payload.refs == 0)
     {
         import std.traits : hasElaborateDestructor;
-        debug printf("uring(%d): free\n", uring.payload.fd);
+        // debug printf("uring(%d): free\n", uring.payload.fd);
         static if (hasElaborateDestructor!UringDesc)
             destroy(*uring.payload); // call possible destructors
         free(cast(void*)uring.payload);

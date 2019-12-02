@@ -101,7 +101,15 @@ private:
 
 auto getTestFileName(string baseName)()
 {
-    import core.stdc.stdlib : rand;
+    import core.stdc.stdlib : rand, srand;
+    import core.sys.posix.time : clock_gettime, CLOCK_REALTIME, timespec;
+
+    // make rand a bit more random - nothing fancy needed
+    timespec t;
+    auto tr = clock_gettime(CLOCK_REALTIME, &t);
+    assert(tr == 0);
+    srand(cast(uint)t.tv_nsec);
+
     static immutable ubyte[] let = cast(immutable(ubyte[]))"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     char[baseName.length + 16] fname = baseName ~ "_**********.dat\0";
 

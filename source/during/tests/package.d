@@ -17,11 +17,11 @@ version (unittest)
             printf(">> " ~ desc ~ ":\n");
             static foreach(u; __traits(getUnitTests, symbol))
             {
-                printf("> testing " ~ __traits(getAttributes, u)[0] ~ "\n");
+                printf("testing '" ~ __traits(getAttributes, u)[0] ~ "'");
                 u();
-                printf("> " ~ __traits(getAttributes, u)[0] ~ ": passed\n\n");
+                printf(": ok\n");
             }
-            printf(">> " ~ desc ~ ": passed\n\n");
+            printf("\n");
         }
     }
 }
