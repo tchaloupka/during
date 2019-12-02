@@ -596,7 +596,7 @@ int io_uring_setup(uint entries, scope ref SetupParameters p) @trusted
  *
  * Returns:
  */
-int io_uring_enter(int fd, uint to_submit, uint min_complete, EnterFlags flags, const sigset_t* sig = null) @trusted
+int io_uring_enter(int fd, uint to_submit, uint min_complete, EnterFlags flags, const sigset_t* sig = null)
 {
     pragma(inline);
     return syscall(SYS_io_uring_enter, fd, to_submit, min_complete, flags, sig, sigset_t.sizeof);

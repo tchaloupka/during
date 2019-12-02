@@ -222,7 +222,7 @@ struct Uring
      *
      * Returns: Number of submitted entries on success, `-errno` on error
      */
-    auto submit(uint want = 0, const sigset_t* sig = null)
+    auto submit(uint want = 0, const sigset_t* sig = null) @trusted
     {
         checkInitialized();
 
@@ -254,7 +254,7 @@ struct Uring
      *
      * Returns: `0` on success, `-errno` on error
      */
-    auto wait(uint want = 1, const sigset_t* sig = null)
+    auto wait(uint want = 1, const sigset_t* sig = null) @trusted
     {
         pragma(inline);
         checkInitialized();
@@ -288,6 +288,10 @@ struct Uring
     {
         checkInitialized();
         assert(buffers.length, "Empty buffer");
+
+        if (payload.regBuffers !is null)
+            return -EBUSY; // buffers were already registered
+
         static if (is(buffers == ubyte[]))
         {
             iovec vec;
@@ -297,17 +301,21 @@ struct Uring
         }
         else
         {
-            iovec[] vec = cast(iovec*)malloc(buffers.length * iovec.sizeof)[0..buffers.length];
-            if (vec is null) return -errno;
-            scope (exit) free(cast(void*)&vec[0]);
+            auto p = malloc(buffers.length * iovec.sizeof);
+            if (p is null) return -errno;
+            payload.registerBuffers = cast(iovec*)p[0..buffers.length];
 
             foreach (i, b; buffers)
             {
                 assert(b.length, "Empty buffer");
-                vec[i].iov_base = cast(void*)&b[0];
-                vec[i].iov_len = b.length;
+                payload.registerBuffers[i].iov_base = cast(void*)&b[0];
+                payload.registerBuffers[i].iov_len = b.length;
             }
-            auto r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_BUFFERS, cast(const(void)*)&vec[0], 1);
+            auto r = io_uring_register(
+                payload.fd,
+                RegisterOpCode.REGISTER_BUFFERS,
+                cast(const(void)*)&payload.registerBuffers[0], 1
+            );
         }
         if (r < 0) return -errno;
         return 0;
@@ -323,12 +331,120 @@ struct Uring
     auto unregisterBuffers() @trusted
     {
         checkInitialized();
+
+        if (payload.regBuffers is null)
+            return -ENXIO; // no buffers were registered
+
+        free(cast(void*)&payload.regBuffers[0]);
+
         auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_BUFFERS, null, 0);
         if (r < 0) return -errno;
         return 0;
     }
 
-    // TODO: register/unregister (files, eventfd, filesupdate)
+    /**
+     * Register files for I/O.
+     *
+     * To make use of the registered files, the `IOSQE_FIXED_FILE` flag must be set in the flags
+     * member of the `SubmissionEntry`, and the `fd` member is set to the index of the file in the
+     * file descriptor array.
+     *
+     * Files are automatically unregistered when the `io_uring` instance is torn down. An application
+     * need only unregister if it wishes to register a new set of fds.
+     *
+     * Use `-1` as a file descriptor to mark it as reserved in the array.*
+     * Params: fds = array of file descriptors to be registered
+     *
+     * Returns: On success, returns 0. On error, `-errno` is returned.
+     */
+    auto registerFiles(const(int)[] fds) @trusted
+    {
+        checkInitialized();
+        assert(fds.length, "No file descriptors provided");
+        assert(fds.length < uint.max, "Too many file descriptors");
+
+        // arg contains a pointer to an array of nr_args file descriptors (signed 32 bit integers).
+        auto r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_FILES, &fds[0], cast(uint)fds.length);
+        if (r < 0) return -errno;
+        return 0;
+    }
+
+    /*
+     * Register an update for an existing file set. The updates will start at
+     * `off` in the original array.
+     *
+     * Use `-1` as a file descriptor to mark it as reserved in the array.
+     *
+     * Params:
+     *      off = offset to the original registered files to be updated
+     *      files = array of file descriptors to update with
+     *
+     * Returns: number of files updated on success, -errno on failure.
+     */
+    auto registerFilesUpdate(uint off, const(int)[] fds) @trusted
+    {
+        struct Update
+        {
+            uint off;
+            const(int)* fds;
+        }
+
+        checkInitialized();
+        assert(fds.length, "No file descriptors provided to update");
+        assert(fds.length < uint.max, "Too many file descriptors");
+
+        Update u = Update(off, &fds[0]);
+        auto r = io_uring_register(
+            payload.fd,
+            RegisterOpCode.REGISTER_FILES_UPDATE,
+            &u, cast(uint)fds.length);
+        if (r < 0) return -errno;
+        return 0;
+    }
+
+    /**
+     * All previously registered files associated with the `io_uring` instance will be unregistered.
+     *
+     * Files are automatically unregistered when the `io_uring` instance is torn down. An application
+     * need only unregister if it wishes to register a new set of fds.
+     *
+     * Returns: On success, returns 0. On error, `-errno` is returned.
+     */
+    auto unregisterFiles() @trusted
+    {
+        checkInitialized();
+        auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_FILES, null, 0);
+        if (r < 0) return -errno;
+        return 0;
+    }
+
+    /**
+     * TODO
+     *
+     * Params: eventFD = TODO
+     *
+     * Returns: On success, returns 0. On error, `-errno` is returned.
+     */
+    auto registerEventFD(int eventFD) @trusted
+    {
+        checkInitialized();
+        auto r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_EVENTFD, &eventFD, 1);
+        if (r < 0) return -errno;
+        return 0;
+    }
+
+    /**
+     * TODO
+     *
+     * Returns: On success, returns 0. On error, `-errno` is returned.
+     */
+    auto unregisterEventFD() @trusted
+    {
+        checkInitialized();
+        auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_EVENTFD, null, 0);
+        if (r < 0) return -errno;
+        return 0;
+    }
 }
 
 /**
@@ -428,6 +544,8 @@ struct UringDesc
     SetupParameters params;
     SubmissionQueue sq;
     CompletionQueue cq;
+
+    iovec[] regBuffers;
 
     ~this()
     {
