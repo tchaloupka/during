@@ -54,7 +54,7 @@
 <a class="br" href="#L26" id="L26">26 </a>    <span class="kwrd">scope</span> (<span class="hid">exit</span>) <span class="hid">remove</span>(&amp;<span class="hid">fname</span>[<span class="num">0</span>]);
 <a class="br" href="#L27" id="L27">27 </a>
 <a class="br" href="#L28" id="L28">28 </a>    <span class="com">// read it and check if read correctly</span>
-<a class="br" href="#L29" id="L29">29 </a>    <a class="hid" href="during.d.html#L65" title="during.Uring">Uring</a> <span class="hid">io</span>;
+<a class="br" href="#L29" id="L29">29 </a>    <a class="hid" href="during.d.html#L66" title="during.Uring">Uring</a> <span class="hid">io</span>;
 <a class="br" href="#L30" id="L30">30 </a>    <span class="kwrd">auto</span> <span class="hid">res</span> = <span class="hid">io.setup</span>(<span class="num">16</span>);
 <a class="br" href="#L31" id="L31">31 </a>    <span class="kwrd">assert</span>(<span class="hid">res</span> &gt;= <span class="num">0</span>, <span class="str">&quot;Error initializing IO&quot;</span>);
 <a class="br" href="#L32" id="L32">32 </a>
@@ -67,7 +67,7 @@
 <a class="br" href="#L39" id="L39">39 </a>    <span class="hid">v.iov_len</span> = <span class="hid">readbuf.length</span>;
 <a class="br" href="#L40" id="L40">40 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">8</span>) <span class="com">// 8 operations must complete to read whole file</span>
 <a class="br" href="#L41" id="L41">41 </a>    {
-<a class="br" href="#L42" id="L42">42 </a>        <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L480" title="during.Readv">Readv</a>(<span class="hid">file</span>, <span class="hid">i</span>*<span class="num">32</span>, <span class="hid">v</span>)).<span class="hid">submit</span>(<span class="num">1</span>);
+<a class="br" href="#L42" id="L42">42 </a>        <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L481" title="during.Readv">Readv</a>(<span class="hid">file</span>, <span class="hid">i</span>*<span class="num">32</span>, <span class="hid">v</span>)).<span class="hid">submit</span>(<span class="num">1</span>);
 <a class="br" href="#L43" id="L43">43 </a>        <span class="kwrd">assert</span>(<span class="hid">io.front.res</span> == <span class="num">32</span>); <span class="com">// number of bytes read</span>
 <a class="br" href="#L44" id="L44">44 </a>        <span class="kwrd">assert</span>(<span class="hid">readbuf</span>[] == <span class="hid">buf</span>[<span class="hid">i</span>*<span class="num">32</span>..(<span class="hid">i</span>+<span class="num">1</span>)*<span class="num">32</span>]);
 <a class="br" href="#L45" id="L45">45 </a>        <span class="hid">io.popFront</span>();
@@ -75,7 +75,7 @@
 <a class="br" href="#L47" id="L47">47 </a>
 <a class="br" href="#L48" id="L48">48 </a>    <span class="com">// try to read after the file content too</span>
 <a class="br" href="#L49" id="L49">49 </a>    <span class="kwrd">assert</span>(<span class="hid">io.empty</span>);
-<a class="br" href="#L50" id="L50">50 </a>    <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L480" title="during.Readv">Readv</a>(<span class="hid">file</span>, <span class="num">256</span>, <span class="hid">v</span>)).<span class="hid">submit</span>(<span class="num">1</span>);
+<a class="br" href="#L50" id="L50">50 </a>    <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L481" title="during.Readv">Readv</a>(<span class="hid">file</span>, <span class="num">256</span>, <span class="hid">v</span>)).<span class="hid">submit</span>(<span class="num">1</span>);
 <a class="br" href="#L51" id="L51">51 </a>    <span class="kwrd">assert</span>(<span class="hid">io.front.res</span> == <span class="num">0</span>); <span class="com">// ok we've reached the EOF</span>
 <a class="br" href="#L52" id="L52">52 </a>}
 <a class="br" href="#L53" id="L53">53 </a>
@@ -95,7 +95,7 @@
 <a class="br" href="#L67" id="L67">67 </a>        <span class="hid">v.iov_len</span> = <span class="hid">buffer.length</span>;
 <a class="br" href="#L68" id="L68">68 </a>
 <a class="br" href="#L69" id="L69">69 </a>        <span class="com">// prepare uring</span>
-<a class="br" href="#L70" id="L70">70 </a>        <a class="hid" href="during.d.html#L65" title="during.Uring">Uring</a> <span class="hid">io</span>;
+<a class="br" href="#L70" id="L70">70 </a>        <a class="hid" href="during.d.html#L66" title="during.Uring">Uring</a> <span class="hid">io</span>;
 <a class="br" href="#L71" id="L71">71 </a>        <span class="kwrd">auto</span> <span class="hid">res</span> = <span class="hid">io.setup</span>(<span class="num">16</span>);
 <a class="br" href="#L72" id="L72">72 </a>        <span class="kwrd">assert</span>(<span class="hid">res</span> &gt;= <span class="num">0</span>, <span class="str">&quot;Error initializing IO&quot;</span>);
 <a class="br" href="#L73" id="L73">73 </a>
@@ -104,7 +104,7 @@
 <a class="br" href="#L76" id="L76">76 </a>        {
 <a class="br" href="#L77" id="L77">77 </a>            <span class="kwrd">foreach</span> (<span class="hid">j</span>; <span class="num">0</span>..<span class="num">32</span>) <span class="hid">buffer</span>[<span class="hid">j</span>] = <span class="kwrd">cast</span>(<span class="type">ubyte</span>)(<span class="hid">i</span>*<span class="num">32</span> + <span class="hid">j</span>);
 <a class="br" href="#L78" id="L78">78 </a>            <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>;
-<a class="br" href="#L79" id="L79">79 </a>            <span class="hid">entry.fill</span>(<a class="hid" href="during.d.html#L483" title="during.Writev">Writev</a>(<span class="hid">f</span>, <span class="hid">i</span>*<span class="num">32</span>, <span class="hid">v</span>));
+<a class="br" href="#L79" id="L79">79 </a>            <span class="hid">entry.fill</span>(<a class="hid" href="during.d.html#L484" title="during.Writev">Writev</a>(<span class="hid">f</span>, <span class="hid">i</span>*<span class="num">32</span>, <span class="hid">v</span>));
 <a class="br" href="#L80" id="L80">80 </a>            <span class="hid">entry.user_data</span> = <span class="hid">i</span>;
 <a class="br" href="#L81" id="L81">81 </a>            <span class="hid">io.put</span>(<span class="hid">entry</span>).<span class="hid">submit</span>(<span class="num">1</span>);
 <a class="br" href="#L82" id="L82">82 </a>
