@@ -657,6 +657,7 @@ struct UringDesc
 
     ~this()
     {
+        if (regBuffers) free(cast(void*)&regBuffers);
         if (sq.ring) munmap(sq.ring, sq.ringSize);
         if (sq.sqes) munmap(cast(void*)&sq.sqes[0], sq.sqes.length * SubmissionEntry.sizeof);
         if (cq.ring && cq.ring != sq.ring) munmap(cq.ring, cq.ringSize);
