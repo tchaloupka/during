@@ -46,7 +46,7 @@
 <a class="br" href="#L18" id="L18">18 </a>    <span class="kwrd">auto</span> <span class="hid">fname</span> = <a class="hid" href="during.tests.rw.d.html#L102" title="during.tests.rw.getTestFileName">getTestFileName</a>!<span class="str">&quot;readv_test&quot;</span>;
 <a class="br" href="#L19" id="L19">19 </a>    <span class="type">ubyte</span>[<span class="num">256</span>] <span class="hid">buf</span>;
 <a class="br" href="#L20" id="L20">20 </a>    <span class="hid">iota</span>(<span class="num">0</span>, <span class="num">256</span>).<span class="hid">map</span>!(<span class="hid">a</span> =&gt; <span class="kwrd">cast</span>(<span class="type">ubyte</span>)<span class="hid">a</span>).<span class="hid">copy</span>(<span class="hid">buf</span>[]);
-<a class="br" href="#L21" id="L21">21 </a>    <span class="kwrd">auto</span> <span class="hid">file</span> = <a class="hid" href="during.tests.rw.d.html#L115" title="during.tests.rw.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_CREAT</span> | <span class="hid">O_WRONLY</span>);
+<a class="br" href="#L21" id="L21">21 </a>    <span class="kwrd">auto</span> <span class="hid">file</span> = <a class="hid" href="during.tests.rw.d.html#L123" title="during.tests.rw.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_CREAT</span> | <span class="hid">O_WRONLY</span>);
 <a class="br" href="#L22" id="L22">22 </a>    <span class="kwrd">auto</span> <span class="hid">wr</span> = <span class="hid">write</span>(<span class="hid">file</span>, &amp;<span class="hid">buf</span>[<span class="num">0</span>], <span class="hid">buf.length</span>);
 <a class="br" href="#L23" id="L23">23 </a>    <span class="kwrd">assert</span>(<span class="hid">wr</span> == <span class="hid">buf.length</span>);
 <a class="br" href="#L24" id="L24">24 </a>    <span class="hid">close</span>(<span class="hid">file</span>);
@@ -58,7 +58,7 @@
 <a class="br" href="#L30" id="L30">30 </a>    <span class="kwrd">auto</span> <span class="hid">res</span> = <span class="hid">io.setup</span>(<span class="num">16</span>);
 <a class="br" href="#L31" id="L31">31 </a>    <span class="kwrd">assert</span>(<span class="hid">res</span> &gt;= <span class="num">0</span>, <span class="str">&quot;Error initializing IO&quot;</span>);
 <a class="br" href="#L32" id="L32">32 </a>
-<a class="br" href="#L33" id="L33">33 </a>    <span class="hid">file</span> = <a class="hid" href="during.tests.rw.d.html#L115" title="during.tests.rw.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_RDONLY</span>);
+<a class="br" href="#L33" id="L33">33 </a>    <span class="hid">file</span> = <a class="hid" href="during.tests.rw.d.html#L123" title="during.tests.rw.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_RDONLY</span>);
 <a class="br" href="#L34" id="L34">34 </a>    <span class="kwrd">scope</span> (<span class="hid">exit</span>) <span class="hid">close</span>(<span class="hid">file</span>);
 <a class="br" href="#L35" id="L35">35 </a>
 <a class="br" href="#L36" id="L36">36 </a>    <span class="type">ubyte</span>[<span class="num">32</span>] <span class="hid">readbuf</span>; <span class="com">// small buffer to test reading in chunks</span>
@@ -84,7 +84,7 @@
 <a class="br" href="#L56" id="L56">56 </a>{
 <a class="br" href="#L57" id="L57">57 </a>    <span class="com">// prepare file to write to</span>
 <a class="br" href="#L58" id="L58">58 </a>    <span class="kwrd">auto</span> <span class="hid">fname</span> = <a class="hid" href="during.tests.rw.d.html#L102" title="during.tests.rw.getTestFileName">getTestFileName</a>!<span class="str">&quot;writev_test&quot;</span>;
-<a class="br" href="#L59" id="L59">59 </a>    <span class="kwrd">auto</span> <span class="hid">f</span> = <a class="hid" href="during.tests.rw.d.html#L115" title="during.tests.rw.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_CREAT</span> | <span class="hid">O_WRONLY</span>);
+<a class="br" href="#L59" id="L59">59 </a>    <span class="kwrd">auto</span> <span class="hid">f</span> = <a class="hid" href="during.tests.rw.d.html#L123" title="during.tests.rw.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_CREAT</span> | <span class="hid">O_WRONLY</span>);
 <a class="br" href="#L60" id="L60">60 </a>
 <a class="br" href="#L61" id="L61">61 </a>    {
 <a class="br" href="#L62" id="L62">62 </a>        <span class="kwrd">scope</span> (<span class="hid">exit</span>) <span class="hid">close</span>(<span class="hid">f</span>);
@@ -117,7 +117,7 @@
 <a class="br" href="#L89" id="L89">89 </a>
 <a class="br" href="#L90" id="L90">90 </a>    <span class="com">// now check back file content</span>
 <a class="br" href="#L91" id="L91">91 </a>    <span class="type">ubyte</span>[<span class="num">257</span>] <span class="hid">readbuf</span>;
-<a class="br" href="#L92" id="L92">92 </a>    <span class="hid">f</span> = <a class="hid" href="during.tests.rw.d.html#L115" title="during.tests.rw.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_RDONLY</span>);
+<a class="br" href="#L92" id="L92">92 </a>    <span class="hid">f</span> = <a class="hid" href="during.tests.rw.d.html#L123" title="during.tests.rw.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_RDONLY</span>);
 <a class="br" href="#L93" id="L93">93 </a>    <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">read</span>(<span class="hid">f</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">readbuf</span>[<span class="num">0</span>], <span class="num">257</span>);
 <a class="br" href="#L94" id="L94">94 </a>    <span class="kwrd">assert</span>(<span class="hid">r</span> == <span class="num">256</span>);
 <a class="br" href="#L95" id="L95">95 </a>    <span class="kwrd">assert</span>(<span class="hid">readbuf</span>[<span class="num">0</span>..<span class="num">256</span>].<span class="hid">equal</span>(<span class="hid">iota</span>(<span class="num">0</span>, <span class="num">256</span>)));
@@ -129,25 +129,33 @@
 <a class="br" href="#L101" id="L101">101 </a>
 <a class="br" href="#L102" id="L102">102 </a><span class="kwrd">auto</span> <a class="hid" href="during.tests.rw.d.html#L102" title="during.tests.rw.getTestFileName">getTestFileName</a>(<span class="type">string</span> <span class="hid">baseName</span>)()
 <a class="br" href="#L103" id="L103">103 </a>{
-<a class="br" href="#L104" id="L104">104 </a>    <span class="kwrd">import</span> <span class="hid">core.stdc.stdlib</span> : <span class="hid">rand</span>;
-<a class="br" href="#L105" id="L105">105 </a>    <span class="kwrd">static</span> <span class="kwrd">immutable</span> <span class="type">ubyte</span>[] <span class="hid">let</span> = <span class="kwrd">cast</span>(<span class="kwrd">immutable</span>(<span class="type">ubyte</span>[]))<span class="str">&quot;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz&quot;</span>;
-<a class="br" href="#L106" id="L106">106 </a>    <span class="type">char</span>[<span class="hid">baseName.length</span> + <span class="num">16</span>] <span class="hid">fname</span> = <span class="hid">baseName</span> ~ <span class="str">&quot;_**********.dat\0&quot;</span>;
-<a class="br" href="#L107" id="L107">107 </a>
-<a class="br" href="#L108" id="L108">108 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">10</span>)
-<a class="br" href="#L109" id="L109">109 </a>    {
-<a class="br" href="#L110" id="L110">110 </a>        <span class="hid">fname</span>[<span class="hid">baseName.length</span> + <span class="num">1</span> + <span class="hid">i</span>] = <span class="hid">let</span>[<span class="hid">rand</span>() % <span class="hid">let.length</span>];
-<a class="br" href="#L111" id="L111">111 </a>    }
-<a class="br" href="#L112" id="L112">112 </a>    <span class="kwrd">return</span> <span class="hid">fname</span>;
-<a class="br" href="#L113" id="L113">113 </a>}
-<a class="br" href="#L114" id="L114">114 </a>
-<a class="br" href="#L115" id="L115">115 </a><span class="kwrd">auto</span> <a class="hid" href="during.tests.rw.d.html#L115" title="during.tests.rw.openFile">openFile</a>(<span class="hid">T</span>)(<span class="hid">T</span> <span class="hid">fname</span>, <span class="type">int</span> <span class="hid">flags</span>)
-<a class="br" href="#L116" id="L116">116 </a>{
-<a class="br" href="#L117" id="L117">117 </a>    <span class="kwrd">auto</span> <span class="hid">f</span> = <span class="hid">open</span>(&amp;<span class="hid">fname</span>[<span class="num">0</span>], <span class="hid">flags</span>, <span class="hid">S_IRUSR</span> | <span class="hid">S_IWUSR</span> | <span class="hid">S_IRGRP</span> | <span class="hid">S_IWGRP</span> | <span class="hid">S_IROTH</span>);
-<a class="br" href="#L118" id="L118">118 </a>    <span class="kwrd">assert</span>(<span class="hid">f</span> &gt; <span class="num">0</span>, <span class="str">&quot;Failed to open file&quot;</span>);
-<a class="br" href="#L119" id="L119">119 </a>    <span class="kwrd">return</span> <span class="hid">f</span>;
-<a class="br" href="#L120" id="L120">120 </a>}</pre></div>
+<a class="br" href="#L104" id="L104">104 </a>    <span class="kwrd">import</span> <span class="hid">core.stdc.stdlib</span> : <span class="hid">rand</span>, <span class="hid">srand</span>;
+<a class="br" href="#L105" id="L105">105 </a>    <span class="kwrd">import</span> <span class="hid">core.sys.posix.time</span> : <span class="hid">clock_gettime</span>, <span class="hid">CLOCK_REALTIME</span>, <span class="hid">timespec</span>;
+<a class="br" href="#L106" id="L106">106 </a>
+<a class="br" href="#L107" id="L107">107 </a>    <span class="com">// make rand a bit more random - nothing fancy needed</span>
+<a class="br" href="#L108" id="L108">108 </a>    <span class="hid">timespec</span> <span class="hid">t</span>;
+<a class="br" href="#L109" id="L109">109 </a>    <span class="kwrd">auto</span> <span class="hid">tr</span> = <span class="hid">clock_gettime</span>(<span class="hid">CLOCK_REALTIME</span>, &amp;<span class="hid">t</span>);
+<a class="br" href="#L110" id="L110">110 </a>    <span class="kwrd">assert</span>(<span class="hid">tr</span> == <span class="num">0</span>);
+<a class="br" href="#L111" id="L111">111 </a>    <span class="hid">srand</span>(<span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">t.tv_nsec</span>);
+<a class="br" href="#L112" id="L112">112 </a>
+<a class="br" href="#L113" id="L113">113 </a>    <span class="kwrd">static</span> <span class="kwrd">immutable</span> <span class="type">ubyte</span>[] <span class="hid">let</span> = <span class="kwrd">cast</span>(<span class="kwrd">immutable</span>(<span class="type">ubyte</span>[]))<span class="str">&quot;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz&quot;</span>;
+<a class="br" href="#L114" id="L114">114 </a>    <span class="type">char</span>[<span class="hid">baseName.length</span> + <span class="num">16</span>] <span class="hid">fname</span> = <span class="hid">baseName</span> ~ <span class="str">&quot;_**********.dat\0&quot;</span>;
+<a class="br" href="#L115" id="L115">115 </a>
+<a class="br" href="#L116" id="L116">116 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">10</span>)
+<a class="br" href="#L117" id="L117">117 </a>    {
+<a class="br" href="#L118" id="L118">118 </a>        <span class="hid">fname</span>[<span class="hid">baseName.length</span> + <span class="num">1</span> + <span class="hid">i</span>] = <span class="hid">let</span>[<span class="hid">rand</span>() % <span class="hid">let.length</span>];
+<a class="br" href="#L119" id="L119">119 </a>    }
+<a class="br" href="#L120" id="L120">120 </a>    <span class="kwrd">return</span> <span class="hid">fname</span>;
+<a class="br" href="#L121" id="L121">121 </a>}
+<a class="br" href="#L122" id="L122">122 </a>
+<a class="br" href="#L123" id="L123">123 </a><span class="kwrd">auto</span> <a class="hid" href="during.tests.rw.d.html#L123" title="during.tests.rw.openFile">openFile</a>(<span class="hid">T</span>)(<span class="hid">T</span> <span class="hid">fname</span>, <span class="type">int</span> <span class="hid">flags</span>)
+<a class="br" href="#L124" id="L124">124 </a>{
+<a class="br" href="#L125" id="L125">125 </a>    <span class="kwrd">auto</span> <span class="hid">f</span> = <span class="hid">open</span>(&amp;<span class="hid">fname</span>[<span class="num">0</span>], <span class="hid">flags</span>, <span class="hid">S_IRUSR</span> | <span class="hid">S_IWUSR</span> | <span class="hid">S_IRGRP</span> | <span class="hid">S_IWGRP</span> | <span class="hid">S_IROTH</span>);
+<a class="br" href="#L126" id="L126">126 </a>    <span class="kwrd">assert</span>(<span class="hid">f</span> &gt; <span class="num">0</span>, <span class="str">&quot;Failed to open file&quot;</span>);
+<a class="br" href="#L127" id="L127">127 </a>    <span class="kwrd">return</span> <span class="hid">f</span>;
+<a class="br" href="#L128" id="L128">128 </a>}</pre></div>
 		<div id="page-nav">
-		<div id="source-navigation"><div class="list-holder"><ul><li><a href="#L1">during.tests.rw</a><ul><li><a href="#L3">during</a></li><li><a href="#L5">core.stdc.stdio</a></li><li><a href="#L6">core.sys.linux.fcntl</a></li><li><a href="#L7">core.sys.posix.sys.uio</a></li><li><a href="#L8">core.sys.posix.unistd</a></li><li><a href="#L9">std.algorithm</a></li><li><a href="#L10">std.range</a></li><li><a href="#L102">getTestFileName</a></li><li><a href="#L115">openFile</a></li></ul></li></ul></div></div></div>
+		<div id="source-navigation"><div class="list-holder"><ul><li><a href="#L1">during.tests.rw</a><ul><li><a href="#L3">during</a></li><li><a href="#L5">core.stdc.stdio</a></li><li><a href="#L6">core.sys.linux.fcntl</a></li><li><a href="#L7">core.sys.posix.sys.uio</a></li><li><a href="#L8">core.sys.posix.unistd</a></li><li><a href="#L9">std.algorithm</a></li><li><a href="#L10">std.range</a></li><li><a href="#L102">getTestFileName</a></li><li><a href="#L123">openFile</a></li></ul></li></ul></div></div></div>
 	</div>
 	<div id="page-footer">Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a></div>
 </body>

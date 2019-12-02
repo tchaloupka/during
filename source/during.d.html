@@ -79,7 +79,7 @@
 <a class="br" href="#L51" id="L51">51 </a>        <span class="kwrd">return</span> -<span class="hid">errno</span>;
 <a class="br" href="#L52" id="L52">52 </a>    }
 <a class="br" href="#L53" id="L53">53 </a>
-<a class="br" href="#L54" id="L54">54 </a>    <span class="kwrd">debug</span> <span class="hid">printf</span>(<span class="str">&quot;uring(%d): setup\n&quot;</span>, <span class="hid">uring.payload.fd</span>);
+<a class="br" href="#L54" id="L54">54 </a>    <span class="com">// debug printf(&quot;uring(%d): setup\n&quot;, uring.payload.fd);</span>
 <a class="br" href="#L55" id="L55">55 </a>
 <a class="br" href="#L56" id="L56">56 </a>    <span class="kwrd">return</span> <span class="num">0</span>;
 <a class="br" href="#L57" id="L57">57 </a>}
@@ -438,7 +438,7 @@
 <a class="br" href="#L410" id="L410">410 </a>    <span class="kwrd">if</span> (--<span class="hid">uring.payload.refs</span> == <span class="num">0</span>)
 <a class="br" href="#L411" id="L411">411 </a>    {
 <a class="br" href="#L412" id="L412">412 </a>        <span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">hasElaborateDestructor</span>;
-<a class="br" href="#L413" id="L413">413 </a>        <span class="kwrd">debug</span> <span class="hid">printf</span>(<span class="str">&quot;uring(%d): free\n&quot;</span>, <span class="hid">uring.payload.fd</span>);
+<a class="br" href="#L413" id="L413">413 </a>        <span class="com">// debug printf(&quot;uring(%d): free\n&quot;, uring.payload.fd);</span>
 <a class="br" href="#L414" id="L414">414 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">hasElaborateDestructor</span>!<a class="hid" href="during.d.html#L422" title="during.UringDesc">UringDesc</a>)
 <a class="br" href="#L415" id="L415">415 </a>            <span class="hid">destroy</span>(*<span class="hid">uring.payload</span>); <span class="com">// call possible destructors</span>
 <a class="br" href="#L416" id="L416">416 </a>        <span class="hid">free</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)<span class="hid">uring.payload</span>);
