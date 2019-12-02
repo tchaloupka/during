@@ -586,7 +586,7 @@ struct RWMsg(Operation op)
     uint msg_flags;
 
     /**
-     * Read/write operation constructor.
+     * sendmsg/recvmsg operation constructor.
      *
      * Params:
      *      fd = file descriptor of file we are operating on
