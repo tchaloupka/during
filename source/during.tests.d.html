@@ -47,11 +47,12 @@
 <a class="br" href="#L19" id="L19">19 </a>            {
 <a class="br" href="#L20" id="L20">20 </a>                <span class="hid">printf</span>(<span class="str">&quot;&gt; testing &quot;</span> ~ <span class="kwrd">__traits</span>(<span class="hid">getAttributes</span>, <span class="hid">u</span>)[<span class="num">0</span>] ~ <span class="str">&quot;\n&quot;</span>);
 <a class="br" href="#L21" id="L21">21 </a>                <span class="hid">u</span>();
-<a class="br" href="#L22" id="L22">22 </a>            }
-<a class="br" href="#L23" id="L23">23 </a>            <span class="hid">printf</span>(<span class="str">&quot;\n&quot;</span>);
-<a class="br" href="#L24" id="L24">24 </a>        }
-<a class="br" href="#L25" id="L25">25 </a>    }
-<a class="br" href="#L26" id="L26">26 </a>}</pre></div>
+<a class="br" href="#L22" id="L22">22 </a>                <span class="hid">printf</span>(<span class="str">&quot;&gt; &quot;</span> ~ <span class="kwrd">__traits</span>(<span class="hid">getAttributes</span>, <span class="hid">u</span>)[<span class="num">0</span>] ~ <span class="str">&quot;: passed\n\n&quot;</span>);
+<a class="br" href="#L23" id="L23">23 </a>            }
+<a class="br" href="#L24" id="L24">24 </a>            <span class="hid">printf</span>(<span class="str">&quot;&gt;&gt; &quot;</span> ~ <span class="hid">desc</span> ~ <span class="str">&quot;: passed\n\n&quot;</span>);
+<a class="br" href="#L25" id="L25">25 </a>        }
+<a class="br" href="#L26" id="L26">26 </a>    }
+<a class="br" href="#L27" id="L27">27 </a>}</pre></div>
 		<div id="page-nav">
 		<div id="source-navigation"><div class="list-holder"><ul><li><a href="#L1">during.tests</a><ul><li><a href="#L7">core.stdc.stdio</a></li><li><a href="#L8">main</a></li><li><a href="#L15">runTests</a></li></ul></li></ul></div></div></div>
 	</div>
