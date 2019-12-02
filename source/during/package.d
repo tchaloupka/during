@@ -195,33 +195,6 @@ struct Uring
     }
 
     /**
-     * Advances `SubmissionEntry` and `CompletionEntry` indexes in ring buffers.
-     * Same as calling `finishCq` and `finishSq` individually
-     */
-    ref Uring finish() return
-    {
-        finishCq();
-        finishSq();
-        return this;
-    }
-
-    /// Write current cq head index to ring (so it can be processed by the kernel)
-    ref Uring finishCq() return
-    {
-        checkInitialized();
-        payload.cq.flushHead;
-        return this;
-    }
-
-    /// Write current sq tail index to ring (so it can be processed by the kernel)
-    ref Uring finishSq() return
-    {
-        checkInitialized();
-        payload.sq.flushTail;
-        return this;
-    }
-
-    /**
      * If completion queue is full, the new event maybe dropped.
      * This value records number of dropped events.
      */
@@ -258,6 +231,8 @@ struct Uring
         {
             EnterFlags flags;
             if (want > 0) flags |= EnterFlags.GETEVENTS;
+
+            payload.sq.flushTail(); // advance queue index
 
             if (payload.params.flags & SetupFlags.SQPOLL)
             {
@@ -562,6 +537,7 @@ struct SubmissionQueue
 
     void flushTail()
     {
+        pragma(inline);
         // debug printf("SQ updating tail: %d\n", localTail);
         atomicStore!(MemoryOrder.rel)(*ktail, localTail);
     }
@@ -627,6 +603,7 @@ struct CompletionQueue
 
     void flushHead()
     {
+        pragma(inline);
         // debug printf("CQ updating head: %d\n", localHead);
         atomicStore!(MemoryOrder.rel)(*khead, localHead);
     }
@@ -641,8 +618,10 @@ struct CompletionQueue
 
     void popFront()
     {
+        pragma(inline);
         assert(!empty, "CompletionQueue is empty");
         localHead++;
+        flushHead();
     }
 
     size_t length() const { return tail - localHead; }
