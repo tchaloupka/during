@@ -184,6 +184,14 @@ struct Uring
         return this;
     }
 
+    /// ditto
+    ref Uring putWith(ARGS...)(void function(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args) return
+    {
+        checkInitialized();
+        payload.sq.putWith(fn, args);
+        return this;
+    }
+
     /**
      * Similar to `put(SubmissionEntry)` but in this case we can provide our custom type (args) to be filled
      * to next `SubmissionEntry` in queue.
@@ -300,31 +308,34 @@ struct Uring
         if (payload.regBuffers !is null)
             return -EBUSY; // buffers were already registered
 
-        static if (is(buffers == ubyte[]))
+        static if (is(T == ubyte[]))
         {
-            iovec vec;
-            vec.iov_base = cast(void*)&buffers[0];
-            vec.iov_len = buffers.length;
-            auto r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_BUFFERS, cast(const(void)*)&vec, 1);
+            auto p = malloc(iovec.sizeof);
+            if (p is null) return -errno;
+            payload.regBuffers = (cast(iovec*)p)[0..1];
+            payload.regBuffers[0].iov_base = cast(void*)&buffers[0];
+            payload.regBuffers[0].iov_len = buffers.length;
         }
-        else
+        else static if (is(T == ubyte[][]))
         {
             auto p = malloc(buffers.length * iovec.sizeof);
             if (p is null) return -errno;
-            payload.registerBuffers = cast(iovec*)p[0..buffers.length];
+            payload.regBuffers = (cast(iovec*)p)[0..buffers.length];
 
             foreach (i, b; buffers)
             {
                 assert(b.length, "Empty buffer");
-                payload.registerBuffers[i].iov_base = cast(void*)&b[0];
-                payload.registerBuffers[i].iov_len = b.length;
+                payload.regBuffers[i].iov_base = cast(void*)&b[0];
+                payload.regBuffers[i].iov_len = b.length;
             }
-            auto r = io_uring_register(
+        }
+
+        auto r = io_uring_register(
                 payload.fd,
                 RegisterOpCode.REGISTER_BUFFERS,
-                cast(const(void)*)&payload.registerBuffers[0], 1
+                cast(const(void)*)&payload.regBuffers[0], 1
             );
-        }
+
         if (r < 0) return -errno;
         return 0;
     }
@@ -657,7 +668,8 @@ struct UringDesc
 
     ~this()
     {
-        if (regBuffers) free(cast(void*)&regBuffers);
+        //TODO: got: free(): double free detected in tcache 2 on this.. (released on kernel side?)
+        // if (regBuffers) free(cast(void*)&regBuffers[0]);
         if (sq.ring) munmap(sq.ring, sq.ringSize);
         if (sq.sqes) munmap(cast(void*)&sq.sqes[0], sq.sqes.length * SubmissionEntry.sizeof);
         if (cq.ring && cq.ring != sq.ring) munmap(cq.ring, cq.ringSize);
@@ -797,6 +809,16 @@ struct SubmissionQueue
     }
 
     void putWith(ARGS...)(void delegate(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args)
+    {
+        putWithImpl(fn, args);
+    }
+
+    void putWith(ARGS...)(void function(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args)
+    {
+        putWithImpl(fn, args);
+    }
+
+    private void putWithImpl(FN, ARGS...)(FN fn, ARGS args)
     {
         assert(!full, "SumbissionQueue is full");
         sqes[tail & ringMask].clear();
