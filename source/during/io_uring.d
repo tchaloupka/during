@@ -35,7 +35,11 @@ struct SubmissionEntry
     uint len;                               /// buffer size or number of iovecs
     SubmissionEntryOperationFlags op_flags;
     ulong user_data;                        /// data to be passed back at completion time
-    SubmissionEntryExtraData extra;
+    union
+    {
+        ushort buf_index;                   /// index into fixed buffers, if used
+        ulong[3] __pad2;
+    }
 
     /// Resets entry fields
     void clear() @safe nothrow @nogc
@@ -166,12 +170,6 @@ enum TimeoutFlags : uint
 {
     NONE = 0,
     TIMEOUT_ABS = 1U << 0   /// `IORING_TIMEOUT_ABS`
-}
-
-union SubmissionEntryExtraData
-{
-    ushort buf_index; /// index into fixed buffers, if used
-    private ulong[3] __pad2;
 }
 
 /**
@@ -513,7 +511,6 @@ static assert(CompletionEntry.sizeof == 16);
 static assert(CompletionQueueRingOffsets.sizeof == 40);
 static assert(SetupParameters.sizeof == 120);
 static assert(SubmissionEntry.sizeof == 64);
-static assert(SubmissionEntryExtraData.sizeof == 24);
 static assert(SubmissionEntryOperationFlags.sizeof == 4);
 static assert(SubmissionQueueRingOffsets.sizeof == 40);
 

@@ -482,6 +482,15 @@ alias Readv = RW!(Operation.READV);
 /// Helper structure to initiate `writev` operations.
 alias Writev = RW!(Operation.WRITEV);
 
+/// Helper structure to initiate `read_fixed` operations.
+alias ReadFixed = RWFixed!(Operation.READ_FIXED);
+
+/// Helper structure to initiate `write_fixed` operations.
+alias WriteFixed = RWFixed!(Operation.WRITE_FIXED);
+
+// TODO: check offset behavior, preadv2/pwritev2 should accept -1 to work on the current file offset,
+// but it doesn't seem to work here.
+
 /**
  * Template for read/write operations
  *
@@ -495,15 +504,13 @@ struct RW(Operation op)
     ulong addr;
     uint len;
 
-    // TODO: check offset behavior, preadv2/pwritev2 should accept -1 to work on the current file offset,
-    // but it doesn't seem to work here.
-
     /**
      * Read/write operation constructor.
      *
      * Params:
      *      fd = file descriptor of file we are operating on
      *      offset = offset
+     *      buffer = iovec buffers to be used by the operation
      */
     this(int fd, ulong offset, iovec[] buffer...)
     {
@@ -513,6 +520,41 @@ struct RW(Operation op)
         this.off = offset;
         this.addr = cast(ulong)(cast(void*)&buffer[0]);
         this.len = cast(uint)buffer.length;
+    }
+}
+
+/**
+ * Template for fixed read/write operations (using preregistered buffer)
+ *
+ * Type of operation is defined by `op` template parameter.
+ */
+struct RWFixed(Operation op)
+{
+    Operation opcode = op;
+    int fd;
+    ulong off;
+    ulong addr;
+    uint len;
+    ushort buf_index;
+
+    /**
+     * Fixed read/write operation constructor.
+     *
+     * Params:
+     *      fd = file descriptor of file we are operating on
+     *      offset = offset
+     *      buffer = slice to preregistered buffer
+     *      bufferIndex = index to the preregistered buffers array buffer belongs to
+     */
+    this(int fd, ulong offset, ubyte[] buffer, ushort bufferIndex) @safe
+    {
+        assert(buffer.length, "Empty buffer");
+        assert(buffer.length < uint.max, "Buffer too large");
+        this.fd = fd;
+        this.off = offset;
+        this.addr = cast(ulong)(cast(void*)&buffer[0]);
+        this.len = cast(uint)buffer.length;
+        this.buf_index = bufferIndex;
     }
 }
 
