@@ -109,7 +109,7 @@
 <a class="br" href="#L81" id="L81">81 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">16</span>);
 <a class="br" href="#L82" id="L82">82 </a>    <span class="kwrd">assert</span>(!<span class="hid">io.overflow</span>);
 <a class="br" href="#L83" id="L83">83 </a>    <span class="hid">io.popFront</span>();
-<a class="br" href="#L84" id="L84">84 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">15</span>); <span class="com">// note that kernel still things it's 16</span>
+<a class="br" href="#L84" id="L84">84 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">15</span>); <span class="com">// note that kernel still thinks it's 16</span>
 <a class="br" href="#L85" id="L85">85 </a>
 <a class="br" href="#L86" id="L86">86 </a>    <span class="com">// fill up completion queue</span>
 <a class="br" href="#L87" id="L87">87 </a>    <span class="kwrd">foreach</span> (<span class="hid">_</span>; <span class="num">0</span>..<span class="num">16</span>) <span class="hid">io.put</span>(<a class="hid" href="during.d.html#L383" title="during.Nop">Nop</a>());
