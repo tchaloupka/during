@@ -113,25 +113,26 @@
 <a class="br" href="#L85" id="L85">85 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">5</span>);
 <a class="br" href="#L86" id="L86">86 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">5</span>)
 <a class="br" href="#L87" id="L87">87 </a>    {
-<a class="br" href="#L88" id="L88">88 </a>        <span class="kwrd">if</span> (<span class="hid">io.front.res</span> == -<span class="hid">EINVAL</span>)
-<a class="br" href="#L89" id="L89">89 </a>        {
-<a class="br" href="#L90" id="L90">90 </a>            <span class="kwrd">version</span> (<span class="hid">D_BetterC</span>)
-<a class="br" href="#L91" id="L91">91 </a>            {
-<a class="br" href="#L92" id="L92">92 </a>                <a class="hid" href="during.tests.base.d.html#L10" title="during.tests.base.errmsg">errmsg</a> = <span class="str">&quot;kernel doesn't support IOSQE_IO_DRAIN&quot;</span>;
-<a class="br" href="#L93" id="L93">93 </a>                <span class="kwrd">return</span>;
-<a class="br" href="#L94" id="L94">94 </a>            }
-<a class="br" href="#L95" id="L95">95 </a>            <span class="kwrd">else</span> <span class="kwrd">throw</span> <span class="kwrd">new</span> <span class="hid">Exception</span>(<span class="str">&quot;kernel doesn't support IOSQE_IO_DRAIN&quot;</span>);
-<a class="br" href="#L96" id="L96">96 </a>        }
-<a class="br" href="#L97" id="L97">97 </a>        <span class="kwrd">assert</span>(<span class="hid">io.front.res</span> &gt;= <span class="num">0</span>);
-<a class="br" href="#L98" id="L98">98 </a>        <span class="kwrd">if</span> (<span class="hid">i</span> &lt; <span class="num">4</span>) <span class="kwrd">assert</span>(<span class="hid">io.front.user_data</span> == <span class="num">1</span>, <span class="str">&quot;unexpected op completion&quot;</span>);
-<a class="br" href="#L99" id="L99">99 </a>        <span class="kwrd">else</span> <span class="kwrd">assert</span>(<span class="hid">io.front.user_data</span> == <span class="num">2</span>, <span class="str">&quot;unexpected op completion&quot;</span>);
-<a class="br" href="#L100" id="L100">100 </a>
-<a class="br" href="#L101" id="L101">101 </a>        <span class="hid">io.popFront</span>();
-<a class="br" href="#L102" id="L102">102 </a>    }
-<a class="br" href="#L103" id="L103">103 </a>
-<a class="br" href="#L104" id="L104">104 </a>    <span class="hid">close</span>(<span class="hid">fd</span>);
-<a class="br" href="#L105" id="L105">105 </a>    <span class="hid">unlink</span>(&amp;<span class="hid">fname</span>[<span class="num">0</span>]);
-<a class="br" href="#L106" id="L106">106 </a>}</pre></div>
+<a class="br" href="#L88" id="L88">88 </a>        <span class="com">// TODO: doesn't work on 5.3.11 where it should.. (available from 5.2)</span>
+<a class="br" href="#L89" id="L89">89 </a>        <span class="kwrd">if</span> (<span class="hid">io.front.res</span> == -<span class="hid">EINVAL</span>)
+<a class="br" href="#L90" id="L90">90 </a>        {
+<a class="br" href="#L91" id="L91">91 </a>            <span class="kwrd">version</span> (<span class="hid">D_BetterC</span>)
+<a class="br" href="#L92" id="L92">92 </a>            {
+<a class="br" href="#L93" id="L93">93 </a>                <a class="hid" href="during.tests.base.d.html#L10" title="during.tests.base.errmsg">errmsg</a> = <span class="str">&quot;kernel doesn't support IOSQE_IO_DRAIN&quot;</span>;
+<a class="br" href="#L94" id="L94">94 </a>                <span class="kwrd">return</span>;
+<a class="br" href="#L95" id="L95">95 </a>            }
+<a class="br" href="#L96" id="L96">96 </a>            <span class="kwrd">else</span> <span class="kwrd">throw</span> <span class="kwrd">new</span> <span class="hid">Exception</span>(<span class="str">&quot;kernel doesn't support IOSQE_IO_DRAIN&quot;</span>);
+<a class="br" href="#L97" id="L97">97 </a>        }
+<a class="br" href="#L98" id="L98">98 </a>        <span class="kwrd">assert</span>(<span class="hid">io.front.res</span> &gt;= <span class="num">0</span>);
+<a class="br" href="#L99" id="L99">99 </a>        <span class="kwrd">if</span> (<span class="hid">i</span> &lt; <span class="num">4</span>) <span class="kwrd">assert</span>(<span class="hid">io.front.user_data</span> == <span class="num">1</span>, <span class="str">&quot;unexpected op completion&quot;</span>);
+<a class="br" href="#L100" id="L100">100 </a>        <span class="kwrd">else</span> <span class="kwrd">assert</span>(<span class="hid">io.front.user_data</span> == <span class="num">2</span>, <span class="str">&quot;unexpected op completion&quot;</span>);
+<a class="br" href="#L101" id="L101">101 </a>
+<a class="br" href="#L102" id="L102">102 </a>        <span class="hid">io.popFront</span>();
+<a class="br" href="#L103" id="L103">103 </a>    }
+<a class="br" href="#L104" id="L104">104 </a>
+<a class="br" href="#L105" id="L105">105 </a>    <span class="hid">close</span>(<span class="hid">fd</span>);
+<a class="br" href="#L106" id="L106">106 </a>    <span class="hid">unlink</span>(&amp;<span class="hid">fname</span>[<span class="num">0</span>]);
+<a class="br" href="#L107" id="L107">107 </a>}</pre></div>
 		<div id="page-nav">
 		<div id="source-navigation"><div class="list-holder"><ul><li><a href="#L1">during.tests.fsync</a><ul><li><a href="#L3">during</a></li><li><a href="#L4">during.tests.base</a></li><li><a href="#L6">core.stdc.stdlib</a></li><li><a href="#L7">core.sys.linux.errno</a></li><li><a href="#L8">core.sys.linux.fcntl</a></li><li><a href="#L9">core.sys.posix.sys.uio</a></li><li><a href="#L10">core.sys.posix.unistd</a></li></ul></li></ul></div></div></div>
 	</div>
