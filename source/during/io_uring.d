@@ -3,7 +3,7 @@
  *
  * See: https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring.h
  *
- * Last changes from: 1d7bb1d50fb4dc141c7431cc21fdd24ffcc83c76 (20191109)
+ * Last changes from: f8e85cf255ad57d65eeb9a9d0e59e3dec55bdd9e (20191123)
 */
 module during.io_uring;
 
@@ -28,7 +28,7 @@ struct SubmissionEntry
     union
     {
         ulong off;                          /// offset into file
-        ulong addr2;
+        ulong addr2;                        /// from Linux 5.5
     }
 
     ulong addr;                             /// pointer to buffer or iovecs
@@ -39,11 +39,11 @@ struct SubmissionEntry
         ReadWriteFlags  rw_flags;
         FsyncFlags      fsync_flags;
         PollEvents      poll_events;
-        uint            sync_range_flags;
-        uint            msg_flags;
-        TimeoutFlags    timeout_flags;
-        uint            accept_flags;
-        uint            cancel_flags;
+        uint            sync_range_flags;   /// from Linux 5.2
+        uint            msg_flags;          /// from Linux 5.3
+        TimeoutFlags    timeout_flags;      /// from Linux 5.4
+        uint            accept_flags;       /// from Linux 5.5
+        uint            cancel_flags;       /// from Linux 5.5
     }
 
     ulong user_data;                        /// data to be passed back at completion time
@@ -170,7 +170,7 @@ enum PollEvents : ushort
 enum TimeoutFlags : uint
 {
     NONE = 0,
-    TIMEOUT_ABS = 1U << 0   /// `IORING_TIMEOUT_ABS`
+    TIMEOUT_ABS = 1U << 0   /// `IORING_TIMEOUT_ABS` (from Linux 5.5)
 }
 
 /**
@@ -180,7 +180,7 @@ enum TimeoutFlags : uint
  */
 enum Operation : ubyte
 {
-    // available in kernel 5.1
+    // available from Linux 5.1
     NOP = 0,                /// IORING_OP_NOP
     READV = 1,              /// IORING_OP_READV
     WRITEV = 2,             /// IORING_OP_WRITEV
@@ -190,23 +190,21 @@ enum Operation : ubyte
     POLL_ADD = 6,           /// IORING_OP_POLL_ADD
     POLL_REMOVE = 7,        /// IORING_OP_POLL_REMOVE
 
-    // available in kernel 5.2
+    // available from Linux 5.2
     SYNC_FILE_RANGE = 8,    /// IORING_OP_SYNC_FILE_RANGE
 
-    // available in kernel 5.3
+    // available from Linux 5.3
     SENDMSG = 9,            /// IORING_OP_SENDMSG
     RECVMSG = 10,           /// IORING_OP_RECVMSG
 
-    // available in kernel 5.4
+    // available from Linux 5.4
     TIMEOUT = 11,           /// IORING_OP_TIMEOUT
 
-    // probably'll be available in kernel 5.5 (in master now)
+    // available from Linux 5.5 (in master now)
     TIMEOUT_REMOVE = 12,    /// IORING_OP_TIMEOUT_REMOVE
     ACCEPT = 13,            /// IORING_OP_ACCEPT
     ASYNC_CANCEL = 14,      /// IORING_OP_ASYNC_CANCEL
     LINK_TIMEOUT = 15,      /// IORING_OP_LINK_TIMEOUT
-
-    // not accepted yet
     CONNECT = 16,           /// IORING_OP_CONNECT
 }
 
@@ -215,8 +213,8 @@ enum SubmissionEntryFlags : ubyte
 {
     NONE        = 0,
     FIXED_FILE  = 1U << 0,  /// IOSQE_FIXED_FILE: use fixed fileset
-    IO_DRAIN    = 1U << 1,  /// IOSQE_IO_DRAIN: issue after inflight IO
-    IO_LINK     = 1U << 2,  /// IOSQE_IO_LINK: links next sqe
+    IO_DRAIN    = 1U << 1,  /// IOSQE_IO_DRAIN: issue after inflight IO (from Linux 5.2)
+    IO_LINK     = 1U << 2,  /// IOSQE_IO_LINK: links next sqe (from Linux 5.3)
 }
 
 /**
@@ -263,7 +261,7 @@ struct SetupParameters
     /// (input) used if SQPOLL flag is active; timeout in milliseconds
     /// until kernel poll thread goes to sleep.
     uint                        sq_thread_idle;
-    SetupFeatures               features;
+    SetupFeatures               features;       /// (from Linux 5.4)
     private uint[4]             resv;           // reserved
     SubmissionQueueRingOffsets  sq_off;         /// (output) submission queue ring data field offsets
     CompletionQueueRingOffsets  cq_off;         /// (output) completion queue ring data field offsets
@@ -333,6 +331,8 @@ enum SetupFlags : uint
      *
      * Create the completion queue with struct io_uring_params.cq_entries entries.  The value must
      * be greater than entries, and may be rounded up to the next power-of-two.
+     *
+     * Note: Available from Linux 5.5
      */
     CQSIZE  = 1U << 3,
 }
@@ -341,8 +341,8 @@ enum SetupFlags : uint
 enum SetupFeatures : uint
 {
     NONE        = 0,
-    SINGLE_MMAP = 1U << 0,  /// `IORING_FEAT_SINGLE_MMAP`
-    NODROP      = 1U << 1   /// `IORING_FEAT_NODROP`
+    SINGLE_MMAP = 1U << 0,  /// `IORING_FEAT_SINGLE_MMAP` (from Linux 5.4)
+    NODROP      = 1U << 1   /// `IORING_FEAT_NODROP` (from Linux 5.5)
 }
 
 /**
@@ -455,14 +455,18 @@ enum RegisterOpCode : uint
      *
      * An application need not unregister buffers explicitly before shutting down the io_uring
      * instance.
+     *
+     * `IORING_REGISTER_BUFFERS`
      */
-    REGISTER_BUFFERS        = 0,    /// `IORING_REGISTER_BUFFERS`
+    REGISTER_BUFFERS        = 0,
 
     /**
      * This operation takes no argument, and `arg` must be passed as NULL. All previously registered
      * buffers associated with the io_uring instance will be released.
+     *
+     * `IORING_UNREGISTER_BUFFERS`
      */
-    UNREGISTER_BUFFERS      = 1,    /// `IORING_UNREGISTER_BUFFERS`
+    UNREGISTER_BUFFERS      = 1,
 
     /**
      * Register files for I/O. `arg` contains a pointer to an array of `nr_args` file descriptors
@@ -474,23 +478,27 @@ enum RegisterOpCode : uint
      *
      * Files are automatically unregistered when the io_uring instance is torn down. An application
      * need only unregister if it wishes to register a new set of fds.
+     *
+     * `IORING_REGISTER_FILES`
      */
-    REGISTER_FILES          = 2,    /// `IORING_REGISTER_FILES`
+    REGISTER_FILES          = 2,
 
     /**
      * This operation requires no argument, and `arg` must be passed as NULL.  All previously
      * registered files associated with the io_uring instance will be unregistered.
+     *
+     * `IORING_UNREGISTER_FILES`
      */
-    UNREGISTER_FILES        = 3,    /// `IORING_UNREGISTER_FILES`
+    UNREGISTER_FILES        = 3,
 
-    ///
-    REGISTER_EVENTFD        = 4,    /// `IORING_REGISTER_EVENTFD`
+    /// `IORING_REGISTER_EVENTFD` (from Linux 5.2)
+    REGISTER_EVENTFD        = 4,
 
-    ///
-    UNREGISTER_EVENTFD      = 5,    /// `IORING_UNREGISTER_EVENTFD`
+    /// `IORING_UNREGISTER_EVENTFD` (from Linux 5.2)
+    UNREGISTER_EVENTFD      = 5,
 
-    ///
-    REGISTER_FILES_UPDATE   = 6,    /// `IORING_REGISTER_FILES_UPDATE`
+    /// `IORING_REGISTER_FILES_UPDATE` (from Linux 5.5)
+    REGISTER_FILES_UPDATE   = 6,
 }
 
 /// io_uring_enter(2) flags
@@ -499,13 +507,6 @@ enum EnterFlags: uint
     NONE        = 0,
     GETEVENTS   = (1 << 0), /// `IORING_ENTER_GETEVENTS`
     SQ_WAKEUP   = (1 << 1), /// `IORING_ENTER_SQ_WAKEUP`
-}
-
-//TODO: Used with io_uring_register(REGISTER_FILES_UPDATE)
-struct io_uring_files_update
-{
-    uint offset;
-    int* fds;
 }
 
 static assert(CompletionEntry.sizeof == 16);
