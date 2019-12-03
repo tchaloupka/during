@@ -85,6 +85,7 @@ unittest
     assert(io.length == 5);
     foreach (i; 0..5)
     {
+        // TODO: doesn't work on 5.3.11 where it should.. (available from 5.2)
         if (io.front.res == -EINVAL)
         {
             version (D_BetterC)
