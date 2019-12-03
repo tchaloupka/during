@@ -31,14 +31,88 @@
 <a class="br" href="#L3" id="L3">3 </a><span class="kwrd">import</span> <a class="hid" href="during.tests.msg.d.html#L3" title="during.tests.msg.during">during</a>;
 <a class="br" href="#L4" id="L4">4 </a><span class="kwrd">import</span> <span class="hid">during.tests.base</span>;
 <a class="br" href="#L5" id="L5">5 </a>
-<a class="br" href="#L6" id="L6">6 </a>@(<span class="str">&quot;send/recv&quot;</span>)
-<a class="br" href="#L7" id="L7">7 </a><span class="kwrd">unittest</span>
-<a class="br" href="#L8" id="L8">8 </a>{
-<a class="br" href="#L9" id="L9">9 </a>    <span class="com">// TODO: sendmsg/recvmsg (Linux 5.3)</span>
-<a class="br" href="#L10" id="L10">10 </a>    <span class="kwrd">version</span> (<span class="hid">D_BetterC</span>) <span class="hid">errmsg</span> = <span class="str">&quot;not implemented&quot;</span>;
-<a class="br" href="#L11" id="L11">11 </a>}</pre></div>
+<a class="br" href="#L6" id="L6">6 </a><span class="kwrd">import</span> <span class="hid">core.stdc.stdlib</span>;
+<a class="br" href="#L7" id="L7">7 </a><span class="kwrd">import</span> <span class="hid">core.sys.linux.errno</span>;
+<a class="br" href="#L8" id="L8">8 </a><span class="kwrd">import</span> <span class="hid">core.sys.posix.sys.socket</span>;
+<a class="br" href="#L9" id="L9">9 </a><span class="kwrd">import</span> <span class="hid">core.sys.posix.sys.uio</span> : <span class="hid">iovec</span>;
+<a class="br" href="#L10" id="L10">10 </a><span class="kwrd">import</span> <span class="hid">core.sys.posix.unistd</span>;
+<a class="br" href="#L11" id="L11">11 </a>
+<a class="br" href="#L12" id="L12">12 </a><span class="kwrd">import</span> <span class="hid">std.algorithm</span> : <span class="hid">copy</span>, <span class="hid">equal</span>, <span class="hid">map</span>;
+<a class="br" href="#L13" id="L13">13 </a><span class="kwrd">import</span> <span class="hid">std.range</span>;
+<a class="br" href="#L14" id="L14">14 </a>
+<a class="br" href="#L15" id="L15">15 </a>@(<span class="str">&quot;send/recv&quot;</span>)
+<a class="br" href="#L16" id="L16">16 </a><span class="kwrd">unittest</span>
+<a class="br" href="#L17" id="L17">17 </a>{
+<a class="br" href="#L18" id="L18">18 </a>    <span class="com">// TODO: sendmsg/recvmsg (Linux 5.3)</span>
+<a class="br" href="#L19" id="L19">19 </a>
+<a class="br" href="#L20" id="L20">20 </a>    <span class="type">int</span>[<span class="num">2</span>] <span class="hid">fd</span>;
+<a class="br" href="#L21" id="L21">21 </a>    <span class="type">int</span> <span class="hid">ret</span> = <span class="hid">socketpair</span>(<span class="hid">AF_UNIX</span>, <span class="hid">SOCK_STREAM</span>, <span class="num">0</span>, <span class="hid">fd</span>);
+<a class="br" href="#L22" id="L22">22 </a>    <span class="kwrd">assert</span>(<span class="hid">ret</span> == <span class="num">0</span>, <span class="str">&quot;socketpair()&quot;</span>);
+<a class="br" href="#L23" id="L23">23 </a>
+<a class="br" href="#L24" id="L24">24 </a>    <a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> <span class="hid">io</span>;
+<a class="br" href="#L25" id="L25">25 </a>    <span class="kwrd">auto</span> <span class="hid">res</span> = <span class="hid">io.setup</span>();
+<a class="br" href="#L26" id="L26">26 </a>    <span class="kwrd">assert</span>(<span class="hid">res</span> &gt;= <span class="num">0</span>, <span class="str">&quot;Error initializing IO&quot;</span>);
+<a class="br" href="#L27" id="L27">27 </a>
+<a class="br" href="#L28" id="L28">28 </a>    <span class="com">// 0 - read, 1 - write</span>
+<a class="br" href="#L29" id="L29">29 </a>    <span class="hid">iovec</span>[<span class="num">2</span>] <span class="hid">v</span>;
+<a class="br" href="#L30" id="L30">30 </a>    <span class="hid">msghdr</span>[<span class="num">2</span>] <span class="hid">msg</span>;
+<a class="br" href="#L31" id="L31">31 </a>
+<a class="br" href="#L32" id="L32">32 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">2</span>)
+<a class="br" href="#L33" id="L33">33 </a>    {
+<a class="br" href="#L34" id="L34">34 </a>        <span class="hid">v</span>[<span class="hid">i</span>].<span class="hid">iov_base</span> = <span class="hid">malloc</span>(<span class="num">256</span>);
+<a class="br" href="#L35" id="L35">35 </a>        <span class="hid">v</span>[<span class="hid">i</span>].<span class="hid">iov_len</span> = <span class="num">256</span>;
+<a class="br" href="#L36" id="L36">36 </a>
+<a class="br" href="#L37" id="L37">37 </a>        <span class="hid">msg</span>[<span class="hid">i</span>].<span class="hid">msg_iov</span> = &amp;<span class="hid">v</span>[<span class="hid">i</span>];
+<a class="br" href="#L38" id="L38">38 </a>        <span class="hid">msg</span>[<span class="hid">i</span>].<span class="hid">msg_iovlen</span> = <span class="num">1</span>;
+<a class="br" href="#L39" id="L39">39 </a>    }
+<a class="br" href="#L40" id="L40">40 </a>    <span class="kwrd">scope</span> (<span class="hid">exit</span>) <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">2</span>) <span class="hid">free</span>(<span class="hid">v</span>[<span class="hid">i</span>].<span class="hid">iov_base</span>);
+<a class="br" href="#L41" id="L41">41 </a>
+<a class="br" href="#L42" id="L42">42 </a>    <span class="hid">iota</span>(<span class="num">0</span>, <span class="num">256</span>)
+<a class="br" href="#L43" id="L43">43 </a>        .<span class="hid">map</span>!(<span class="hid">a</span> =&gt; <span class="kwrd">cast</span>(<span class="type">ubyte</span>)<span class="hid">a</span>)
+<a class="br" href="#L44" id="L44">44 </a>        .<span class="hid">copy</span>((<span class="kwrd">cast</span>(<span class="type">ubyte</span>*)<span class="hid">v</span>[<span class="num">1</span>].<span class="hid">iov_base</span>)[<span class="num">0</span>..<span class="num">256</span>]);
+<a class="br" href="#L45" id="L45">45 </a>
+<a class="br" href="#L46" id="L46">46 </a>    <span class="com">// add recvmsg</span>
+<a class="br" href="#L47" id="L47">47 </a>    <span class="hid">io.putWith</span>(
+<a class="br" href="#L48" id="L48">48 </a>        (<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="hid">msghdr</span>* <span class="hid">m</span>)
+<a class="br" href="#L49" id="L49">49 </a>        {
+<a class="br" href="#L50" id="L50">50 </a>            <span class="hid">e.prepRecvMsg</span>(<span class="hid">fd</span>, *<span class="hid">m</span>);
+<a class="br" href="#L51" id="L51">51 </a>            <span class="hid">e.user_data</span> = <span class="num">0</span>;
+<a class="br" href="#L52" id="L52">52 </a>        },
+<a class="br" href="#L53" id="L53">53 </a>        <span class="hid">fd</span>[<span class="num">0</span>], &amp;<span class="hid">msg</span>[<span class="num">0</span>]
+<a class="br" href="#L54" id="L54">54 </a>    );
+<a class="br" href="#L55" id="L55">55 </a>
+<a class="br" href="#L56" id="L56">56 </a>    <span class="com">// add sendmsg</span>
+<a class="br" href="#L57" id="L57">57 </a>    <span class="hid">io.putWith</span>(
+<a class="br" href="#L58" id="L58">58 </a>        (<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="hid">msghdr</span> <span class="hid">m</span>)
+<a class="br" href="#L59" id="L59">59 </a>        {
+<a class="br" href="#L60" id="L60">60 </a>            <span class="hid">e.prepSendMsg</span>(<span class="hid">fd</span>, <span class="hid">m</span>);
+<a class="br" href="#L61" id="L61">61 </a>            <span class="hid">e.user_data</span> = <span class="num">1</span>;
+<a class="br" href="#L62" id="L62">62 </a>        },
+<a class="br" href="#L63" id="L63">63 </a>        <span class="hid">fd</span>[<span class="num">1</span>], <span class="hid">msg</span>[<span class="num">1</span>]
+<a class="br" href="#L64" id="L64">64 </a>    );
+<a class="br" href="#L65" id="L65">65 </a>
+<a class="br" href="#L66" id="L66">66 </a>    <span class="hid">ret</span> = <span class="hid">io.submit</span>(<span class="num">2</span>);
+<a class="br" href="#L67" id="L67">67 </a>    <span class="kwrd">assert</span>(<span class="hid">ret</span> == <span class="num">2</span>);
+<a class="br" href="#L68" id="L68">68 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">2</span>);
+<a class="br" href="#L69" id="L69">69 </a>
+<a class="br" href="#L70" id="L70">70 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">2</span>)
+<a class="br" href="#L71" id="L71">71 </a>    {
+<a class="br" href="#L72" id="L72">72 </a>        <span class="kwrd">if</span> (<span class="hid">io.front.res</span> == -<span class="hid">EINVAL</span>)
+<a class="br" href="#L73" id="L73">73 </a>        {
+<a class="br" href="#L74" id="L74">74 </a>            <span class="kwrd">version</span> (<span class="hid">D_BetterC</span>)
+<a class="br" href="#L75" id="L75">75 </a>            {
+<a class="br" href="#L76" id="L76">76 </a>                <span class="hid">errmsg</span> = <span class="str">&quot;kernel doesn't support SEND/RECVMSG&quot;</span>;
+<a class="br" href="#L77" id="L77">77 </a>                <span class="kwrd">return</span>;
+<a class="br" href="#L78" id="L78">78 </a>            }
+<a class="br" href="#L79" id="L79">79 </a>            <span class="kwrd">else</span> <span class="kwrd">throw</span> <span class="kwrd">new</span> <span class="hid">Exception</span>(<span class="str">&quot;kernel doesn't support SEND/RECVMSG&quot;</span>);
+<a class="br" href="#L80" id="L80">80 </a>        }
+<a class="br" href="#L81" id="L81">81 </a>        <span class="kwrd">assert</span>(<span class="hid">io.front.res</span> &gt;= <span class="num">0</span>);
+<a class="br" href="#L82" id="L82">82 </a>        <span class="kwrd">if</span> (<span class="hid">io.front.user_data</span> == <span class="num">1</span>) <span class="kwrd">continue</span>; <span class="com">// write done</span>
+<a class="br" href="#L83" id="L83">83 </a>        <span class="kwrd">else</span> <span class="kwrd">assert</span>((<span class="kwrd">cast</span>(<span class="type">ubyte</span>*)<span class="hid">v</span>[<span class="num">0</span>].<span class="hid">iov_base</span>)[<span class="num">0</span>..<span class="num">256</span>].<span class="hid">equal</span>(<span class="hid">iota</span>(<span class="num">0</span>, <span class="num">256</span>)));
+<a class="br" href="#L84" id="L84">84 </a>    }
+<a class="br" href="#L85" id="L85">85 </a>}</pre></div>
 		<div id="page-nav">
-		<div id="source-navigation"><div class="list-holder"><ul><li><a href="#L1">during.tests.msg</a><ul><li><a href="#L3">during</a></li><li><a href="#L4">during.tests.base</a></li></ul></li></ul></div></div></div>
+		<div id="source-navigation"><div class="list-holder"><ul><li><a href="#L1">during.tests.msg</a><ul><li><a href="#L3">during</a></li><li><a href="#L4">during.tests.base</a></li><li><a href="#L6">core.stdc.stdlib</a></li><li><a href="#L7">core.sys.linux.errno</a></li><li><a href="#L8">core.sys.posix.sys.socket</a></li><li><a href="#L9">core.sys.posix.sys.uio</a></li><li><a href="#L10">core.sys.posix.unistd</a></li><li><a href="#L12">std.algorithm</a></li><li><a href="#L13">std.range</a></li></ul></li></ul></div></div></div>
 	</div>
 	<div id="page-footer">Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a></div>
 </body>
