@@ -355,6 +355,7 @@ struct Uring
             return -ENXIO; // no buffers were registered
 
         free(cast(void*)&payload.regBuffers[0]);
+        payload.regBuffers = null;
 
         auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_BUFFERS, null, 0);
         if (r < 0) return -errno;
@@ -668,8 +669,7 @@ struct UringDesc
 
     ~this()
     {
-        //TODO: got: free(): double free detected in tcache 2 on this.. (released on kernel side?)
-        // if (regBuffers) free(cast(void*)&regBuffers[0]);
+        if (regBuffers) free(cast(void*)&regBuffers[0]);
         if (sq.ring) munmap(sq.ring, sq.ringSize);
         if (sq.sqes) munmap(cast(void*)&sq.sqes[0], sq.sqes.length * SubmissionEntry.sizeof);
         if (cq.ring && cq.ring != sq.ring) munmap(cq.ring, cq.ringSize);
