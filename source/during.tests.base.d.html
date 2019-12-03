@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+        <title>during.tests.base source code</title>
+	<meta charset="utf-8" />
+	<meta content="width=device-width, initial-scale=1" name="viewport" />
+        <link href="../style.css" rel="stylesheet" />
+        <script src="../script.js" type="text/javascript"></script>
+
+	
+	<link href="../search-results.html" rel="prefetch" />
+</head>
+<body>
+	<div id="page-header">
+		<div id="logotype">
+		<span>Documentation</span>
+		<nav>
+			<a href="http://dlang.org/">Dlang.org</a>
+		</nav>
+		</div>
+
+		<form action="../search-docs.html" id="search">
+			<input name="searchTerm" placeholder="Find a symbol name..." type="search" />
+			<input type="submit" value="Go" />
+		</form>
+	</div>
+	<div id="page-body">
+		<div id="page-content">
+		<pre class="d_code highlighted with-line-wrappers"><a class="br" href="#L1" id="L1">1 </a><span class="com">/**
+<a class="br" href="#L2" id="L2">2 </a> * Internal functions used in unittests.
+<a class="br" href="#L3" id="L3">3 </a> */</span>
+<a class="br" href="#L4" id="L4">4 </a><span class="kwrd">module</span> <span class="hid">during.tests.base</span>;
+<a class="br" href="#L5" id="L5">5 </a>
+<a class="br" href="#L6" id="L6">6 </a><span class="kwrd">import</span> <span class="hid">core.sys.linux.fcntl</span>;
+<a class="br" href="#L7" id="L7">7 </a>
+<a class="br" href="#L8" id="L8">8 </a><span class="kwrd">package</span>:
+<a class="br" href="#L9" id="L9">9 </a>
+<a class="br" href="#L10" id="L10">10 </a><span class="kwrd">version</span> (<span class="hid">D_BetterC</span>) <span class="type">string</span> <a class="hid" href="during.tests.base.d.html#L10" title="during.tests.base.errmsg">errmsg</a>; <span class="com">// used to pass error texts on tests that can't be completed</span>
+<a class="br" href="#L11" id="L11">11 </a>
+<a class="br" href="#L12" id="L12">12 </a><span class="kwrd">auto</span> <a class="hid" href="during.tests.base.d.html#L12" title="during.tests.base.getTestFileName">getTestFileName</a>(<span class="type">string</span> <span class="hid">baseName</span>)()
+<a class="br" href="#L13" id="L13">13 </a>{
+<a class="br" href="#L14" id="L14">14 </a>    <span class="kwrd">import</span> <span class="hid">core.stdc.stdlib</span> : <span class="hid">rand</span>, <span class="hid">srand</span>;
+<a class="br" href="#L15" id="L15">15 </a>    <span class="kwrd">import</span> <span class="hid">core.sys.posix.time</span> : <span class="hid">clock_gettime</span>, <span class="hid">CLOCK_REALTIME</span>, <span class="hid">timespec</span>;
+<a class="br" href="#L16" id="L16">16 </a>
+<a class="br" href="#L17" id="L17">17 </a>    <span class="com">// make rand a bit more random - nothing fancy needed</span>
+<a class="br" href="#L18" id="L18">18 </a>    <span class="hid">timespec</span> <span class="hid">t</span>;
+<a class="br" href="#L19" id="L19">19 </a>    <span class="kwrd">auto</span> <span class="hid">tr</span> = <span class="hid">clock_gettime</span>(<span class="hid">CLOCK_REALTIME</span>, &amp;<span class="hid">t</span>);
+<a class="br" href="#L20" id="L20">20 </a>    <span class="kwrd">assert</span>(<span class="hid">tr</span> == <span class="num">0</span>);
+<a class="br" href="#L21" id="L21">21 </a>    <span class="hid">srand</span>(<span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">t.tv_nsec</span>);
+<a class="br" href="#L22" id="L22">22 </a>
+<a class="br" href="#L23" id="L23">23 </a>    <span class="kwrd">static</span> <span class="kwrd">immutable</span> <span class="type">ubyte</span>[] <span class="hid">let</span> = <span class="kwrd">cast</span>(<span class="kwrd">immutable</span>(<span class="type">ubyte</span>[]))<span class="str">&quot;ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz&quot;</span>;
+<a class="br" href="#L24" id="L24">24 </a>    <span class="type">char</span>[<span class="hid">baseName.length</span> + <span class="num">16</span>] <span class="hid">fname</span> = <span class="hid">baseName</span> ~ <span class="str">&quot;_**********.dat\0&quot;</span>;
+<a class="br" href="#L25" id="L25">25 </a>
+<a class="br" href="#L26" id="L26">26 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">10</span>)
+<a class="br" href="#L27" id="L27">27 </a>    {
+<a class="br" href="#L28" id="L28">28 </a>        <span class="hid">fname</span>[<span class="hid">baseName.length</span> + <span class="num">1</span> + <span class="hid">i</span>] = <span class="hid">let</span>[<span class="hid">rand</span>() % <span class="hid">let.length</span>];
+<a class="br" href="#L29" id="L29">29 </a>    }
+<a class="br" href="#L30" id="L30">30 </a>    <span class="kwrd">return</span> <span class="hid">fname</span>;
+<a class="br" href="#L31" id="L31">31 </a>}
+<a class="br" href="#L32" id="L32">32 </a>
+<a class="br" href="#L33" id="L33">33 </a><span class="kwrd">auto</span> <a class="hid" href="during.tests.base.d.html#L33" title="during.tests.base.openFile">openFile</a>(<span class="hid">T</span>)(<span class="hid">T</span> <span class="hid">fname</span>, <span class="type">int</span> <span class="hid">flags</span>)
+<a class="br" href="#L34" id="L34">34 </a>{
+<a class="br" href="#L35" id="L35">35 </a>    <span class="kwrd">auto</span> <span class="hid">f</span> = <span class="hid">open</span>(&amp;<span class="hid">fname</span>[<span class="num">0</span>], <span class="hid">flags</span>, <span class="num">0x1a4</span>); <span class="com">//0644 (std.conv.octal doesn't work with betterC)</span>
+<a class="br" href="#L36" id="L36">36 </a>    <span class="kwrd">assert</span>(<span class="hid">f</span> &gt; <span class="num">0</span>, <span class="str">&quot;Failed to open file&quot;</span>);
+<a class="br" href="#L37" id="L37">37 </a>    <span class="kwrd">return</span> <span class="hid">f</span>;
+<a class="br" href="#L38" id="L38">38 </a>}</pre></div>
+		<div id="page-nav">
+		<div id="source-navigation"><div class="list-holder"><ul><li><a class="docs" href="../during.tests.base.html">[Docs] </a><a href="#L1">during.tests.base</a><ul><li><a href="#L6">core.sys.linux.fcntl</a></li><li><a href="#L10">errmsg</a></li><li><a href="#L12">getTestFileName</a></li><li><a href="#L33">openFile</a></li></ul></li></ul></div></div></div>
+	</div>
+	<div id="page-footer">Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a></div>
+</body>
+</html>

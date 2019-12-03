@@ -64,7 +64,7 @@
 <a class="br" href="#L36" id="L36">36 </a><span class="type">int</span> <a class="hid" href="during.d.html#L36" title="during.setup">setup</a>(<span class="kwrd">ref</span> <a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> <span class="hid">uring</span>, <span class="type">uint</span> <span class="hid">entries</span> = <span class="num">128</span>, <span class="hid">SetupFlags</span> <span class="hid">flags</span> = <span class="hid">SetupFlags.NONE</span>)
 <a class="br" href="#L37" id="L37">37 </a>{
 <a class="br" href="#L38" id="L38">38 </a>    <span class="kwrd">assert</span>(<span class="hid">uring.payload</span> <span class="kwrd">is</span> <span class="kwrd">null</span>, <span class="str">&quot;Uring is already initialized&quot;</span>);
-<a class="br" href="#L39" id="L39">39 </a>    <span class="hid">uring.payload</span> = <span class="kwrd">cast</span>(<a class="hid" href="during.d.html#L658" title="during.UringDesc">UringDesc</a>*)<span class="hid">calloc</span>(<span class="num">1</span>, <a class="hid" href="during.d.html#L658" title="during.UringDesc">UringDesc.sizeof</a>);
+<a class="br" href="#L39" id="L39">39 </a>    <span class="hid">uring.payload</span> = <span class="kwrd">cast</span>(<a class="hid" href="during.d.html#L672" title="during.UringDesc">UringDesc</a>*)<span class="hid">calloc</span>(<span class="num">1</span>, <a class="hid" href="during.d.html#L672" title="during.UringDesc">UringDesc.sizeof</a>);
 <a class="br" href="#L40" id="L40">40 </a>    <span class="kwrd">if</span> (<span class="hid">uring.payload</span> <span class="kwrd">is</span> <span class="kwrd">null</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
 <a class="br" href="#L41" id="L41">41 </a>
 <a class="br" href="#L42" id="L42">42 </a>    <span class="hid">uring.payload.params.flags</span> = <span class="hid">flags</span>;
@@ -76,7 +76,7 @@
 <a class="br" href="#L48" id="L48">48 </a>
 <a class="br" href="#L49" id="L49">49 </a>    <span class="kwrd">if</span> (<span class="hid">uring.payload.mapRings</span>() &lt; <span class="num">0</span>)
 <a class="br" href="#L50" id="L50">50 </a>    {
-<a class="br" href="#L51" id="L51">51 </a>        <a class="hid" href="during.d.html#L642" title="during.dispose">dispose</a>(<span class="hid">uring</span>);
+<a class="br" href="#L51" id="L51">51 </a>        <a class="hid" href="during.d.html#L656" title="during.dispose">dispose</a>(<span class="hid">uring</span>);
 <a class="br" href="#L52" id="L52">52 </a>        <span class="kwrd">return</span> -<span class="hid">errno</span>;
 <a class="br" href="#L53" id="L53">53 </a>    }
 <a class="br" href="#L54" id="L54">54 </a>
@@ -102,7 +102,7 @@
 <a class="br" href="#L74" id="L74">74 </a>{
 <a class="br" href="#L75" id="L75">75 </a>    <span class="kwrd">nothrow</span> @<span class="hid">nogc</span>:
 <a class="br" href="#L76" id="L76">76 </a>
-<a class="br" href="#L77" id="L77">77 </a>    <span class="kwrd">private</span> <a class="hid" href="during.d.html#L658" title="during.UringDesc">UringDesc</a>* <span class="hid">payload</span>;
+<a class="br" href="#L77" id="L77">77 </a>    <span class="kwrd">private</span> <a class="hid" href="during.d.html#L672" title="during.UringDesc">UringDesc</a>* <span class="hid">payload</span>;
 <a class="br" href="#L78" id="L78">78 </a>    <span class="kwrd">private</span> <span class="type">void</span> <span class="hid">checkInitialized</span>() <span class="kwrd">const</span>
 <a class="br" href="#L79" id="L79">79 </a>    {
 <a class="br" href="#L80" id="L80">80 </a>        <span class="kwrd">assert</span>(<span class="hid">payload</span> !<span class="kwrd">is</span> <span class="kwrd">null</span>, <span class="str">&quot;Uring hasn't been initialized yet&quot;</span>);
@@ -120,7 +120,7 @@
 <a class="br" href="#L92" id="L92">92 </a>    <span class="com">/// Destructor</span>
 <a class="br" href="#L93" id="L93">93 </a>    ~<span class="kwrd">this</span>()
 <a class="br" href="#L94" id="L94">94 </a>    {
-<a class="br" href="#L95" id="L95">95 </a>        <a class="hid" href="during.d.html#L642" title="during.dispose">dispose</a>(<span class="kwrd">this</span>);
+<a class="br" href="#L95" id="L95">95 </a>        <a class="hid" href="during.d.html#L656" title="during.dispose">dispose</a>(<span class="kwrd">this</span>);
 <a class="br" href="#L96" id="L96">96 </a>    }
 <a class="br" href="#L97" id="L97">97 </a>
 <a class="br" href="#L98" id="L98">98 </a>    <span class="com">/// Native io_uring file descriptor</span>
@@ -653,285 +653,299 @@
 <a class="br" href="#L625" id="L625">625 </a>    <span class="hid">entry.msg_flags</span> = <span class="hid">flags</span>;
 <a class="br" href="#L626" id="L626">626 </a>}
 <a class="br" href="#L627" id="L627">627 </a>
-<a class="br" href="#L628" id="L628">628 </a><span class="com">// void prepPollAdd(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L629" id="L629">629 </a><span class="com">// void prepPollRemove(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L630" id="L630">630 </a><span class="com">// void prepFsync(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L631" id="L631">631 </a><span class="com">// void prepSyncFileRange(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L632" id="L632">632 </a><span class="com">// void prepTimeout(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L633" id="L633">633 </a><span class="com">// void prepTimeoutRemove(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L634" id="L634">634 </a><span class="com">// void prepAccept(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L635" id="L635">635 </a><span class="com">// void prepAsyncCancel(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L636" id="L636">636 </a><span class="com">// void prepLinkTimeout(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L637" id="L637">637 </a><span class="com">// void prepConnect(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L638" id="L638">638 </a>
-<a class="br" href="#L639" id="L639">639 </a><span class="kwrd">private</span>:
-<a class="br" href="#L640" id="L640">640 </a>
-<a class="br" href="#L641" id="L641">641 </a><span class="com">// uring cleanup</span>
-<a class="br" href="#L642" id="L642">642 </a><span class="type">void</span> <a class="hid" href="during.d.html#L642" title="during.dispose">dispose</a>(<span class="kwrd">ref</span> <a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> <span class="hid">uring</span>)
-<a class="br" href="#L643" id="L643">643 </a>{
-<a class="br" href="#L644" id="L644">644 </a>    <span class="kwrd">if</span> (<span class="hid">uring.payload</span> <span class="kwrd">is</span> <span class="kwrd">null</span>) <span class="kwrd">return</span>;
-<a class="br" href="#L645" id="L645">645 </a>    <span class="com">// debug printf(&quot;uring(%d): dispose(%d)\n&quot;, uring.payload.fd, uring.payload.refs);</span>
-<a class="br" href="#L646" id="L646">646 </a>    <span class="kwrd">if</span> (--<span class="hid">uring.payload.refs</span> == <span class="num">0</span>)
-<a class="br" href="#L647" id="L647">647 </a>    {
-<a class="br" href="#L648" id="L648">648 </a>        <span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">hasElaborateDestructor</span>;
-<a class="br" href="#L649" id="L649">649 </a>        <span class="com">// debug printf(&quot;uring(%d): free\n&quot;, uring.payload.fd);</span>
-<a class="br" href="#L650" id="L650">650 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">hasElaborateDestructor</span>!<a class="hid" href="during.d.html#L658" title="during.UringDesc">UringDesc</a>)
-<a class="br" href="#L651" id="L651">651 </a>            <span class="hid">destroy</span>(*<span class="hid">uring.payload</span>); <span class="com">// call possible destructors</span>
-<a class="br" href="#L652" id="L652">652 </a>        <span class="hid">free</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)<span class="hid">uring.payload</span>);
-<a class="br" href="#L653" id="L653">653 </a>    }
-<a class="br" href="#L654" id="L654">654 </a>    <span class="hid">uring.payload</span> = <span class="kwrd">null</span>;
-<a class="br" href="#L655" id="L655">655 </a>}
-<a class="br" href="#L656" id="L656">656 </a>
-<a class="br" href="#L657" id="L657">657 </a><span class="com">// system fields descriptor</span>
-<a class="br" href="#L658" id="L658">658 </a><span class="kwrd">struct</span> <a class="hid" href="during.d.html#L658" title="during.UringDesc">UringDesc</a>
-<a class="br" href="#L659" id="L659">659 </a>{
-<a class="br" href="#L660" id="L660">660 </a>    <span class="kwrd">nothrow</span> @<span class="hid">nogc</span>:
-<a class="br" href="#L661" id="L661">661 </a>
-<a class="br" href="#L662" id="L662">662 </a>    <span class="type">int</span> <span class="hid">fd</span>;
-<a class="br" href="#L663" id="L663">663 </a>    <span class="hid">size_t</span> <span class="hid">refs</span>;
-<a class="br" href="#L664" id="L664">664 </a>    <span class="hid">SetupParameters</span> <span class="hid">params</span>;
-<a class="br" href="#L665" id="L665">665 </a>    <a class="hid" href="during.d.html#L754" title="during.SubmissionQueue">SubmissionQueue</a> <span class="hid">sq</span>;
-<a class="br" href="#L666" id="L666">666 </a>    <a class="hid" href="during.d.html#L832" title="during.CompletionQueue">CompletionQueue</a> <span class="hid">cq</span>;
-<a class="br" href="#L667" id="L667">667 </a>
-<a class="br" href="#L668" id="L668">668 </a>    <span class="hid">iovec</span>[] <span class="hid">regBuffers</span>;
-<a class="br" href="#L669" id="L669">669 </a>
-<a class="br" href="#L670" id="L670">670 </a>    ~<span class="kwrd">this</span>()
-<a class="br" href="#L671" id="L671">671 </a>    {
-<a class="br" href="#L672" id="L672">672 </a>        <span class="kwrd">if</span> (<span class="hid">regBuffers</span>) <span class="hid">free</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">regBuffers</span>[<span class="num">0</span>]);
-<a class="br" href="#L673" id="L673">673 </a>        <span class="kwrd">if</span> (<span class="hid">sq.ring</span>) <span class="hid">munmap</span>(<span class="hid">sq.ring</span>, <span class="hid">sq.ringSize</span>);
-<a class="br" href="#L674" id="L674">674 </a>        <span class="kwrd">if</span> (<span class="hid">sq.sqes</span>) <span class="hid">munmap</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">sq.sqes</span>[<span class="num">0</span>], <span class="hid">sq.sqes.length</span> * <span class="hid">SubmissionEntry.sizeof</span>);
-<a class="br" href="#L675" id="L675">675 </a>        <span class="kwrd">if</span> (<span class="hid">cq.ring</span> &amp;&amp; <span class="hid">cq.ring</span> != <span class="hid">sq.ring</span>) <span class="hid">munmap</span>(<span class="hid">cq.ring</span>, <span class="hid">cq.ringSize</span>);
-<a class="br" href="#L676" id="L676">676 </a>        <span class="hid">close</span>(<span class="hid">fd</span>);
-<a class="br" href="#L677" id="L677">677 </a>    }
-<a class="br" href="#L678" id="L678">678 </a>
-<a class="br" href="#L679" id="L679">679 </a>    <span class="kwrd">private</span> <span class="kwrd">auto</span> <span class="hid">mapRings</span>()
-<a class="br" href="#L680" id="L680">680 </a>    {
-<a class="br" href="#L681" id="L681">681 </a>        <span class="hid">sq.ringSize</span> = <span class="hid">params.sq_off.array</span> + <span class="hid">params.sq_entries</span> * <span class="type">uint</span>.<span class="hid">sizeof</span>;
-<a class="br" href="#L682" id="L682">682 </a>        <span class="hid">cq.ringSize</span> = <span class="hid">params.cq_off.cqes</span> + <span class="hid">params.cq_entries</span> * <span class="hid">CompletionEntry.sizeof</span>;
+<a class="br" href="#L628" id="L628">628 </a><span class="com">/**
+<a class="br" href="#L629" id="L629">629 </a> * Prepares `fsync` operation.
+<a class="br" href="#L630" id="L630">630 </a> *
+<a class="br" href="#L631" id="L631">631 </a> * Params:
+<a class="br" href="#L632" id="L632">632 </a> *      entry = `SubmissionEntry` to prepare
+<a class="br" href="#L633" id="L633">633 </a> *      fd = file descriptor of a file to call `fsync` on
+<a class="br" href="#L634" id="L634">634 </a> *      flags = `fsync` operation flags
+<a class="br" href="#L635" id="L635">635 </a> */</span>
+<a class="br" href="#L636" id="L636">636 </a><span class="type">void</span> <a class="hid" href="during.d.html#L636" title="during.prepFsync">prepFsync</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="hid">FsyncFlags</span> <span class="hid">flags</span> = <span class="hid">FsyncFlags.NORMAL</span>)
+<a class="br" href="#L637" id="L637">637 </a>{
+<a class="br" href="#L638" id="L638">638 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.FSYNC</span>;
+<a class="br" href="#L639" id="L639">639 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
+<a class="br" href="#L640" id="L640">640 </a>    <span class="hid">entry.fsync_flags</span> = <span class="hid">flags</span>;
+<a class="br" href="#L641" id="L641">641 </a>}
+<a class="br" href="#L642" id="L642">642 </a>
+<a class="br" href="#L643" id="L643">643 </a><span class="com">// void prepPollAdd(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L644" id="L644">644 </a><span class="com">// void prepPollRemove(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L645" id="L645">645 </a><span class="com">// void prepSyncFileRange(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L646" id="L646">646 </a><span class="com">// void prepTimeout(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L647" id="L647">647 </a><span class="com">// void prepTimeoutRemove(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L648" id="L648">648 </a><span class="com">// void prepAccept(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L649" id="L649">649 </a><span class="com">// void prepAsyncCancel(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L650" id="L650">650 </a><span class="com">// void prepLinkTimeout(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L651" id="L651">651 </a><span class="com">// void prepConnect(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L652" id="L652">652 </a>
+<a class="br" href="#L653" id="L653">653 </a><span class="kwrd">private</span>:
+<a class="br" href="#L654" id="L654">654 </a>
+<a class="br" href="#L655" id="L655">655 </a><span class="com">// uring cleanup</span>
+<a class="br" href="#L656" id="L656">656 </a><span class="type">void</span> <a class="hid" href="during.d.html#L656" title="during.dispose">dispose</a>(<span class="kwrd">ref</span> <a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> <span class="hid">uring</span>)
+<a class="br" href="#L657" id="L657">657 </a>{
+<a class="br" href="#L658" id="L658">658 </a>    <span class="kwrd">if</span> (<span class="hid">uring.payload</span> <span class="kwrd">is</span> <span class="kwrd">null</span>) <span class="kwrd">return</span>;
+<a class="br" href="#L659" id="L659">659 </a>    <span class="com">// debug printf(&quot;uring(%d): dispose(%d)\n&quot;, uring.payload.fd, uring.payload.refs);</span>
+<a class="br" href="#L660" id="L660">660 </a>    <span class="kwrd">if</span> (--<span class="hid">uring.payload.refs</span> == <span class="num">0</span>)
+<a class="br" href="#L661" id="L661">661 </a>    {
+<a class="br" href="#L662" id="L662">662 </a>        <span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">hasElaborateDestructor</span>;
+<a class="br" href="#L663" id="L663">663 </a>        <span class="com">// debug printf(&quot;uring(%d): free\n&quot;, uring.payload.fd);</span>
+<a class="br" href="#L664" id="L664">664 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">hasElaborateDestructor</span>!<a class="hid" href="during.d.html#L672" title="during.UringDesc">UringDesc</a>)
+<a class="br" href="#L665" id="L665">665 </a>            <span class="hid">destroy</span>(*<span class="hid">uring.payload</span>); <span class="com">// call possible destructors</span>
+<a class="br" href="#L666" id="L666">666 </a>        <span class="hid">free</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)<span class="hid">uring.payload</span>);
+<a class="br" href="#L667" id="L667">667 </a>    }
+<a class="br" href="#L668" id="L668">668 </a>    <span class="hid">uring.payload</span> = <span class="kwrd">null</span>;
+<a class="br" href="#L669" id="L669">669 </a>}
+<a class="br" href="#L670" id="L670">670 </a>
+<a class="br" href="#L671" id="L671">671 </a><span class="com">// system fields descriptor</span>
+<a class="br" href="#L672" id="L672">672 </a><span class="kwrd">struct</span> <a class="hid" href="during.d.html#L672" title="during.UringDesc">UringDesc</a>
+<a class="br" href="#L673" id="L673">673 </a>{
+<a class="br" href="#L674" id="L674">674 </a>    <span class="kwrd">nothrow</span> @<span class="hid">nogc</span>:
+<a class="br" href="#L675" id="L675">675 </a>
+<a class="br" href="#L676" id="L676">676 </a>    <span class="type">int</span> <span class="hid">fd</span>;
+<a class="br" href="#L677" id="L677">677 </a>    <span class="hid">size_t</span> <span class="hid">refs</span>;
+<a class="br" href="#L678" id="L678">678 </a>    <span class="hid">SetupParameters</span> <span class="hid">params</span>;
+<a class="br" href="#L679" id="L679">679 </a>    <a class="hid" href="during.d.html#L768" title="during.SubmissionQueue">SubmissionQueue</a> <span class="hid">sq</span>;
+<a class="br" href="#L680" id="L680">680 </a>    <a class="hid" href="during.d.html#L846" title="during.CompletionQueue">CompletionQueue</a> <span class="hid">cq</span>;
+<a class="br" href="#L681" id="L681">681 </a>
+<a class="br" href="#L682" id="L682">682 </a>    <span class="hid">iovec</span>[] <span class="hid">regBuffers</span>;
 <a class="br" href="#L683" id="L683">683 </a>
-<a class="br" href="#L684" id="L684">684 </a>        <span class="kwrd">if</span> (<span class="hid">params.features</span> &amp; <span class="hid">SetupFeatures.SINGLE_MMAP</span>)
-<a class="br" href="#L685" id="L685">685 </a>        {
-<a class="br" href="#L686" id="L686">686 </a>            <span class="kwrd">if</span> (<span class="hid">cq.ringSize</span> &gt; <span class="hid">sq.ringSize</span>) <span class="hid">sq.ringSize</span> = <span class="hid">cq.ringSize</span>;
-<a class="br" href="#L687" id="L687">687 </a>            <span class="hid">cq.ringSize</span> = <span class="hid">sq.ringSize</span>;
-<a class="br" href="#L688" id="L688">688 </a>        }
-<a class="br" href="#L689" id="L689">689 </a>
-<a class="br" href="#L690" id="L690">690 </a>        <span class="hid">sq.ring</span> = <span class="hid">mmap</span>(<span class="kwrd">null</span>, <span class="hid">sq.ringSize</span>,
-<a class="br" href="#L691" id="L691">691 </a>            <span class="hid">PROT_READ</span> | <span class="hid">PROT_WRITE</span>, <span class="hid">MAP_SHARED</span> | <span class="hid">MAP_POPULATE</span>,
-<a class="br" href="#L692" id="L692">692 </a>            <span class="hid">fd</span>, <span class="hid">SetupParameters.SUBMISSION_QUEUE_RING_OFFSET</span>
-<a class="br" href="#L693" id="L693">693 </a>        );
-<a class="br" href="#L694" id="L694">694 </a>
-<a class="br" href="#L695" id="L695">695 </a>        <span class="kwrd">if</span> (<span class="hid">sq.ring</span> == <span class="hid">MAP_FAILED</span>)
-<a class="br" href="#L696" id="L696">696 </a>        {
-<a class="br" href="#L697" id="L697">697 </a>            <span class="hid">sq.ring</span> = <span class="kwrd">null</span>;
-<a class="br" href="#L698" id="L698">698 </a>            <span class="kwrd">return</span> -<span class="hid">errno</span>;
-<a class="br" href="#L699" id="L699">699 </a>        }
-<a class="br" href="#L700" id="L700">700 </a>
-<a class="br" href="#L701" id="L701">701 </a>        <span class="kwrd">if</span> (<span class="hid">params.features</span> &amp; <span class="hid">SetupFeatures.SINGLE_MMAP</span>)
-<a class="br" href="#L702" id="L702">702 </a>            <span class="hid">cq.ring</span> = <span class="hid">sq.ring</span>;
-<a class="br" href="#L703" id="L703">703 </a>        <span class="kwrd">else</span>
-<a class="br" href="#L704" id="L704">704 </a>        {
-<a class="br" href="#L705" id="L705">705 </a>            <span class="hid">cq.ring</span> = <span class="hid">mmap</span>(<span class="kwrd">null</span>, <span class="hid">cq.ringSize</span>,
-<a class="br" href="#L706" id="L706">706 </a>                <span class="hid">PROT_READ</span> | <span class="hid">PROT_WRITE</span>, <span class="hid">MAP_SHARED</span> | <span class="hid">MAP_POPULATE</span>,
-<a class="br" href="#L707" id="L707">707 </a>                <span class="hid">fd</span>, <span class="hid">SetupParameters.COMPLETION_QUEUE_RING_OFFSET</span>
-<a class="br" href="#L708" id="L708">708 </a>            );
-<a class="br" href="#L709" id="L709">709 </a>
-<a class="br" href="#L710" id="L710">710 </a>            <span class="kwrd">if</span> (<span class="hid">cq.ring</span> == <span class="hid">MAP_FAILED</span>)
-<a class="br" href="#L711" id="L711">711 </a>            {
-<a class="br" href="#L712" id="L712">712 </a>                <span class="hid">cq.ring</span> = <span class="kwrd">null</span>;
-<a class="br" href="#L713" id="L713">713 </a>                <span class="kwrd">return</span> -<span class="hid">errno</span>; <span class="com">// cleanup is done in struct destructors</span>
-<a class="br" href="#L714" id="L714">714 </a>            }
-<a class="br" href="#L715" id="L715">715 </a>        }
-<a class="br" href="#L716" id="L716">716 </a>
-<a class="br" href="#L717" id="L717">717 </a>        <span class="type">uint</span> <span class="hid">entries</span> = *<span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.ring_entries</span>);
-<a class="br" href="#L718" id="L718">718 </a>        <span class="hid">sq.khead</span>        = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.head</span>);
-<a class="br" href="#L719" id="L719">719 </a>        <span class="hid">sq.ktail</span>        = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.tail</span>);
-<a class="br" href="#L720" id="L720">720 </a>        <span class="hid">sq.localTail</span>    = *<span class="hid">sq.ktail</span>;
-<a class="br" href="#L721" id="L721">721 </a>        <span class="hid">sq.ringMask</span>     = *<span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.ring_mask</span>);
-<a class="br" href="#L722" id="L722">722 </a>        <span class="hid">sq.kflags</span>       = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.flags</span>);
-<a class="br" href="#L723" id="L723">723 </a>        <span class="hid">sq.kdropped</span>     = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.dropped</span>);
-<a class="br" href="#L724" id="L724">724 </a>
-<a class="br" href="#L725" id="L725">725 </a>        <span class="com">// Indirection array of indexes to the sqes array (head and tail are pointing to this array).</span>
-<a class="br" href="#L726" id="L726">726 </a>        <span class="com">// As we don't need some fancy mappings, just initialize it with constant indexes and forget about it.</span>
-<a class="br" href="#L727" id="L727">727 </a>        <span class="com">// That way, head and tail are actually indexes to our sqes array.</span>
-<a class="br" href="#L728" id="L728">728 </a>        <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="hid">entries</span>)
-<a class="br" href="#L729" id="L729">729 </a>        {
-<a class="br" href="#L730" id="L730">730 </a>            *((<span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.array</span>)) + <span class="hid">i</span>) = <span class="hid">i</span>;
-<a class="br" href="#L731" id="L731">731 </a>        }
-<a class="br" href="#L732" id="L732">732 </a>
-<a class="br" href="#L733" id="L733">733 </a>        <span class="kwrd">auto</span> <span class="hid">psqes</span> = <span class="hid">mmap</span>(
-<a class="br" href="#L734" id="L734">734 </a>            <span class="kwrd">null</span>, <span class="hid">entries</span> * <span class="hid">SubmissionEntry.sizeof</span>,
-<a class="br" href="#L735" id="L735">735 </a>            <span class="hid">PROT_READ</span> | <span class="hid">PROT_WRITE</span>, <span class="hid">MAP_SHARED</span> | <span class="hid">MAP_POPULATE</span>,
-<a class="br" href="#L736" id="L736">736 </a>            <span class="hid">fd</span>, <span class="hid">SetupParameters.SUBMISSION_QUEUE_ENTRIES_OFFSET</span>
-<a class="br" href="#L737" id="L737">737 </a>        );
+<a class="br" href="#L684" id="L684">684 </a>    ~<span class="kwrd">this</span>()
+<a class="br" href="#L685" id="L685">685 </a>    {
+<a class="br" href="#L686" id="L686">686 </a>        <span class="kwrd">if</span> (<span class="hid">regBuffers</span>) <span class="hid">free</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">regBuffers</span>[<span class="num">0</span>]);
+<a class="br" href="#L687" id="L687">687 </a>        <span class="kwrd">if</span> (<span class="hid">sq.ring</span>) <span class="hid">munmap</span>(<span class="hid">sq.ring</span>, <span class="hid">sq.ringSize</span>);
+<a class="br" href="#L688" id="L688">688 </a>        <span class="kwrd">if</span> (<span class="hid">sq.sqes</span>) <span class="hid">munmap</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">sq.sqes</span>[<span class="num">0</span>], <span class="hid">sq.sqes.length</span> * <span class="hid">SubmissionEntry.sizeof</span>);
+<a class="br" href="#L689" id="L689">689 </a>        <span class="kwrd">if</span> (<span class="hid">cq.ring</span> &amp;&amp; <span class="hid">cq.ring</span> != <span class="hid">sq.ring</span>) <span class="hid">munmap</span>(<span class="hid">cq.ring</span>, <span class="hid">cq.ringSize</span>);
+<a class="br" href="#L690" id="L690">690 </a>        <span class="hid">close</span>(<span class="hid">fd</span>);
+<a class="br" href="#L691" id="L691">691 </a>    }
+<a class="br" href="#L692" id="L692">692 </a>
+<a class="br" href="#L693" id="L693">693 </a>    <span class="kwrd">private</span> <span class="kwrd">auto</span> <span class="hid">mapRings</span>()
+<a class="br" href="#L694" id="L694">694 </a>    {
+<a class="br" href="#L695" id="L695">695 </a>        <span class="hid">sq.ringSize</span> = <span class="hid">params.sq_off.array</span> + <span class="hid">params.sq_entries</span> * <span class="type">uint</span>.<span class="hid">sizeof</span>;
+<a class="br" href="#L696" id="L696">696 </a>        <span class="hid">cq.ringSize</span> = <span class="hid">params.cq_off.cqes</span> + <span class="hid">params.cq_entries</span> * <span class="hid">CompletionEntry.sizeof</span>;
+<a class="br" href="#L697" id="L697">697 </a>
+<a class="br" href="#L698" id="L698">698 </a>        <span class="kwrd">if</span> (<span class="hid">params.features</span> &amp; <span class="hid">SetupFeatures.SINGLE_MMAP</span>)
+<a class="br" href="#L699" id="L699">699 </a>        {
+<a class="br" href="#L700" id="L700">700 </a>            <span class="kwrd">if</span> (<span class="hid">cq.ringSize</span> &gt; <span class="hid">sq.ringSize</span>) <span class="hid">sq.ringSize</span> = <span class="hid">cq.ringSize</span>;
+<a class="br" href="#L701" id="L701">701 </a>            <span class="hid">cq.ringSize</span> = <span class="hid">sq.ringSize</span>;
+<a class="br" href="#L702" id="L702">702 </a>        }
+<a class="br" href="#L703" id="L703">703 </a>
+<a class="br" href="#L704" id="L704">704 </a>        <span class="hid">sq.ring</span> = <span class="hid">mmap</span>(<span class="kwrd">null</span>, <span class="hid">sq.ringSize</span>,
+<a class="br" href="#L705" id="L705">705 </a>            <span class="hid">PROT_READ</span> | <span class="hid">PROT_WRITE</span>, <span class="hid">MAP_SHARED</span> | <span class="hid">MAP_POPULATE</span>,
+<a class="br" href="#L706" id="L706">706 </a>            <span class="hid">fd</span>, <span class="hid">SetupParameters.SUBMISSION_QUEUE_RING_OFFSET</span>
+<a class="br" href="#L707" id="L707">707 </a>        );
+<a class="br" href="#L708" id="L708">708 </a>
+<a class="br" href="#L709" id="L709">709 </a>        <span class="kwrd">if</span> (<span class="hid">sq.ring</span> == <span class="hid">MAP_FAILED</span>)
+<a class="br" href="#L710" id="L710">710 </a>        {
+<a class="br" href="#L711" id="L711">711 </a>            <span class="hid">sq.ring</span> = <span class="kwrd">null</span>;
+<a class="br" href="#L712" id="L712">712 </a>            <span class="kwrd">return</span> -<span class="hid">errno</span>;
+<a class="br" href="#L713" id="L713">713 </a>        }
+<a class="br" href="#L714" id="L714">714 </a>
+<a class="br" href="#L715" id="L715">715 </a>        <span class="kwrd">if</span> (<span class="hid">params.features</span> &amp; <span class="hid">SetupFeatures.SINGLE_MMAP</span>)
+<a class="br" href="#L716" id="L716">716 </a>            <span class="hid">cq.ring</span> = <span class="hid">sq.ring</span>;
+<a class="br" href="#L717" id="L717">717 </a>        <span class="kwrd">else</span>
+<a class="br" href="#L718" id="L718">718 </a>        {
+<a class="br" href="#L719" id="L719">719 </a>            <span class="hid">cq.ring</span> = <span class="hid">mmap</span>(<span class="kwrd">null</span>, <span class="hid">cq.ringSize</span>,
+<a class="br" href="#L720" id="L720">720 </a>                <span class="hid">PROT_READ</span> | <span class="hid">PROT_WRITE</span>, <span class="hid">MAP_SHARED</span> | <span class="hid">MAP_POPULATE</span>,
+<a class="br" href="#L721" id="L721">721 </a>                <span class="hid">fd</span>, <span class="hid">SetupParameters.COMPLETION_QUEUE_RING_OFFSET</span>
+<a class="br" href="#L722" id="L722">722 </a>            );
+<a class="br" href="#L723" id="L723">723 </a>
+<a class="br" href="#L724" id="L724">724 </a>            <span class="kwrd">if</span> (<span class="hid">cq.ring</span> == <span class="hid">MAP_FAILED</span>)
+<a class="br" href="#L725" id="L725">725 </a>            {
+<a class="br" href="#L726" id="L726">726 </a>                <span class="hid">cq.ring</span> = <span class="kwrd">null</span>;
+<a class="br" href="#L727" id="L727">727 </a>                <span class="kwrd">return</span> -<span class="hid">errno</span>; <span class="com">// cleanup is done in struct destructors</span>
+<a class="br" href="#L728" id="L728">728 </a>            }
+<a class="br" href="#L729" id="L729">729 </a>        }
+<a class="br" href="#L730" id="L730">730 </a>
+<a class="br" href="#L731" id="L731">731 </a>        <span class="type">uint</span> <span class="hid">entries</span> = *<span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.ring_entries</span>);
+<a class="br" href="#L732" id="L732">732 </a>        <span class="hid">sq.khead</span>        = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.head</span>);
+<a class="br" href="#L733" id="L733">733 </a>        <span class="hid">sq.ktail</span>        = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.tail</span>);
+<a class="br" href="#L734" id="L734">734 </a>        <span class="hid">sq.localTail</span>    = *<span class="hid">sq.ktail</span>;
+<a class="br" href="#L735" id="L735">735 </a>        <span class="hid">sq.ringMask</span>     = *<span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.ring_mask</span>);
+<a class="br" href="#L736" id="L736">736 </a>        <span class="hid">sq.kflags</span>       = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.flags</span>);
+<a class="br" href="#L737" id="L737">737 </a>        <span class="hid">sq.kdropped</span>     = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.dropped</span>);
 <a class="br" href="#L738" id="L738">738 </a>
-<a class="br" href="#L739" id="L739">739 </a>        <span class="kwrd">if</span> (<span class="hid">psqes</span> == <span class="hid">MAP_FAILED</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
-<a class="br" href="#L740" id="L740">740 </a>        <span class="hid">sq.sqes</span> = (<span class="kwrd">cast</span>(<span class="hid">SubmissionEntry</span>*)<span class="hid">psqes</span>)[<span class="num">0</span>..<span class="hid">entries</span>];
-<a class="br" href="#L741" id="L741">741 </a>
-<a class="br" href="#L742" id="L742">742 </a>        <span class="hid">entries</span> = *<span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.ring_entries</span>);
-<a class="br" href="#L743" id="L743">743 </a>        <span class="hid">cq.khead</span>        = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.head</span>);
-<a class="br" href="#L744" id="L744">744 </a>        <span class="hid">cq.localHead</span>    = *<span class="hid">cq.khead</span>;
-<a class="br" href="#L745" id="L745">745 </a>        <span class="hid">cq.ktail</span>        = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.tail</span>);
-<a class="br" href="#L746" id="L746">746 </a>        <span class="hid">cq.ringMask</span>     = *<span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.ring_mask</span>);
-<a class="br" href="#L747" id="L747">747 </a>        <span class="hid">cq.koverflow</span>    = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.overflow</span>);
-<a class="br" href="#L748" id="L748">748 </a>        <span class="hid">cq.cqes</span>         = (<span class="kwrd">cast</span>(<span class="hid">CompletionEntry</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.cqes</span>))[<span class="num">0</span>..<span class="hid">entries</span>];
-<a class="br" href="#L749" id="L749">749 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
-<a class="br" href="#L750" id="L750">750 </a>    }
-<a class="br" href="#L751" id="L751">751 </a>}
+<a class="br" href="#L739" id="L739">739 </a>        <span class="com">// Indirection array of indexes to the sqes array (head and tail are pointing to this array).</span>
+<a class="br" href="#L740" id="L740">740 </a>        <span class="com">// As we don't need some fancy mappings, just initialize it with constant indexes and forget about it.</span>
+<a class="br" href="#L741" id="L741">741 </a>        <span class="com">// That way, head and tail are actually indexes to our sqes array.</span>
+<a class="br" href="#L742" id="L742">742 </a>        <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="hid">entries</span>)
+<a class="br" href="#L743" id="L743">743 </a>        {
+<a class="br" href="#L744" id="L744">744 </a>            *((<span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">sq.ring</span> + <span class="hid">params.sq_off.array</span>)) + <span class="hid">i</span>) = <span class="hid">i</span>;
+<a class="br" href="#L745" id="L745">745 </a>        }
+<a class="br" href="#L746" id="L746">746 </a>
+<a class="br" href="#L747" id="L747">747 </a>        <span class="kwrd">auto</span> <span class="hid">psqes</span> = <span class="hid">mmap</span>(
+<a class="br" href="#L748" id="L748">748 </a>            <span class="kwrd">null</span>, <span class="hid">entries</span> * <span class="hid">SubmissionEntry.sizeof</span>,
+<a class="br" href="#L749" id="L749">749 </a>            <span class="hid">PROT_READ</span> | <span class="hid">PROT_WRITE</span>, <span class="hid">MAP_SHARED</span> | <span class="hid">MAP_POPULATE</span>,
+<a class="br" href="#L750" id="L750">750 </a>            <span class="hid">fd</span>, <span class="hid">SetupParameters.SUBMISSION_QUEUE_ENTRIES_OFFSET</span>
+<a class="br" href="#L751" id="L751">751 </a>        );
 <a class="br" href="#L752" id="L752">752 </a>
-<a class="br" href="#L753" id="L753">753 </a><span class="com">/// Wraper for `SubmissionEntry` queue</span>
-<a class="br" href="#L754" id="L754">754 </a><span class="kwrd">struct</span> <a class="hid" href="during.d.html#L754" title="during.SubmissionQueue">SubmissionQueue</a>
-<a class="br" href="#L755" id="L755">755 </a>{
-<a class="br" href="#L756" id="L756">756 </a>    <span class="kwrd">nothrow</span> @<span class="hid">nogc</span>:
-<a class="br" href="#L757" id="L757">757 </a>
-<a class="br" href="#L758" id="L758">758 </a>    <span class="com">// mmaped fields</span>
-<a class="br" href="#L759" id="L759">759 </a>    <span class="type">uint</span>* <span class="hid">khead</span>; <span class="com">// controlled by kernel</span>
-<a class="br" href="#L760" id="L760">760 </a>    <span class="type">uint</span>* <span class="hid">ktail</span>; <span class="com">// controlled by us</span>
-<a class="br" href="#L761" id="L761">761 </a>    <span class="type">uint</span>* <span class="hid">kflags</span>; <span class="com">// controlled by kernel (ie IORING_SQ_NEED_WAKEUP)</span>
-<a class="br" href="#L762" id="L762">762 </a>    <span class="type">uint</span>* <span class="hid">kdropped</span>; <span class="com">// counter of invalid submissions (out of bound index)</span>
-<a class="br" href="#L763" id="L763">763 </a>    <span class="type">uint</span> <span class="hid">ringMask</span>; <span class="com">// constant mask used to determine array index from head/tail</span>
-<a class="br" href="#L764" id="L764">764 </a>
-<a class="br" href="#L765" id="L765">765 </a>    <span class="com">// mmap details (for cleanup)</span>
-<a class="br" href="#L766" id="L766">766 </a>    <span class="type">void</span>* <span class="hid">ring</span>; <span class="com">// pointer to the mmaped region</span>
-<a class="br" href="#L767" id="L767">767 </a>    <span class="hid">size_t</span> <span class="hid">ringSize</span>; <span class="com">// size of mmaped memory block</span>
-<a class="br" href="#L768" id="L768">768 </a>
-<a class="br" href="#L769" id="L769">769 </a>    <span class="com">// mmapped list of entries (fixed length)</span>
-<a class="br" href="#L770" id="L770">770 </a>    <span class="hid">SubmissionEntry</span>[] <span class="hid">sqes</span>;
+<a class="br" href="#L753" id="L753">753 </a>        <span class="kwrd">if</span> (<span class="hid">psqes</span> == <span class="hid">MAP_FAILED</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
+<a class="br" href="#L754" id="L754">754 </a>        <span class="hid">sq.sqes</span> = (<span class="kwrd">cast</span>(<span class="hid">SubmissionEntry</span>*)<span class="hid">psqes</span>)[<span class="num">0</span>..<span class="hid">entries</span>];
+<a class="br" href="#L755" id="L755">755 </a>
+<a class="br" href="#L756" id="L756">756 </a>        <span class="hid">entries</span> = *<span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.ring_entries</span>);
+<a class="br" href="#L757" id="L757">757 </a>        <span class="hid">cq.khead</span>        = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.head</span>);
+<a class="br" href="#L758" id="L758">758 </a>        <span class="hid">cq.localHead</span>    = *<span class="hid">cq.khead</span>;
+<a class="br" href="#L759" id="L759">759 </a>        <span class="hid">cq.ktail</span>        = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.tail</span>);
+<a class="br" href="#L760" id="L760">760 </a>        <span class="hid">cq.ringMask</span>     = *<span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.ring_mask</span>);
+<a class="br" href="#L761" id="L761">761 </a>        <span class="hid">cq.koverflow</span>    = <span class="kwrd">cast</span>(<span class="type">uint</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.overflow</span>);
+<a class="br" href="#L762" id="L762">762 </a>        <span class="hid">cq.cqes</span>         = (<span class="kwrd">cast</span>(<span class="hid">CompletionEntry</span>*)(<span class="hid">cq.ring</span> + <span class="hid">params.cq_off.cqes</span>))[<span class="num">0</span>..<span class="hid">entries</span>];
+<a class="br" href="#L763" id="L763">763 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
+<a class="br" href="#L764" id="L764">764 </a>    }
+<a class="br" href="#L765" id="L765">765 </a>}
+<a class="br" href="#L766" id="L766">766 </a>
+<a class="br" href="#L767" id="L767">767 </a><span class="com">/// Wraper for `SubmissionEntry` queue</span>
+<a class="br" href="#L768" id="L768">768 </a><span class="kwrd">struct</span> <a class="hid" href="during.d.html#L768" title="during.SubmissionQueue">SubmissionQueue</a>
+<a class="br" href="#L769" id="L769">769 </a>{
+<a class="br" href="#L770" id="L770">770 </a>    <span class="kwrd">nothrow</span> @<span class="hid">nogc</span>:
 <a class="br" href="#L771" id="L771">771 </a>
-<a class="br" href="#L772" id="L772">772 </a>    <span class="type">uint</span> <span class="hid">localTail</span>; <span class="com">// used for batch submission</span>
-<a class="br" href="#L773" id="L773">773 </a>
-<a class="br" href="#L774" id="L774">774 </a>    <span class="type">uint</span> <span class="hid">head</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <a class="hid" href="during.d.html#L891" title="during.atomicLoad">atomicLoad</a>!(<span class="hid">MemoryOrder.acq</span>)(*<span class="hid">khead</span>); }
-<a class="br" href="#L775" id="L775">775 </a>    <span class="type">uint</span> <span class="hid">tail</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">localTail</span>; }
-<a class="br" href="#L776" id="L776">776 </a>
-<a class="br" href="#L777" id="L777">777 </a>    <span class="type">void</span> <span class="hid">flushTail</span>()
-<a class="br" href="#L778" id="L778">778 </a>    {
-<a class="br" href="#L779" id="L779">779 </a>        <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
-<a class="br" href="#L780" id="L780">780 </a>        <span class="com">// debug printf(&quot;SQ updating tail: %d\n&quot;, localTail);</span>
-<a class="br" href="#L781" id="L781">781 </a>        <a class="hid" href="during.d.html#L882" title="during.atomicStore">atomicStore</a>!(<span class="hid">MemoryOrder.rel</span>)(*<span class="hid">ktail</span>, <span class="hid">localTail</span>);
-<a class="br" href="#L782" id="L782">782 </a>    }
-<a class="br" href="#L783" id="L783">783 </a>
-<a class="br" href="#L784" id="L784">784 </a>    <span class="hid">SubmissionQueueFlags</span> <span class="hid">flags</span>() <span class="kwrd">const</span>
-<a class="br" href="#L785" id="L785">785 </a>    {
-<a class="br" href="#L786" id="L786">786 </a>        <span class="kwrd">return</span> <span class="kwrd">cast</span>(<span class="hid">SubmissionQueueFlags</span>)<a class="hid" href="during.d.html#L891" title="during.atomicLoad">atomicLoad</a>!(<span class="hid">MemoryOrder.raw</span>)(*<span class="hid">kflags</span>);
-<a class="br" href="#L787" id="L787">787 </a>    }
-<a class="br" href="#L788" id="L788">788 </a>
-<a class="br" href="#L789" id="L789">789 </a>    <span class="type">bool</span> <span class="hid">full</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">sqes.length</span> == <span class="hid">length</span>; }
+<a class="br" href="#L772" id="L772">772 </a>    <span class="com">// mmaped fields</span>
+<a class="br" href="#L773" id="L773">773 </a>    <span class="type">uint</span>* <span class="hid">khead</span>; <span class="com">// controlled by kernel</span>
+<a class="br" href="#L774" id="L774">774 </a>    <span class="type">uint</span>* <span class="hid">ktail</span>; <span class="com">// controlled by us</span>
+<a class="br" href="#L775" id="L775">775 </a>    <span class="type">uint</span>* <span class="hid">kflags</span>; <span class="com">// controlled by kernel (ie IORING_SQ_NEED_WAKEUP)</span>
+<a class="br" href="#L776" id="L776">776 </a>    <span class="type">uint</span>* <span class="hid">kdropped</span>; <span class="com">// counter of invalid submissions (out of bound index)</span>
+<a class="br" href="#L777" id="L777">777 </a>    <span class="type">uint</span> <span class="hid">ringMask</span>; <span class="com">// constant mask used to determine array index from head/tail</span>
+<a class="br" href="#L778" id="L778">778 </a>
+<a class="br" href="#L779" id="L779">779 </a>    <span class="com">// mmap details (for cleanup)</span>
+<a class="br" href="#L780" id="L780">780 </a>    <span class="type">void</span>* <span class="hid">ring</span>; <span class="com">// pointer to the mmaped region</span>
+<a class="br" href="#L781" id="L781">781 </a>    <span class="hid">size_t</span> <span class="hid">ringSize</span>; <span class="com">// size of mmaped memory block</span>
+<a class="br" href="#L782" id="L782">782 </a>
+<a class="br" href="#L783" id="L783">783 </a>    <span class="com">// mmapped list of entries (fixed length)</span>
+<a class="br" href="#L784" id="L784">784 </a>    <span class="hid">SubmissionEntry</span>[] <span class="hid">sqes</span>;
+<a class="br" href="#L785" id="L785">785 </a>
+<a class="br" href="#L786" id="L786">786 </a>    <span class="type">uint</span> <span class="hid">localTail</span>; <span class="com">// used for batch submission</span>
+<a class="br" href="#L787" id="L787">787 </a>
+<a class="br" href="#L788" id="L788">788 </a>    <span class="type">uint</span> <span class="hid">head</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <a class="hid" href="during.d.html#L905" title="during.atomicLoad">atomicLoad</a>!(<span class="hid">MemoryOrder.acq</span>)(*<span class="hid">khead</span>); }
+<a class="br" href="#L789" id="L789">789 </a>    <span class="type">uint</span> <span class="hid">tail</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">localTail</span>; }
 <a class="br" href="#L790" id="L790">790 </a>
-<a class="br" href="#L791" id="L791">791 </a>    <span class="hid">size_t</span> <span class="hid">length</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">tail</span> - <span class="hid">head</span>; }
-<a class="br" href="#L792" id="L792">792 </a>
-<a class="br" href="#L793" id="L793">793 </a>    <span class="hid">size_t</span> <span class="hid">capacity</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">sqes.length</span> - <span class="hid">length</span>; }
-<a class="br" href="#L794" id="L794">794 </a>
-<a class="br" href="#L795" id="L795">795 </a>    <span class="type">void</span> <span class="hid">put</span>()(<span class="kwrd">auto</span> <span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>)
-<a class="br" href="#L796" id="L796">796 </a>    {
-<a class="br" href="#L797" id="L797">797 </a>        <span class="kwrd">assert</span>(!<span class="hid">full</span>, <span class="str">&quot;SumbissionQueue is full&quot;</span>);
-<a class="br" href="#L798" id="L798">798 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>] = <span class="hid">entry</span>;
-<a class="br" href="#L799" id="L799">799 </a>        <span class="hid">localTail</span>++;
-<a class="br" href="#L800" id="L800">800 </a>    }
-<a class="br" href="#L801" id="L801">801 </a>
-<a class="br" href="#L802" id="L802">802 </a>    <span class="type">void</span> <span class="hid">put</span>(<span class="hid">OP</span>)(<span class="kwrd">auto</span> <span class="kwrd">ref</span> <span class="hid">OP</span> <span class="hid">op</span>)
-<a class="br" href="#L803" id="L803">803 </a>        <span class="kwrd">if</span> (!<span class="kwrd">is</span>(<span class="hid">OP</span> == <span class="hid">SubmissionEntry</span>))
-<a class="br" href="#L804" id="L804">804 </a>    {
-<a class="br" href="#L805" id="L805">805 </a>        <span class="kwrd">assert</span>(!<span class="hid">full</span>, <span class="str">&quot;SumbissionQueue is full&quot;</span>);
-<a class="br" href="#L806" id="L806">806 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>].<span class="hid">clear</span>();
-<a class="br" href="#L807" id="L807">807 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>].<a class="hid" href="during.d.html#L483" title="during.fill">fill</a>(<span class="hid">op</span>);
-<a class="br" href="#L808" id="L808">808 </a>        <span class="hid">localTail</span>++;
-<a class="br" href="#L809" id="L809">809 </a>    }
-<a class="br" href="#L810" id="L810">810 </a>
-<a class="br" href="#L811" id="L811">811 </a>    <span class="type">void</span> <span class="hid">putWith</span>(<span class="hid">ARGS</span>...)(<span class="type">void</span> <span class="kwrd">delegate</span>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span>, <span class="hid">ARGS</span>) <span class="kwrd">nothrow</span> @<span class="hid">nogc</span> <span class="hid">fn</span>, <span class="hid">ARGS</span> <span class="hid">args</span>)
-<a class="br" href="#L812" id="L812">812 </a>    {
-<a class="br" href="#L813" id="L813">813 </a>        <span class="hid">putWithImpl</span>(<span class="hid">fn</span>, <span class="hid">args</span>);
+<a class="br" href="#L791" id="L791">791 </a>    <span class="type">void</span> <span class="hid">flushTail</span>()
+<a class="br" href="#L792" id="L792">792 </a>    {
+<a class="br" href="#L793" id="L793">793 </a>        <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
+<a class="br" href="#L794" id="L794">794 </a>        <span class="com">// debug printf(&quot;SQ updating tail: %d\n&quot;, localTail);</span>
+<a class="br" href="#L795" id="L795">795 </a>        <a class="hid" href="during.d.html#L896" title="during.atomicStore">atomicStore</a>!(<span class="hid">MemoryOrder.rel</span>)(*<span class="hid">ktail</span>, <span class="hid">localTail</span>);
+<a class="br" href="#L796" id="L796">796 </a>    }
+<a class="br" href="#L797" id="L797">797 </a>
+<a class="br" href="#L798" id="L798">798 </a>    <span class="hid">SubmissionQueueFlags</span> <span class="hid">flags</span>() <span class="kwrd">const</span>
+<a class="br" href="#L799" id="L799">799 </a>    {
+<a class="br" href="#L800" id="L800">800 </a>        <span class="kwrd">return</span> <span class="kwrd">cast</span>(<span class="hid">SubmissionQueueFlags</span>)<a class="hid" href="during.d.html#L905" title="during.atomicLoad">atomicLoad</a>!(<span class="hid">MemoryOrder.raw</span>)(*<span class="hid">kflags</span>);
+<a class="br" href="#L801" id="L801">801 </a>    }
+<a class="br" href="#L802" id="L802">802 </a>
+<a class="br" href="#L803" id="L803">803 </a>    <span class="type">bool</span> <span class="hid">full</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">sqes.length</span> == <span class="hid">length</span>; }
+<a class="br" href="#L804" id="L804">804 </a>
+<a class="br" href="#L805" id="L805">805 </a>    <span class="hid">size_t</span> <span class="hid">length</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">tail</span> - <span class="hid">head</span>; }
+<a class="br" href="#L806" id="L806">806 </a>
+<a class="br" href="#L807" id="L807">807 </a>    <span class="hid">size_t</span> <span class="hid">capacity</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">sqes.length</span> - <span class="hid">length</span>; }
+<a class="br" href="#L808" id="L808">808 </a>
+<a class="br" href="#L809" id="L809">809 </a>    <span class="type">void</span> <span class="hid">put</span>()(<span class="kwrd">auto</span> <span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>)
+<a class="br" href="#L810" id="L810">810 </a>    {
+<a class="br" href="#L811" id="L811">811 </a>        <span class="kwrd">assert</span>(!<span class="hid">full</span>, <span class="str">&quot;SumbissionQueue is full&quot;</span>);
+<a class="br" href="#L812" id="L812">812 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>] = <span class="hid">entry</span>;
+<a class="br" href="#L813" id="L813">813 </a>        <span class="hid">localTail</span>++;
 <a class="br" href="#L814" id="L814">814 </a>    }
 <a class="br" href="#L815" id="L815">815 </a>
-<a class="br" href="#L816" id="L816">816 </a>    <span class="type">void</span> <span class="hid">putWith</span>(<span class="hid">ARGS</span>...)(<span class="type">void</span> <span class="kwrd">function</span>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span>, <span class="hid">ARGS</span>) <span class="kwrd">nothrow</span> @<span class="hid">nogc</span> <span class="hid">fn</span>, <span class="hid">ARGS</span> <span class="hid">args</span>)
-<a class="br" href="#L817" id="L817">817 </a>    {
-<a class="br" href="#L818" id="L818">818 </a>        <span class="hid">putWithImpl</span>(<span class="hid">fn</span>, <span class="hid">args</span>);
-<a class="br" href="#L819" id="L819">819 </a>    }
-<a class="br" href="#L820" id="L820">820 </a>
-<a class="br" href="#L821" id="L821">821 </a>    <span class="kwrd">private</span> <span class="type">void</span> <span class="hid">putWithImpl</span>(<span class="hid">FN</span>, <span class="hid">ARGS</span>...)(<span class="hid">FN</span> <span class="hid">fn</span>, <span class="hid">ARGS</span> <span class="hid">args</span>)
-<a class="br" href="#L822" id="L822">822 </a>    {
-<a class="br" href="#L823" id="L823">823 </a>        <span class="kwrd">assert</span>(!<span class="hid">full</span>, <span class="str">&quot;SumbissionQueue is full&quot;</span>);
-<a class="br" href="#L824" id="L824">824 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>].<span class="hid">clear</span>();
-<a class="br" href="#L825" id="L825">825 </a>        <span class="hid">fn</span>(<span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>], <span class="hid">args</span>);
-<a class="br" href="#L826" id="L826">826 </a>        <span class="hid">localTail</span>++;
-<a class="br" href="#L827" id="L827">827 </a>    }
-<a class="br" href="#L828" id="L828">828 </a>
-<a class="br" href="#L829" id="L829">829 </a>    <span class="type">uint</span> <span class="hid">dropped</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <a class="hid" href="during.d.html#L891" title="during.atomicLoad">atomicLoad</a>!(<span class="hid">MemoryOrder.raw</span>)(*<span class="hid">kdropped</span>); }
-<a class="br" href="#L830" id="L830">830 </a>}
-<a class="br" href="#L831" id="L831">831 </a>
-<a class="br" href="#L832" id="L832">832 </a><span class="kwrd">struct</span> <a class="hid" href="during.d.html#L832" title="during.CompletionQueue">CompletionQueue</a>
-<a class="br" href="#L833" id="L833">833 </a>{
-<a class="br" href="#L834" id="L834">834 </a>    <span class="kwrd">nothrow</span> @<span class="hid">nogc</span>:
-<a class="br" href="#L835" id="L835">835 </a>
-<a class="br" href="#L836" id="L836">836 </a>    <span class="com">// mmaped fields</span>
-<a class="br" href="#L837" id="L837">837 </a>    <span class="type">uint</span>* <span class="hid">khead</span>; <span class="com">// controlled by us (increment after entry at head was read)</span>
-<a class="br" href="#L838" id="L838">838 </a>    <span class="type">uint</span>* <span class="hid">ktail</span>; <span class="com">// updated by kernel</span>
-<a class="br" href="#L839" id="L839">839 </a>    <span class="type">uint</span>* <span class="hid">koverflow</span>;
-<a class="br" href="#L840" id="L840">840 </a>    <span class="hid">CompletionEntry</span>[] <span class="hid">cqes</span>; <span class="com">// array of entries (fixed length)</span>
-<a class="br" href="#L841" id="L841">841 </a>
-<a class="br" href="#L842" id="L842">842 </a>    <span class="type">uint</span> <span class="hid">ringMask</span>; <span class="com">// constant mask used to determine array index from head/tail</span>
-<a class="br" href="#L843" id="L843">843 </a>
-<a class="br" href="#L844" id="L844">844 </a>    <span class="com">// mmap details (for cleanup)</span>
-<a class="br" href="#L845" id="L845">845 </a>    <span class="type">void</span>* <span class="hid">ring</span>;
-<a class="br" href="#L846" id="L846">846 </a>    <span class="hid">size_t</span> <span class="hid">ringSize</span>;
-<a class="br" href="#L847" id="L847">847 </a>
-<a class="br" href="#L848" id="L848">848 </a>    <span class="type">uint</span> <span class="hid">localHead</span>; <span class="com">// used for bulk reading</span>
+<a class="br" href="#L816" id="L816">816 </a>    <span class="type">void</span> <span class="hid">put</span>(<span class="hid">OP</span>)(<span class="kwrd">auto</span> <span class="kwrd">ref</span> <span class="hid">OP</span> <span class="hid">op</span>)
+<a class="br" href="#L817" id="L817">817 </a>        <span class="kwrd">if</span> (!<span class="kwrd">is</span>(<span class="hid">OP</span> == <span class="hid">SubmissionEntry</span>))
+<a class="br" href="#L818" id="L818">818 </a>    {
+<a class="br" href="#L819" id="L819">819 </a>        <span class="kwrd">assert</span>(!<span class="hid">full</span>, <span class="str">&quot;SumbissionQueue is full&quot;</span>);
+<a class="br" href="#L820" id="L820">820 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>].<span class="hid">clear</span>();
+<a class="br" href="#L821" id="L821">821 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>].<a class="hid" href="during.d.html#L483" title="during.fill">fill</a>(<span class="hid">op</span>);
+<a class="br" href="#L822" id="L822">822 </a>        <span class="hid">localTail</span>++;
+<a class="br" href="#L823" id="L823">823 </a>    }
+<a class="br" href="#L824" id="L824">824 </a>
+<a class="br" href="#L825" id="L825">825 </a>    <span class="type">void</span> <span class="hid">putWith</span>(<span class="hid">ARGS</span>...)(<span class="type">void</span> <span class="kwrd">delegate</span>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span>, <span class="hid">ARGS</span>) <span class="kwrd">nothrow</span> @<span class="hid">nogc</span> <span class="hid">fn</span>, <span class="hid">ARGS</span> <span class="hid">args</span>)
+<a class="br" href="#L826" id="L826">826 </a>    {
+<a class="br" href="#L827" id="L827">827 </a>        <span class="hid">putWithImpl</span>(<span class="hid">fn</span>, <span class="hid">args</span>);
+<a class="br" href="#L828" id="L828">828 </a>    }
+<a class="br" href="#L829" id="L829">829 </a>
+<a class="br" href="#L830" id="L830">830 </a>    <span class="type">void</span> <span class="hid">putWith</span>(<span class="hid">ARGS</span>...)(<span class="type">void</span> <span class="kwrd">function</span>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span>, <span class="hid">ARGS</span>) <span class="kwrd">nothrow</span> @<span class="hid">nogc</span> <span class="hid">fn</span>, <span class="hid">ARGS</span> <span class="hid">args</span>)
+<a class="br" href="#L831" id="L831">831 </a>    {
+<a class="br" href="#L832" id="L832">832 </a>        <span class="hid">putWithImpl</span>(<span class="hid">fn</span>, <span class="hid">args</span>);
+<a class="br" href="#L833" id="L833">833 </a>    }
+<a class="br" href="#L834" id="L834">834 </a>
+<a class="br" href="#L835" id="L835">835 </a>    <span class="kwrd">private</span> <span class="type">void</span> <span class="hid">putWithImpl</span>(<span class="hid">FN</span>, <span class="hid">ARGS</span>...)(<span class="hid">FN</span> <span class="hid">fn</span>, <span class="hid">ARGS</span> <span class="hid">args</span>)
+<a class="br" href="#L836" id="L836">836 </a>    {
+<a class="br" href="#L837" id="L837">837 </a>        <span class="kwrd">assert</span>(!<span class="hid">full</span>, <span class="str">&quot;SumbissionQueue is full&quot;</span>);
+<a class="br" href="#L838" id="L838">838 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>].<span class="hid">clear</span>();
+<a class="br" href="#L839" id="L839">839 </a>        <span class="hid">fn</span>(<span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>], <span class="hid">args</span>);
+<a class="br" href="#L840" id="L840">840 </a>        <span class="hid">localTail</span>++;
+<a class="br" href="#L841" id="L841">841 </a>    }
+<a class="br" href="#L842" id="L842">842 </a>
+<a class="br" href="#L843" id="L843">843 </a>    <span class="type">uint</span> <span class="hid">dropped</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <a class="hid" href="during.d.html#L905" title="during.atomicLoad">atomicLoad</a>!(<span class="hid">MemoryOrder.raw</span>)(*<span class="hid">kdropped</span>); }
+<a class="br" href="#L844" id="L844">844 </a>}
+<a class="br" href="#L845" id="L845">845 </a>
+<a class="br" href="#L846" id="L846">846 </a><span class="kwrd">struct</span> <a class="hid" href="during.d.html#L846" title="during.CompletionQueue">CompletionQueue</a>
+<a class="br" href="#L847" id="L847">847 </a>{
+<a class="br" href="#L848" id="L848">848 </a>    <span class="kwrd">nothrow</span> @<span class="hid">nogc</span>:
 <a class="br" href="#L849" id="L849">849 </a>
-<a class="br" href="#L850" id="L850">850 </a>    <span class="type">uint</span> <span class="hid">head</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">localHead</span>; }
-<a class="br" href="#L851" id="L851">851 </a>    <span class="type">uint</span> <span class="hid">tail</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <a class="hid" href="during.d.html#L891" title="during.atomicLoad">atomicLoad</a>!(<span class="hid">MemoryOrder.acq</span>)(*<span class="hid">ktail</span>); }
-<a class="br" href="#L852" id="L852">852 </a>
-<a class="br" href="#L853" id="L853">853 </a>    <span class="type">void</span> <span class="hid">flushHead</span>()
-<a class="br" href="#L854" id="L854">854 </a>    {
-<a class="br" href="#L855" id="L855">855 </a>        <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
-<a class="br" href="#L856" id="L856">856 </a>        <span class="com">// debug printf(&quot;CQ updating head: %d\n&quot;, localHead);</span>
-<a class="br" href="#L857" id="L857">857 </a>        <a class="hid" href="during.d.html#L882" title="during.atomicStore">atomicStore</a>!(<span class="hid">MemoryOrder.rel</span>)(*<span class="hid">khead</span>, <span class="hid">localHead</span>);
-<a class="br" href="#L858" id="L858">858 </a>    }
-<a class="br" href="#L859" id="L859">859 </a>
-<a class="br" href="#L860" id="L860">860 </a>    <span class="type">bool</span> <span class="hid">empty</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">head</span> == <span class="hid">tail</span>; }
+<a class="br" href="#L850" id="L850">850 </a>    <span class="com">// mmaped fields</span>
+<a class="br" href="#L851" id="L851">851 </a>    <span class="type">uint</span>* <span class="hid">khead</span>; <span class="com">// controlled by us (increment after entry at head was read)</span>
+<a class="br" href="#L852" id="L852">852 </a>    <span class="type">uint</span>* <span class="hid">ktail</span>; <span class="com">// updated by kernel</span>
+<a class="br" href="#L853" id="L853">853 </a>    <span class="type">uint</span>* <span class="hid">koverflow</span>;
+<a class="br" href="#L854" id="L854">854 </a>    <span class="hid">CompletionEntry</span>[] <span class="hid">cqes</span>; <span class="com">// array of entries (fixed length)</span>
+<a class="br" href="#L855" id="L855">855 </a>
+<a class="br" href="#L856" id="L856">856 </a>    <span class="type">uint</span> <span class="hid">ringMask</span>; <span class="com">// constant mask used to determine array index from head/tail</span>
+<a class="br" href="#L857" id="L857">857 </a>
+<a class="br" href="#L858" id="L858">858 </a>    <span class="com">// mmap details (for cleanup)</span>
+<a class="br" href="#L859" id="L859">859 </a>    <span class="type">void</span>* <span class="hid">ring</span>;
+<a class="br" href="#L860" id="L860">860 </a>    <span class="hid">size_t</span> <span class="hid">ringSize</span>;
 <a class="br" href="#L861" id="L861">861 </a>
-<a class="br" href="#L862" id="L862">862 </a>    <span class="kwrd">ref</span> <span class="hid">CompletionEntry</span> <span class="hid">front</span>() <span class="kwrd">return</span>
-<a class="br" href="#L863" id="L863">863 </a>    {
-<a class="br" href="#L864" id="L864">864 </a>        <span class="kwrd">assert</span>(!<span class="hid">empty</span>, <span class="str">&quot;CompletionQueue is empty&quot;</span>);
-<a class="br" href="#L865" id="L865">865 </a>        <span class="kwrd">return</span> <span class="hid">cqes</span>[<span class="hid">localHead</span> &amp; <span class="hid">ringMask</span>];
-<a class="br" href="#L866" id="L866">866 </a>    }
-<a class="br" href="#L867" id="L867">867 </a>
-<a class="br" href="#L868" id="L868">868 </a>    <span class="type">void</span> <span class="hid">popFront</span>()
-<a class="br" href="#L869" id="L869">869 </a>    {
-<a class="br" href="#L870" id="L870">870 </a>        <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
-<a class="br" href="#L871" id="L871">871 </a>        <span class="kwrd">assert</span>(!<span class="hid">empty</span>, <span class="str">&quot;CompletionQueue is empty&quot;</span>);
-<a class="br" href="#L872" id="L872">872 </a>        <span class="hid">localHead</span>++;
-<a class="br" href="#L873" id="L873">873 </a>        <span class="hid">flushHead</span>();
-<a class="br" href="#L874" id="L874">874 </a>    }
+<a class="br" href="#L862" id="L862">862 </a>    <span class="type">uint</span> <span class="hid">localHead</span>; <span class="com">// used for bulk reading</span>
+<a class="br" href="#L863" id="L863">863 </a>
+<a class="br" href="#L864" id="L864">864 </a>    <span class="type">uint</span> <span class="hid">head</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">localHead</span>; }
+<a class="br" href="#L865" id="L865">865 </a>    <span class="type">uint</span> <span class="hid">tail</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <a class="hid" href="during.d.html#L905" title="during.atomicLoad">atomicLoad</a>!(<span class="hid">MemoryOrder.acq</span>)(*<span class="hid">ktail</span>); }
+<a class="br" href="#L866" id="L866">866 </a>
+<a class="br" href="#L867" id="L867">867 </a>    <span class="type">void</span> <span class="hid">flushHead</span>()
+<a class="br" href="#L868" id="L868">868 </a>    {
+<a class="br" href="#L869" id="L869">869 </a>        <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
+<a class="br" href="#L870" id="L870">870 </a>        <span class="com">// debug printf(&quot;CQ updating head: %d\n&quot;, localHead);</span>
+<a class="br" href="#L871" id="L871">871 </a>        <a class="hid" href="during.d.html#L896" title="during.atomicStore">atomicStore</a>!(<span class="hid">MemoryOrder.rel</span>)(*<span class="hid">khead</span>, <span class="hid">localHead</span>);
+<a class="br" href="#L872" id="L872">872 </a>    }
+<a class="br" href="#L873" id="L873">873 </a>
+<a class="br" href="#L874" id="L874">874 </a>    <span class="type">bool</span> <span class="hid">empty</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">head</span> == <span class="hid">tail</span>; }
 <a class="br" href="#L875" id="L875">875 </a>
-<a class="br" href="#L876" id="L876">876 </a>    <span class="hid">size_t</span> <span class="hid">length</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">tail</span> - <span class="hid">localHead</span>; }
-<a class="br" href="#L877" id="L877">877 </a>
-<a class="br" href="#L878" id="L878">878 </a>    <span class="type">uint</span> <span class="hid">overflow</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <a class="hid" href="during.d.html#L891" title="during.atomicLoad">atomicLoad</a>!(<span class="hid">MemoryOrder.raw</span>)(*<span class="hid">koverflow</span>); }
-<a class="br" href="#L879" id="L879">879 </a>}
-<a class="br" href="#L880" id="L880">880 </a>
-<a class="br" href="#L881" id="L881">881 </a><span class="com">// just a helper to use atomicStore more easily with older compilers</span>
-<a class="br" href="#L882" id="L882">882 </a><span class="type">void</span> <a class="hid" href="during.d.html#L882" title="during.atomicStore">atomicStore</a>(<span class="hid">MemoryOrder</span> <span class="hid">ms</span>, <span class="hid">T</span>, <span class="hid">V</span>)(<span class="kwrd">ref</span> <span class="hid">T</span> <span class="hid">val</span>, <span class="hid">V</span> <span class="hid">newVal</span>) @<span class="hid">trusted</span>
-<a class="br" href="#L883" id="L883">883 </a>{
-<a class="br" href="#L884" id="L884">884 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>, <span class="kwrd">true</span>);
-<a class="br" href="#L885" id="L885">885 </a>    <span class="kwrd">import</span> <span class="hid">core.atomic</span> : <span class="hid">store</span> = <a class="hid" href="during.d.html#L882" title="during.atomicStore">atomicStore</a>;
-<a class="br" href="#L886" id="L886">886 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="kwrd">__VERSION__</span> &gt;= <span class="num">2089</span>) <span class="hid">store</span>!<span class="hid">ms</span>(<span class="hid">val</span>, <span class="hid">newVal</span>);
-<a class="br" href="#L887" id="L887">887 </a>    <span class="kwrd">else</span> <span class="hid">store</span>!<span class="hid">ms</span>(*(<span class="kwrd">cast</span>(<span class="kwrd">shared</span> <span class="hid">T</span>*)&amp;<span class="hid">val</span>), <span class="hid">newVal</span>);
-<a class="br" href="#L888" id="L888">888 </a>}
+<a class="br" href="#L876" id="L876">876 </a>    <span class="kwrd">ref</span> <span class="hid">CompletionEntry</span> <span class="hid">front</span>() <span class="kwrd">return</span>
+<a class="br" href="#L877" id="L877">877 </a>    {
+<a class="br" href="#L878" id="L878">878 </a>        <span class="kwrd">assert</span>(!<span class="hid">empty</span>, <span class="str">&quot;CompletionQueue is empty&quot;</span>);
+<a class="br" href="#L879" id="L879">879 </a>        <span class="kwrd">return</span> <span class="hid">cqes</span>[<span class="hid">localHead</span> &amp; <span class="hid">ringMask</span>];
+<a class="br" href="#L880" id="L880">880 </a>    }
+<a class="br" href="#L881" id="L881">881 </a>
+<a class="br" href="#L882" id="L882">882 </a>    <span class="type">void</span> <span class="hid">popFront</span>()
+<a class="br" href="#L883" id="L883">883 </a>    {
+<a class="br" href="#L884" id="L884">884 </a>        <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
+<a class="br" href="#L885" id="L885">885 </a>        <span class="kwrd">assert</span>(!<span class="hid">empty</span>, <span class="str">&quot;CompletionQueue is empty&quot;</span>);
+<a class="br" href="#L886" id="L886">886 </a>        <span class="hid">localHead</span>++;
+<a class="br" href="#L887" id="L887">887 </a>        <span class="hid">flushHead</span>();
+<a class="br" href="#L888" id="L888">888 </a>    }
 <a class="br" href="#L889" id="L889">889 </a>
-<a class="br" href="#L890" id="L890">890 </a><span class="com">// just a helper to use atomicLoad more easily with older compilers</span>
-<a class="br" href="#L891" id="L891">891 </a><span class="hid">T</span> <a class="hid" href="during.d.html#L891" title="during.atomicLoad">atomicLoad</a>(<span class="hid">MemoryOrder</span> <span class="hid">ms</span>, <span class="hid">T</span>)(<span class="kwrd">ref</span> <span class="kwrd">const</span> <span class="hid">T</span> <span class="hid">val</span>) @<span class="hid">trusted</span>
-<a class="br" href="#L892" id="L892">892 </a>{
-<a class="br" href="#L893" id="L893">893 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>, <span class="kwrd">true</span>);
-<a class="br" href="#L894" id="L894">894 </a>    <span class="kwrd">import</span> <span class="hid">core.atomic</span> : <span class="hid">load</span> = <a class="hid" href="during.d.html#L891" title="during.atomicLoad">atomicLoad</a>;
-<a class="br" href="#L895" id="L895">895 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="kwrd">__VERSION__</span> &gt;= <span class="num">2089</span>) <span class="kwrd">return</span> <span class="hid">load</span>!<span class="hid">ms</span>(<span class="hid">val</span>);
-<a class="br" href="#L896" id="L896">896 </a>    <span class="kwrd">else</span> <span class="kwrd">return</span> <span class="hid">load</span>!<span class="hid">ms</span>(*(<span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="kwrd">shared</span> <span class="hid">T</span>*)&amp;<span class="hid">val</span>));
-<a class="br" href="#L897" id="L897">897 </a>}
-<a class="br" href="#L898" id="L898">898 </a>
-<a class="br" href="#L899" id="L899">899 </a><span class="kwrd">version</span> (<span class="kwrd">assert</span>)
-<a class="br" href="#L900" id="L900">900 </a>{
-<a class="br" href="#L901" id="L901">901 </a>    <span class="kwrd">import</span> <span class="hid">std.range.primitives</span> : <span class="hid">ElementType</span>, <span class="hid">isInputRange</span>, <span class="hid">isOutputRange</span>;
-<a class="br" href="#L902" id="L902">902 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">isInputRange</span>!<a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> &amp;&amp; <span class="kwrd">is</span>(<span class="hid">ElementType</span>!<a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> == <span class="hid">CompletionEntry</span>));
-<a class="br" href="#L903" id="L903">903 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">isOutputRange</span>!(<a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a>, <span class="hid">SubmissionEntry</span>));
-<a class="br" href="#L904" id="L904">904 </a>}</pre></div>
+<a class="br" href="#L890" id="L890">890 </a>    <span class="hid">size_t</span> <span class="hid">length</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <span class="hid">tail</span> - <span class="hid">localHead</span>; }
+<a class="br" href="#L891" id="L891">891 </a>
+<a class="br" href="#L892" id="L892">892 </a>    <span class="type">uint</span> <span class="hid">overflow</span>() <span class="kwrd">const</span> { <span class="kwrd">return</span> <a class="hid" href="during.d.html#L905" title="during.atomicLoad">atomicLoad</a>!(<span class="hid">MemoryOrder.raw</span>)(*<span class="hid">koverflow</span>); }
+<a class="br" href="#L893" id="L893">893 </a>}
+<a class="br" href="#L894" id="L894">894 </a>
+<a class="br" href="#L895" id="L895">895 </a><span class="com">// just a helper to use atomicStore more easily with older compilers</span>
+<a class="br" href="#L896" id="L896">896 </a><span class="type">void</span> <a class="hid" href="during.d.html#L896" title="during.atomicStore">atomicStore</a>(<span class="hid">MemoryOrder</span> <span class="hid">ms</span>, <span class="hid">T</span>, <span class="hid">V</span>)(<span class="kwrd">ref</span> <span class="hid">T</span> <span class="hid">val</span>, <span class="hid">V</span> <span class="hid">newVal</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L897" id="L897">897 </a>{
+<a class="br" href="#L898" id="L898">898 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>, <span class="kwrd">true</span>);
+<a class="br" href="#L899" id="L899">899 </a>    <span class="kwrd">import</span> <span class="hid">core.atomic</span> : <span class="hid">store</span> = <a class="hid" href="during.d.html#L896" title="during.atomicStore">atomicStore</a>;
+<a class="br" href="#L900" id="L900">900 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="kwrd">__VERSION__</span> &gt;= <span class="num">2089</span>) <span class="hid">store</span>!<span class="hid">ms</span>(<span class="hid">val</span>, <span class="hid">newVal</span>);
+<a class="br" href="#L901" id="L901">901 </a>    <span class="kwrd">else</span> <span class="hid">store</span>!<span class="hid">ms</span>(*(<span class="kwrd">cast</span>(<span class="kwrd">shared</span> <span class="hid">T</span>*)&amp;<span class="hid">val</span>), <span class="hid">newVal</span>);
+<a class="br" href="#L902" id="L902">902 </a>}
+<a class="br" href="#L903" id="L903">903 </a>
+<a class="br" href="#L904" id="L904">904 </a><span class="com">// just a helper to use atomicLoad more easily with older compilers</span>
+<a class="br" href="#L905" id="L905">905 </a><span class="hid">T</span> <a class="hid" href="during.d.html#L905" title="during.atomicLoad">atomicLoad</a>(<span class="hid">MemoryOrder</span> <span class="hid">ms</span>, <span class="hid">T</span>)(<span class="kwrd">ref</span> <span class="kwrd">const</span> <span class="hid">T</span> <span class="hid">val</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L906" id="L906">906 </a>{
+<a class="br" href="#L907" id="L907">907 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>, <span class="kwrd">true</span>);
+<a class="br" href="#L908" id="L908">908 </a>    <span class="kwrd">import</span> <span class="hid">core.atomic</span> : <span class="hid">load</span> = <a class="hid" href="during.d.html#L905" title="during.atomicLoad">atomicLoad</a>;
+<a class="br" href="#L909" id="L909">909 </a>    <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="kwrd">__VERSION__</span> &gt;= <span class="num">2089</span>) <span class="kwrd">return</span> <span class="hid">load</span>!<span class="hid">ms</span>(<span class="hid">val</span>);
+<a class="br" href="#L910" id="L910">910 </a>    <span class="kwrd">else</span> <span class="kwrd">return</span> <span class="hid">load</span>!<span class="hid">ms</span>(*(<span class="kwrd">cast</span>(<span class="kwrd">const</span> <span class="kwrd">shared</span> <span class="hid">T</span>*)&amp;<span class="hid">val</span>));
+<a class="br" href="#L911" id="L911">911 </a>}
+<a class="br" href="#L912" id="L912">912 </a>
+<a class="br" href="#L913" id="L913">913 </a><span class="kwrd">version</span> (<span class="kwrd">assert</span>)
+<a class="br" href="#L914" id="L914">914 </a>{
+<a class="br" href="#L915" id="L915">915 </a>    <span class="kwrd">import</span> <span class="hid">std.range.primitives</span> : <span class="hid">ElementType</span>, <span class="hid">isInputRange</span>, <span class="hid">isOutputRange</span>;
+<a class="br" href="#L916" id="L916">916 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">isInputRange</span>!<a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> &amp;&amp; <span class="kwrd">is</span>(<span class="hid">ElementType</span>!<a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> == <span class="hid">CompletionEntry</span>));
+<a class="br" href="#L917" id="L917">917 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">isOutputRange</span>!(<a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a>, <span class="hid">SubmissionEntry</span>));
+<a class="br" href="#L918" id="L918">918 </a>}</pre></div>
 		<div id="page-nav">
-		<div id="source-navigation"><div class="list-holder"><ul><li><a class="docs" href="../during.html">[Docs] </a><a href="#L1">during</a><ul><li><a class="docs" href="../during.io_uring.html">[Docs] </a><a href="#L10">during.io_uring</a></li><li><a href="#L12">core.atomic</a></li><li><a href="#L13">core.stdc.stdio</a></li><li><a href="#L14">core.stdc.stdlib</a></li><li><a href="#L15">core.sys.linux.errno</a></li><li><a href="#L16">core.sys.linux.sys.mman</a></li><li><a href="#L17">core.sys.linux.unistd</a></li><li><a href="#L18">core.sys.posix.signal</a></li><li><a href="#L19">core.sys.posix.sys.socket</a></li><li><a href="#L20">core.sys.posix.sys.uio</a></li><li><a href="#L21">std.algorithm.comparison</a></li><li><a class="docs" href="../during.setup.html">[Docs] </a><a href="#L36">setup</a></li><li><a class="docs" href="../during.Uring.html">[Docs] </a><a href="#L73">Uring</a><ul><li><a href="#L77">payload</a></li><li><a href="#L78">checkInitialized</a></li><li><a class="docs" href="../during.Uring.this.html">[Docs] </a><a href="#L84">this</a></li><li><a class="docs" href="../during.Uring.~this.html">[Docs] </a><a href="#L93">~this</a></li><li><a class="docs" href="../during.Uring.fd.html">[Docs] </a><a href="#L99">fd</a></li><li><a class="docs" href="../during.Uring.params.html">[Docs] </a><a href="#L106">params</a></li><li><a class="docs" href="../during.Uring.empty.html">[Docs] </a><a href="#L113">empty</a></li><li><a class="docs" href="../during.Uring.full.html">[Docs] </a><a href="#L120">full</a></li><li><a class="docs" href="../during.Uring.capacity.html">[Docs] </a><a href="#L127">capacity</a></li><li><a class="docs" href="../during.Uring.length.html">[Docs] </a><a href="#L134">length</a></li><li><a class="docs" href="../during.Uring.front.html">[Docs] </a><a href="#L141">front</a></li><li><a class="docs" href="../during.Uring.popFront.html">[Docs] </a><a href="#L148">popFront</a></li><li><a class="docs" href="../during.Uring.put.1.html">[Docs] </a><a href="#L172">put</a></li><li><a class="docs" href="../during.Uring.putWith.1.html">[Docs] </a><a href="#L180">putWith</a></li><li><a class="docs" href="../during.Uring.putWith.2.html">[Docs] </a><a href="#L188">putWith</a></li><li><a class="docs" href="../during.Uring.put.2.html">[Docs] </a><a href="#L205">put</a></li><li><a class="docs" href="../during.Uring.overflow.html">[Docs] </a><a href="#L217">overflow</a></li><li><a class="docs" href="../during.Uring.dropped.html">[Docs] </a><a href="#L224">dropped</a></li><li><a class="docs" href="../during.Uring.submit.html">[Docs] </a><a href="#L241">submit</a></li><li><a class="docs" href="../during.Uring.wait.html">[Docs] </a><a href="#L273">wait</a></li><li><a class="docs" href="../during.Uring.registerBuffers.html">[Docs] </a><a href="#L302">registerBuffers</a></li><li><a class="docs" href="../during.Uring.unregisterBuffers.html">[Docs] </a><a href="#L350">unregisterBuffers</a></li><li><a class="docs" href="../during.Uring.registerFiles.html">[Docs] </a><a href="#L380">registerFiles</a></li><li><a href="#L404">registerFilesUpdate</a></li><li><a class="docs" href="../during.Uring.unregisterFiles.html">[Docs] </a><a href="#L433">unregisterFiles</a></li><li><a class="docs" href="../during.Uring.registerEventFD.html">[Docs] </a><a href="#L448">registerEventFD</a></li><li><a class="docs" href="../during.Uring.unregisterEventFD.html">[Docs] </a><a href="#L461">unregisterEventFD</a></li></ul></li><li><a class="docs" href="../during.fill.html">[Docs] </a><a href="#L483">fill</a></li><li><a class="docs" href="../during.prepNop.html">[Docs] </a><a href="#L502">prepNop</a></li><li><a class="docs" href="../during.prepReadv.html">[Docs] </a><a href="#L519">prepReadv</a></li><li><a class="docs" href="../during.prepWritev.html">[Docs] </a><a href="#L539">prepWritev</a></li><li><a class="docs" href="../during.prepReadFixed.html">[Docs] </a><a href="#L560">prepReadFixed</a></li><li><a class="docs" href="../during.prepWriteFixed.html">[Docs] </a><a href="#L582">prepWriteFixed</a></li><li><a class="docs" href="../during.prepSendMsg.html">[Docs] </a><a href="#L603">prepSendMsg</a></li><li><a class="docs" href="../during.prepRecvMsg.html">[Docs] </a><a href="#L620">prepRecvMsg</a></li><li><a href="#L642">dispose</a></li><li><a href="#L658">UringDesc</a><ul><li><a href="#L662">fd</a></li><li><a href="#L663">refs</a></li><li><a href="#L664">params</a></li><li><a href="#L665">sq</a></li><li><a href="#L666">cq</a></li><li><a href="#L668">regBuffers</a></li><li><a href="#L670">~this</a></li><li><a href="#L679">mapRings</a></li></ul></li><li><a href="#L754">SubmissionQueue</a><ul><li><a href="#L759">khead</a></li><li><a href="#L760">ktail</a></li><li><a href="#L761">kflags</a></li><li><a href="#L762">kdropped</a></li><li><a href="#L763">ringMask</a></li><li><a href="#L766">ring</a></li><li><a href="#L767">ringSize</a></li><li><a href="#L770">sqes</a></li><li><a href="#L772">localTail</a></li><li><a href="#L774">head</a></li><li><a href="#L775">tail</a></li><li><a href="#L777">flushTail</a></li><li><a href="#L784">flags</a></li><li><a href="#L789">full</a></li><li><a href="#L791">length</a></li><li><a href="#L793">capacity</a></li><li><a href="#L795">put</a></li><li><a href="#L802">put</a></li><li><a href="#L811">putWith</a></li><li><a href="#L816">putWith</a></li><li><a href="#L821">putWithImpl</a></li><li><a href="#L829">dropped</a></li></ul></li><li><a href="#L832">CompletionQueue</a><ul><li><a href="#L837">khead</a></li><li><a href="#L838">ktail</a></li><li><a href="#L839">koverflow</a></li><li><a href="#L840">cqes</a></li><li><a href="#L842">ringMask</a></li><li><a href="#L845">ring</a></li><li><a href="#L846">ringSize</a></li><li><a href="#L848">localHead</a></li><li><a href="#L850">head</a></li><li><a href="#L851">tail</a></li><li><a href="#L853">flushHead</a></li><li><a href="#L860">empty</a></li><li><a href="#L862">front</a></li><li><a href="#L868">popFront</a></li><li><a href="#L876">length</a></li><li><a href="#L878">overflow</a></li></ul></li><li><a href="#L882">atomicStore</a></li><li><a href="#L891">atomicLoad</a></li><li><a href="#L901">std.range.primitives</a></li></ul></li></ul></div></div></div>
+		<div id="source-navigation"><div class="list-holder"><ul><li><a class="docs" href="../during.html">[Docs] </a><a href="#L1">during</a><ul><li><a class="docs" href="../during.io_uring.html">[Docs] </a><a href="#L10">during.io_uring</a></li><li><a href="#L12">core.atomic</a></li><li><a href="#L13">core.stdc.stdio</a></li><li><a href="#L14">core.stdc.stdlib</a></li><li><a href="#L15">core.sys.linux.errno</a></li><li><a href="#L16">core.sys.linux.sys.mman</a></li><li><a href="#L17">core.sys.linux.unistd</a></li><li><a href="#L18">core.sys.posix.signal</a></li><li><a href="#L19">core.sys.posix.sys.socket</a></li><li><a href="#L20">core.sys.posix.sys.uio</a></li><li><a href="#L21">std.algorithm.comparison</a></li><li><a class="docs" href="../during.setup.html">[Docs] </a><a href="#L36">setup</a></li><li><a class="docs" href="../during.Uring.html">[Docs] </a><a href="#L73">Uring</a><ul><li><a href="#L77">payload</a></li><li><a href="#L78">checkInitialized</a></li><li><a class="docs" href="../during.Uring.this.html">[Docs] </a><a href="#L84">this</a></li><li><a class="docs" href="../during.Uring.~this.html">[Docs] </a><a href="#L93">~this</a></li><li><a class="docs" href="../during.Uring.fd.html">[Docs] </a><a href="#L99">fd</a></li><li><a class="docs" href="../during.Uring.params.html">[Docs] </a><a href="#L106">params</a></li><li><a class="docs" href="../during.Uring.empty.html">[Docs] </a><a href="#L113">empty</a></li><li><a class="docs" href="../during.Uring.full.html">[Docs] </a><a href="#L120">full</a></li><li><a class="docs" href="../during.Uring.capacity.html">[Docs] </a><a href="#L127">capacity</a></li><li><a class="docs" href="../during.Uring.length.html">[Docs] </a><a href="#L134">length</a></li><li><a class="docs" href="../during.Uring.front.html">[Docs] </a><a href="#L141">front</a></li><li><a class="docs" href="../during.Uring.popFront.html">[Docs] </a><a href="#L148">popFront</a></li><li><a class="docs" href="../during.Uring.put.1.html">[Docs] </a><a href="#L172">put</a></li><li><a class="docs" href="../during.Uring.putWith.1.html">[Docs] </a><a href="#L180">putWith</a></li><li><a class="docs" href="../during.Uring.putWith.2.html">[Docs] </a><a href="#L188">putWith</a></li><li><a class="docs" href="../during.Uring.put.2.html">[Docs] </a><a href="#L205">put</a></li><li><a class="docs" href="../during.Uring.overflow.html">[Docs] </a><a href="#L217">overflow</a></li><li><a class="docs" href="../during.Uring.dropped.html">[Docs] </a><a href="#L224">dropped</a></li><li><a class="docs" href="../during.Uring.submit.html">[Docs] </a><a href="#L241">submit</a></li><li><a class="docs" href="../during.Uring.wait.html">[Docs] </a><a href="#L273">wait</a></li><li><a class="docs" href="../during.Uring.registerBuffers.html">[Docs] </a><a href="#L302">registerBuffers</a></li><li><a class="docs" href="../during.Uring.unregisterBuffers.html">[Docs] </a><a href="#L350">unregisterBuffers</a></li><li><a class="docs" href="../during.Uring.registerFiles.html">[Docs] </a><a href="#L380">registerFiles</a></li><li><a href="#L404">registerFilesUpdate</a></li><li><a class="docs" href="../during.Uring.unregisterFiles.html">[Docs] </a><a href="#L433">unregisterFiles</a></li><li><a class="docs" href="../during.Uring.registerEventFD.html">[Docs] </a><a href="#L448">registerEventFD</a></li><li><a class="docs" href="../during.Uring.unregisterEventFD.html">[Docs] </a><a href="#L461">unregisterEventFD</a></li></ul></li><li><a class="docs" href="../during.fill.html">[Docs] </a><a href="#L483">fill</a></li><li><a class="docs" href="../during.prepNop.html">[Docs] </a><a href="#L502">prepNop</a></li><li><a class="docs" href="../during.prepReadv.html">[Docs] </a><a href="#L519">prepReadv</a></li><li><a class="docs" href="../during.prepWritev.html">[Docs] </a><a href="#L539">prepWritev</a></li><li><a class="docs" href="../during.prepReadFixed.html">[Docs] </a><a href="#L560">prepReadFixed</a></li><li><a class="docs" href="../during.prepWriteFixed.html">[Docs] </a><a href="#L582">prepWriteFixed</a></li><li><a class="docs" href="../during.prepSendMsg.html">[Docs] </a><a href="#L603">prepSendMsg</a></li><li><a class="docs" href="../during.prepRecvMsg.html">[Docs] </a><a href="#L620">prepRecvMsg</a></li><li><a class="docs" href="../during.prepFsync.html">[Docs] </a><a href="#L636">prepFsync</a></li><li><a href="#L656">dispose</a></li><li><a href="#L672">UringDesc</a><ul><li><a href="#L676">fd</a></li><li><a href="#L677">refs</a></li><li><a href="#L678">params</a></li><li><a href="#L679">sq</a></li><li><a href="#L680">cq</a></li><li><a href="#L682">regBuffers</a></li><li><a href="#L684">~this</a></li><li><a href="#L693">mapRings</a></li></ul></li><li><a href="#L768">SubmissionQueue</a><ul><li><a href="#L773">khead</a></li><li><a href="#L774">ktail</a></li><li><a href="#L775">kflags</a></li><li><a href="#L776">kdropped</a></li><li><a href="#L777">ringMask</a></li><li><a href="#L780">ring</a></li><li><a href="#L781">ringSize</a></li><li><a href="#L784">sqes</a></li><li><a href="#L786">localTail</a></li><li><a href="#L788">head</a></li><li><a href="#L789">tail</a></li><li><a href="#L791">flushTail</a></li><li><a href="#L798">flags</a></li><li><a href="#L803">full</a></li><li><a href="#L805">length</a></li><li><a href="#L807">capacity</a></li><li><a href="#L809">put</a></li><li><a href="#L816">put</a></li><li><a href="#L825">putWith</a></li><li><a href="#L830">putWith</a></li><li><a href="#L835">putWithImpl</a></li><li><a href="#L843">dropped</a></li></ul></li><li><a href="#L846">CompletionQueue</a><ul><li><a href="#L851">khead</a></li><li><a href="#L852">ktail</a></li><li><a href="#L853">koverflow</a></li><li><a href="#L854">cqes</a></li><li><a href="#L856">ringMask</a></li><li><a href="#L859">ring</a></li><li><a href="#L860">ringSize</a></li><li><a href="#L862">localHead</a></li><li><a href="#L864">head</a></li><li><a href="#L865">tail</a></li><li><a href="#L867">flushHead</a></li><li><a href="#L874">empty</a></li><li><a href="#L876">front</a></li><li><a href="#L882">popFront</a></li><li><a href="#L890">length</a></li><li><a href="#L892">overflow</a></li></ul></li><li><a href="#L896">atomicStore</a></li><li><a href="#L905">atomicLoad</a></li><li><a href="#L915">std.range.primitives</a></li></ul></li></ul></div></div></div>
 	</div>
 	<div id="page-footer">Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a></div>
 </body>
