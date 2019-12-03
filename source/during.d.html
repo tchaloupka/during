@@ -64,7 +64,7 @@
 <a class="br" href="#L36" id="L36">36 </a><span class="type">int</span> <a class="hid" href="during.d.html#L36" title="during.setup">setup</a>(<span class="kwrd">ref</span> <a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> <span class="hid">uring</span>, <span class="type">uint</span> <span class="hid">entries</span> = <span class="num">128</span>, <span class="hid">SetupFlags</span> <span class="hid">flags</span> = <span class="hid">SetupFlags.NONE</span>)
 <a class="br" href="#L37" id="L37">37 </a>{
 <a class="br" href="#L38" id="L38">38 </a>    <span class="kwrd">assert</span>(<span class="hid">uring.payload</span> <span class="kwrd">is</span> <span class="kwrd">null</span>, <span class="str">&quot;Uring is already initialized&quot;</span>);
-<a class="br" href="#L39" id="L39">39 </a>    <span class="hid">uring.payload</span> = <span class="kwrd">cast</span>(<a class="hid" href="during.d.html#L657" title="during.UringDesc">UringDesc</a>*)<span class="hid">calloc</span>(<span class="num">1</span>, <a class="hid" href="during.d.html#L657" title="during.UringDesc">UringDesc.sizeof</a>);
+<a class="br" href="#L39" id="L39">39 </a>    <span class="hid">uring.payload</span> = <span class="kwrd">cast</span>(<a class="hid" href="during.d.html#L658" title="during.UringDesc">UringDesc</a>*)<span class="hid">calloc</span>(<span class="num">1</span>, <a class="hid" href="during.d.html#L658" title="during.UringDesc">UringDesc.sizeof</a>);
 <a class="br" href="#L40" id="L40">40 </a>    <span class="kwrd">if</span> (<span class="hid">uring.payload</span> <span class="kwrd">is</span> <span class="kwrd">null</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
 <a class="br" href="#L41" id="L41">41 </a>
 <a class="br" href="#L42" id="L42">42 </a>    <span class="hid">uring.payload.params.flags</span> = <span class="hid">flags</span>;
@@ -76,7 +76,7 @@
 <a class="br" href="#L48" id="L48">48 </a>
 <a class="br" href="#L49" id="L49">49 </a>    <span class="kwrd">if</span> (<span class="hid">uring.payload.mapRings</span>() &lt; <span class="num">0</span>)
 <a class="br" href="#L50" id="L50">50 </a>    {
-<a class="br" href="#L51" id="L51">51 </a>        <a class="hid" href="during.d.html#L641" title="during.dispose">dispose</a>(<span class="hid">uring</span>);
+<a class="br" href="#L51" id="L51">51 </a>        <a class="hid" href="during.d.html#L642" title="during.dispose">dispose</a>(<span class="hid">uring</span>);
 <a class="br" href="#L52" id="L52">52 </a>        <span class="kwrd">return</span> -<span class="hid">errno</span>;
 <a class="br" href="#L53" id="L53">53 </a>    }
 <a class="br" href="#L54" id="L54">54 </a>
@@ -102,7 +102,7 @@
 <a class="br" href="#L74" id="L74">74 </a>{
 <a class="br" href="#L75" id="L75">75 </a>    <span class="kwrd">nothrow</span> @<span class="hid">nogc</span>:
 <a class="br" href="#L76" id="L76">76 </a>
-<a class="br" href="#L77" id="L77">77 </a>    <span class="kwrd">private</span> <a class="hid" href="during.d.html#L657" title="during.UringDesc">UringDesc</a>* <span class="hid">payload</span>;
+<a class="br" href="#L77" id="L77">77 </a>    <span class="kwrd">private</span> <a class="hid" href="during.d.html#L658" title="during.UringDesc">UringDesc</a>* <span class="hid">payload</span>;
 <a class="br" href="#L78" id="L78">78 </a>    <span class="kwrd">private</span> <span class="type">void</span> <span class="hid">checkInitialized</span>() <span class="kwrd">const</span>
 <a class="br" href="#L79" id="L79">79 </a>    {
 <a class="br" href="#L80" id="L80">80 </a>        <span class="kwrd">assert</span>(<span class="hid">payload</span> !<span class="kwrd">is</span> <span class="kwrd">null</span>, <span class="str">&quot;Uring hasn't been initialized yet&quot;</span>);
@@ -120,7 +120,7 @@
 <a class="br" href="#L92" id="L92">92 </a>    <span class="com">/// Destructor</span>
 <a class="br" href="#L93" id="L93">93 </a>    ~<span class="kwrd">this</span>()
 <a class="br" href="#L94" id="L94">94 </a>    {
-<a class="br" href="#L95" id="L95">95 </a>        <a class="hid" href="during.d.html#L641" title="during.dispose">dispose</a>(<span class="kwrd">this</span>);
+<a class="br" href="#L95" id="L95">95 </a>        <a class="hid" href="during.d.html#L642" title="during.dispose">dispose</a>(<span class="kwrd">this</span>);
 <a class="br" href="#L96" id="L96">96 </a>    }
 <a class="br" href="#L97" id="L97">97 </a>
 <a class="br" href="#L98" id="L98">98 </a>    <span class="com">/// Native io_uring file descriptor</span>
@@ -383,321 +383,321 @@
 <a class="br" href="#L355" id="L355">355 </a>            <span class="kwrd">return</span> -<span class="hid">ENXIO</span>; <span class="com">// no buffers were registered</span>
 <a class="br" href="#L356" id="L356">356 </a>
 <a class="br" href="#L357" id="L357">357 </a>        <span class="hid">free</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">payload.regBuffers</span>[<span class="num">0</span>]);
-<a class="br" href="#L358" id="L358">358 </a>
-<a class="br" href="#L359" id="L359">359 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.UNREGISTER_BUFFERS</span>, <span class="kwrd">null</span>, <span class="num">0</span>);
-<a class="br" href="#L360" id="L360">360 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
-<a class="br" href="#L361" id="L361">361 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
-<a class="br" href="#L362" id="L362">362 </a>    }
-<a class="br" href="#L363" id="L363">363 </a>
-<a class="br" href="#L364" id="L364">364 </a>    <span class="com">/**
-<a class="br" href="#L365" id="L365">365 </a>     * Register files for I/O.
-<a class="br" href="#L366" id="L366">366 </a>     *
-<a class="br" href="#L367" id="L367">367 </a>     * To make use of the registered files, the `IOSQE_FIXED_FILE` flag must be set in the flags
-<a class="br" href="#L368" id="L368">368 </a>     * member of the `SubmissionEntry`, and the `fd` member is set to the index of the file in the
-<a class="br" href="#L369" id="L369">369 </a>     * file descriptor array.
-<a class="br" href="#L370" id="L370">370 </a>     *
-<a class="br" href="#L371" id="L371">371 </a>     * Files are automatically unregistered when the `io_uring` instance is torn down. An application
-<a class="br" href="#L372" id="L372">372 </a>     * need only unregister if it wishes to register a new set of fds.
-<a class="br" href="#L373" id="L373">373 </a>     *
-<a class="br" href="#L374" id="L374">374 </a>     * Use `-1` as a file descriptor to mark it as reserved in the array.*
-<a class="br" href="#L375" id="L375">375 </a>     * Params: fds = array of file descriptors to be registered
-<a class="br" href="#L376" id="L376">376 </a>     *
-<a class="br" href="#L377" id="L377">377 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
-<a class="br" href="#L378" id="L378">378 </a>     */</span>
-<a class="br" href="#L379" id="L379">379 </a>    <span class="kwrd">auto</span> <span class="hid">registerFiles</span>(<span class="kwrd">const</span>(<span class="type">int</span>)[] <span class="hid">fds</span>) @<span class="hid">trusted</span>
-<a class="br" href="#L380" id="L380">380 </a>    {
-<a class="br" href="#L381" id="L381">381 </a>        <span class="hid">checkInitialized</span>();
-<a class="br" href="#L382" id="L382">382 </a>        <span class="kwrd">assert</span>(<span class="hid">fds.length</span>, <span class="str">&quot;No file descriptors provided&quot;</span>);
-<a class="br" href="#L383" id="L383">383 </a>        <span class="kwrd">assert</span>(<span class="hid">fds.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Too many file descriptors&quot;</span>);
-<a class="br" href="#L384" id="L384">384 </a>
-<a class="br" href="#L385" id="L385">385 </a>        <span class="com">// arg contains a pointer to an array of nr_args file descriptors (signed 32 bit integers).</span>
-<a class="br" href="#L386" id="L386">386 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.REGISTER_FILES</span>, &amp;<span class="hid">fds</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">fds.length</span>);
-<a class="br" href="#L387" id="L387">387 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
-<a class="br" href="#L388" id="L388">388 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
-<a class="br" href="#L389" id="L389">389 </a>    }
-<a class="br" href="#L390" id="L390">390 </a>
-<a class="br" href="#L391" id="L391">391 </a>    <span class="com">/*
-<a class="br" href="#L392" id="L392">392 </a>     * Register an update for an existing file set. The updates will start at
-<a class="br" href="#L393" id="L393">393 </a>     * `off` in the original array.
-<a class="br" href="#L394" id="L394">394 </a>     *
-<a class="br" href="#L395" id="L395">395 </a>     * Use `-1` as a file descriptor to mark it as reserved in the array.
-<a class="br" href="#L396" id="L396">396 </a>     *
-<a class="br" href="#L397" id="L397">397 </a>     * Params:
-<a class="br" href="#L398" id="L398">398 </a>     *      off = offset to the original registered files to be updated
-<a class="br" href="#L399" id="L399">399 </a>     *      files = array of file descriptors to update with
-<a class="br" href="#L400" id="L400">400 </a>     *
-<a class="br" href="#L401" id="L401">401 </a>     * Returns: number of files updated on success, -errno on failure.
-<a class="br" href="#L402" id="L402">402 </a>     */</span>
-<a class="br" href="#L403" id="L403">403 </a>    <span class="kwrd">auto</span> <span class="hid">registerFilesUpdate</span>(<span class="type">uint</span> <span class="hid">off</span>, <span class="kwrd">const</span>(<span class="type">int</span>)[] <span class="hid">fds</span>) @<span class="hid">trusted</span>
-<a class="br" href="#L404" id="L404">404 </a>    {
-<a class="br" href="#L405" id="L405">405 </a>        <span class="kwrd">struct</span> <span class="hid">Update</span>
-<a class="br" href="#L406" id="L406">406 </a>        {
-<a class="br" href="#L407" id="L407">407 </a>            <span class="type">uint</span> <span class="hid">off</span>;
-<a class="br" href="#L408" id="L408">408 </a>            <span class="kwrd">const</span>(<span class="type">int</span>)* <span class="hid">fds</span>;
-<a class="br" href="#L409" id="L409">409 </a>        }
-<a class="br" href="#L410" id="L410">410 </a>
-<a class="br" href="#L411" id="L411">411 </a>        <span class="hid">checkInitialized</span>();
-<a class="br" href="#L412" id="L412">412 </a>        <span class="kwrd">assert</span>(<span class="hid">fds.length</span>, <span class="str">&quot;No file descriptors provided to update&quot;</span>);
-<a class="br" href="#L413" id="L413">413 </a>        <span class="kwrd">assert</span>(<span class="hid">fds.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Too many file descriptors&quot;</span>);
-<a class="br" href="#L414" id="L414">414 </a>
-<a class="br" href="#L415" id="L415">415 </a>        <span class="hid">Update</span> <span class="hid">u</span> = <span class="hid">Update</span>(<span class="hid">off</span>, &amp;<span class="hid">fds</span>[<span class="num">0</span>]);
-<a class="br" href="#L416" id="L416">416 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(
-<a class="br" href="#L417" id="L417">417 </a>            <span class="hid">payload.fd</span>,
-<a class="br" href="#L418" id="L418">418 </a>            <span class="hid">RegisterOpCode.REGISTER_FILES_UPDATE</span>,
-<a class="br" href="#L419" id="L419">419 </a>            &amp;<span class="hid">u</span>, <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">fds.length</span>);
-<a class="br" href="#L420" id="L420">420 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
-<a class="br" href="#L421" id="L421">421 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
-<a class="br" href="#L422" id="L422">422 </a>    }
-<a class="br" href="#L423" id="L423">423 </a>
-<a class="br" href="#L424" id="L424">424 </a>    <span class="com">/**
-<a class="br" href="#L425" id="L425">425 </a>     * All previously registered files associated with the `io_uring` instance will be unregistered.
-<a class="br" href="#L426" id="L426">426 </a>     *
-<a class="br" href="#L427" id="L427">427 </a>     * Files are automatically unregistered when the `io_uring` instance is torn down. An application
-<a class="br" href="#L428" id="L428">428 </a>     * need only unregister if it wishes to register a new set of fds.
-<a class="br" href="#L429" id="L429">429 </a>     *
-<a class="br" href="#L430" id="L430">430 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
-<a class="br" href="#L431" id="L431">431 </a>     */</span>
-<a class="br" href="#L432" id="L432">432 </a>    <span class="kwrd">auto</span> <span class="hid">unregisterFiles</span>() @<span class="hid">trusted</span>
-<a class="br" href="#L433" id="L433">433 </a>    {
-<a class="br" href="#L434" id="L434">434 </a>        <span class="hid">checkInitialized</span>();
-<a class="br" href="#L435" id="L435">435 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.UNREGISTER_FILES</span>, <span class="kwrd">null</span>, <span class="num">0</span>);
-<a class="br" href="#L436" id="L436">436 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
-<a class="br" href="#L437" id="L437">437 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
-<a class="br" href="#L438" id="L438">438 </a>    }
-<a class="br" href="#L439" id="L439">439 </a>
-<a class="br" href="#L440" id="L440">440 </a>    <span class="com">/**
-<a class="br" href="#L441" id="L441">441 </a>     * TODO
-<a class="br" href="#L442" id="L442">442 </a>     *
-<a class="br" href="#L443" id="L443">443 </a>     * Params: eventFD = TODO
-<a class="br" href="#L444" id="L444">444 </a>     *
-<a class="br" href="#L445" id="L445">445 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
-<a class="br" href="#L446" id="L446">446 </a>     */</span>
-<a class="br" href="#L447" id="L447">447 </a>    <span class="kwrd">auto</span> <span class="hid">registerEventFD</span>(<span class="type">int</span> <span class="hid">eventFD</span>) @<span class="hid">trusted</span>
-<a class="br" href="#L448" id="L448">448 </a>    {
-<a class="br" href="#L449" id="L449">449 </a>        <span class="hid">checkInitialized</span>();
-<a class="br" href="#L450" id="L450">450 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.REGISTER_EVENTFD</span>, &amp;<span class="hid">eventFD</span>, <span class="num">1</span>);
-<a class="br" href="#L451" id="L451">451 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
-<a class="br" href="#L452" id="L452">452 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
-<a class="br" href="#L453" id="L453">453 </a>    }
-<a class="br" href="#L454" id="L454">454 </a>
-<a class="br" href="#L455" id="L455">455 </a>    <span class="com">/**
-<a class="br" href="#L456" id="L456">456 </a>     * TODO
-<a class="br" href="#L457" id="L457">457 </a>     *
-<a class="br" href="#L458" id="L458">458 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
-<a class="br" href="#L459" id="L459">459 </a>     */</span>
-<a class="br" href="#L460" id="L460">460 </a>    <span class="kwrd">auto</span> <span class="hid">unregisterEventFD</span>() @<span class="hid">trusted</span>
-<a class="br" href="#L461" id="L461">461 </a>    {
-<a class="br" href="#L462" id="L462">462 </a>        <span class="hid">checkInitialized</span>();
-<a class="br" href="#L463" id="L463">463 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.UNREGISTER_EVENTFD</span>, <span class="kwrd">null</span>, <span class="num">0</span>);
-<a class="br" href="#L464" id="L464">464 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
-<a class="br" href="#L465" id="L465">465 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
-<a class="br" href="#L466" id="L466">466 </a>    }
-<a class="br" href="#L467" id="L467">467 </a>}
-<a class="br" href="#L468" id="L468">468 </a>
-<a class="br" href="#L469" id="L469">469 </a><span class="com">/**
-<a class="br" href="#L470" id="L470">470 </a> * Uses custom operation definition to fill fields of `SubmissionEntry`.
-<a class="br" href="#L471" id="L471">471 </a> * Can be used in cases, when builtin prep* functions aren't enough.
-<a class="br" href="#L472" id="L472">472 </a> *
-<a class="br" href="#L473" id="L473">473 </a> * Custom definition fields must correspond to fields of `SubmissionEntry` for this to work.
-<a class="br" href="#L474" id="L474">474 </a> *
-<a class="br" href="#L475" id="L475">475 </a> * Note: This doesn't touch previous state of the entry, just fills the corresponding fields.
-<a class="br" href="#L476" id="L476">476 </a> *       So it might be needed to call `clear` first on the entry (depends on usage).
-<a class="br" href="#L477" id="L477">477 </a> *
-<a class="br" href="#L478" id="L478">478 </a> * Params:
-<a class="br" href="#L479" id="L479">479 </a> *   entry = entry to set parameters to
-<a class="br" href="#L480" id="L480">480 </a> *   op = operation to fill entry with (can be custom type)
-<a class="br" href="#L481" id="L481">481 </a> */</span>
-<a class="br" href="#L482" id="L482">482 </a><span class="type">void</span> <a class="hid" href="during.d.html#L482" title="during.fill">fill</a>(<span class="hid">E</span>)(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="kwrd">auto</span> <span class="kwrd">ref</span> <span class="hid">E</span> <span class="hid">op</span>)
-<a class="br" href="#L483" id="L483">483 </a>{
-<a class="br" href="#L484" id="L484">484 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
-<a class="br" href="#L485" id="L485">485 </a>    <span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">hasMember</span>, <span class="hid">FieldNameTuple</span>;
-<a class="br" href="#L486" id="L486">486 </a>
-<a class="br" href="#L487" id="L487">487 </a>    <span class="com">// fill entry from provided operation fields (they must have same name as in SubmissionEntry)</span>
-<a class="br" href="#L488" id="L488">488 </a>    <span class="kwrd">foreach</span> (<span class="hid">m</span>; <span class="hid">FieldNameTuple</span>!<span class="hid">E</span>)
-<a class="br" href="#L489" id="L489">489 </a>    {
-<a class="br" href="#L490" id="L490">490 </a>        <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">hasMember</span>!(<span class="hid">SubmissionEntry</span>, <span class="hid">m</span>), <span class="str">&quot;unknown member: &quot;</span> ~ <span class="hid">E.stringof</span> ~ <span class="str">&quot;.&quot;</span> ~ <span class="hid">m</span>);
-<a class="br" href="#L491" id="L491">491 </a>        <span class="kwrd">__traits</span>(<span class="hid">getMember</span>, <span class="hid">entry</span>, <span class="hid">m</span>) = <span class="kwrd">__traits</span>(<span class="hid">getMember</span>, <span class="hid">op</span>, <span class="hid">m</span>);
-<a class="br" href="#L492" id="L492">492 </a>    }
-<a class="br" href="#L493" id="L493">493 </a>}
-<a class="br" href="#L494" id="L494">494 </a>
-<a class="br" href="#L495" id="L495">495 </a><span class="com">/**
-<a class="br" href="#L496" id="L496">496 </a> * Prepares `nop` operation.
-<a class="br" href="#L497" id="L497">497 </a> *
-<a class="br" href="#L498" id="L498">498 </a> * Params:
-<a class="br" href="#L499" id="L499">499 </a> *      entry = `SubmissionEntry` to prepare
-<a class="br" href="#L500" id="L500">500 </a> */</span>
-<a class="br" href="#L501" id="L501">501 </a><span class="type">void</span> <a class="hid" href="during.d.html#L501" title="during.prepNop">prepNop</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>) @<span class="hid">safe</span>
-<a class="br" href="#L502" id="L502">502 </a>{
-<a class="br" href="#L503" id="L503">503 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.NOP</span>;
-<a class="br" href="#L504" id="L504">504 </a>}
-<a class="br" href="#L505" id="L505">505 </a>
-<a class="br" href="#L506" id="L506">506 </a><span class="com">// TODO: check offset behavior, preadv2/pwritev2 should accept -1 to work on the current file offset,</span>
-<a class="br" href="#L507" id="L507">507 </a><span class="com">// but it doesn't seem to work here.</span>
-<a class="br" href="#L508" id="L508">508 </a>
-<a class="br" href="#L509" id="L509">509 </a><span class="com">/**
-<a class="br" href="#L510" id="L510">510 </a> * Prepares `readv` operation.
-<a class="br" href="#L511" id="L511">511 </a> *
-<a class="br" href="#L512" id="L512">512 </a> * Params:
-<a class="br" href="#L513" id="L513">513 </a> *      entry = `SubmissionEntry` to prepare
-<a class="br" href="#L514" id="L514">514 </a> *      fd = file descriptor of file we are operating on
-<a class="br" href="#L515" id="L515">515 </a> *      offset = offset
-<a class="br" href="#L516" id="L516">516 </a> *      buffer = iovec buffers to be used by the operation
-<a class="br" href="#L517" id="L517">517 </a> */</span>
-<a class="br" href="#L518" id="L518">518 </a><span class="type">void</span> <a class="hid" href="during.d.html#L518" title="during.prepReadv">prepReadv</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="type">ulong</span> <span class="hid">offset</span>, <span class="hid">iovec</span>[] <span class="hid">buffer</span>...)
-<a class="br" href="#L519" id="L519">519 </a>{
-<a class="br" href="#L520" id="L520">520 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span>, <span class="str">&quot;Empty buffer&quot;</span>);
-<a class="br" href="#L521" id="L521">521 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Too many iovec buffers&quot;</span>);
-<a class="br" href="#L522" id="L522">522 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.READV</span>;
-<a class="br" href="#L523" id="L523">523 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
-<a class="br" href="#L524" id="L524">524 </a>    <span class="hid">entry.off</span> = <span class="hid">offset</span>;
-<a class="br" href="#L525" id="L525">525 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buffer</span>[<span class="num">0</span>]);
-<a class="br" href="#L526" id="L526">526 </a>    <span class="hid">entry.len</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>;
-<a class="br" href="#L527" id="L527">527 </a>}
-<a class="br" href="#L528" id="L528">528 </a>
-<a class="br" href="#L529" id="L529">529 </a><span class="com">/**
-<a class="br" href="#L530" id="L530">530 </a> * Prepares `writev` operation.
-<a class="br" href="#L531" id="L531">531 </a> *
-<a class="br" href="#L532" id="L532">532 </a> * Params:
-<a class="br" href="#L533" id="L533">533 </a> *      entry = `SubmissionEntry` to prepare
-<a class="br" href="#L534" id="L534">534 </a> *      fd = file descriptor of file we are operating on
-<a class="br" href="#L535" id="L535">535 </a> *      offset = offset
-<a class="br" href="#L536" id="L536">536 </a> *      buffer = iovec buffers to be used by the operation
-<a class="br" href="#L537" id="L537">537 </a> */</span>
-<a class="br" href="#L538" id="L538">538 </a><span class="type">void</span> <a class="hid" href="during.d.html#L538" title="during.prepWritev">prepWritev</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="type">ulong</span> <span class="hid">offset</span>, <span class="hid">iovec</span>[] <span class="hid">buffer</span>...)
-<a class="br" href="#L539" id="L539">539 </a>{
-<a class="br" href="#L540" id="L540">540 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span>, <span class="str">&quot;Empty buffer&quot;</span>);
-<a class="br" href="#L541" id="L541">541 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Too many iovec buffers&quot;</span>);
-<a class="br" href="#L542" id="L542">542 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.WRITEV</span>;
-<a class="br" href="#L543" id="L543">543 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
-<a class="br" href="#L544" id="L544">544 </a>    <span class="hid">entry.off</span> = <span class="hid">offset</span>;
-<a class="br" href="#L545" id="L545">545 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buffer</span>[<span class="num">0</span>]);
-<a class="br" href="#L546" id="L546">546 </a>    <span class="hid">entry.len</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>;
-<a class="br" href="#L547" id="L547">547 </a>}
-<a class="br" href="#L548" id="L548">548 </a>
-<a class="br" href="#L549" id="L549">549 </a><span class="com">/**
-<a class="br" href="#L550" id="L550">550 </a> * Prepares `read_fixed` operation.
-<a class="br" href="#L551" id="L551">551 </a> *
-<a class="br" href="#L552" id="L552">552 </a> * Params:
-<a class="br" href="#L553" id="L553">553 </a> *      entry = `SubmissionEntry` to prepare
-<a class="br" href="#L554" id="L554">554 </a> *      fd = file descriptor of file we are operating on
-<a class="br" href="#L555" id="L555">555 </a> *      offset = offset
-<a class="br" href="#L556" id="L556">556 </a> *      buffer = slice to preregistered buffer
-<a class="br" href="#L557" id="L557">557 </a> *      bufferIndex = index to the preregistered buffers array buffer belongs to
-<a class="br" href="#L558" id="L558">558 </a> */</span>
-<a class="br" href="#L559" id="L559">559 </a><span class="type">void</span> <a class="hid" href="during.d.html#L559" title="during.prepReadFixed">prepReadFixed</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="type">ulong</span> <span class="hid">offset</span>, <span class="type">ubyte</span>[] <span class="hid">buffer</span>, <span class="type">ushort</span> <span class="hid">bufferIndex</span>)
-<a class="br" href="#L560" id="L560">560 </a>{
-<a class="br" href="#L561" id="L561">561 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span>, <span class="str">&quot;Empty buffer&quot;</span>);
-<a class="br" href="#L562" id="L562">562 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Buffer too large&quot;</span>);
-<a class="br" href="#L563" id="L563">563 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.READ_FIXED</span>;
-<a class="br" href="#L564" id="L564">564 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
-<a class="br" href="#L565" id="L565">565 </a>    <span class="hid">entry.off</span> = <span class="hid">offset</span>;
-<a class="br" href="#L566" id="L566">566 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buffer</span>[<span class="num">0</span>]);
-<a class="br" href="#L567" id="L567">567 </a>    <span class="hid">entry.len</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>;
-<a class="br" href="#L568" id="L568">568 </a>    <span class="hid">entry.buf_index</span> = <span class="hid">bufferIndex</span>;
-<a class="br" href="#L569" id="L569">569 </a>}
-<a class="br" href="#L570" id="L570">570 </a>
-<a class="br" href="#L571" id="L571">571 </a><span class="com">/**
-<a class="br" href="#L572" id="L572">572 </a> * Prepares `write_fixed` operation.
-<a class="br" href="#L573" id="L573">573 </a> *
-<a class="br" href="#L574" id="L574">574 </a> * Params:
-<a class="br" href="#L575" id="L575">575 </a> *      entry = `SubmissionEntry` to prepare
-<a class="br" href="#L576" id="L576">576 </a> *      fd = file descriptor of file we are operating on
-<a class="br" href="#L577" id="L577">577 </a> *      offset = offset
-<a class="br" href="#L578" id="L578">578 </a> *      buffer = slice to preregistered buffer
-<a class="br" href="#L579" id="L579">579 </a> *      bufferIndex = index to the preregistered buffers array buffer belongs to
-<a class="br" href="#L580" id="L580">580 </a> */</span>
-<a class="br" href="#L581" id="L581">581 </a><span class="type">void</span> <a class="hid" href="during.d.html#L581" title="during.prepWriteFixed">prepWriteFixed</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="type">ulong</span> <span class="hid">offset</span>, <span class="type">ubyte</span>[] <span class="hid">buffer</span>, <span class="type">ushort</span> <span class="hid">bufferIndex</span>)
-<a class="br" href="#L582" id="L582">582 </a>{
-<a class="br" href="#L583" id="L583">583 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span>, <span class="str">&quot;Empty buffer&quot;</span>);
-<a class="br" href="#L584" id="L584">584 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Buffer too large&quot;</span>);
-<a class="br" href="#L585" id="L585">585 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.WRITE_FIXED</span>;
-<a class="br" href="#L586" id="L586">586 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
-<a class="br" href="#L587" id="L587">587 </a>    <span class="hid">entry.off</span> = <span class="hid">offset</span>;
-<a class="br" href="#L588" id="L588">588 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buffer</span>[<span class="num">0</span>]);
-<a class="br" href="#L589" id="L589">589 </a>    <span class="hid">entry.len</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>;
-<a class="br" href="#L590" id="L590">590 </a>    <span class="hid">entry.buf_index</span> = <span class="hid">bufferIndex</span>;
-<a class="br" href="#L591" id="L591">591 </a>}
-<a class="br" href="#L592" id="L592">592 </a>
-<a class="br" href="#L593" id="L593">593 </a><span class="com">/**
-<a class="br" href="#L594" id="L594">594 </a> * Prepares `sendmsg` operation.
-<a class="br" href="#L595" id="L595">595 </a> *
-<a class="br" href="#L596" id="L596">596 </a> * Params:
-<a class="br" href="#L597" id="L597">597 </a> *      entry = `SubmissionEntry` to prepare
-<a class="br" href="#L598" id="L598">598 </a> *      fd = file descriptor of file we are operating on
-<a class="br" href="#L599" id="L599">599 </a> *      msg = message to operate with
-<a class="br" href="#L600" id="L600">600 </a> *      flags = `sendmsg` operation flags
-<a class="br" href="#L601" id="L601">601 </a> */</span>
-<a class="br" href="#L602" id="L602">602 </a><span class="type">void</span> <a class="hid" href="during.d.html#L602" title="during.prepSendMsg">prepSendMsg</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="kwrd">ref</span> <span class="hid">msghdr</span> <span class="hid">msg</span>, <span class="type">uint</span> <span class="hid">flags</span>)
-<a class="br" href="#L603" id="L603">603 </a>{
-<a class="br" href="#L604" id="L604">604 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.SENDMSG</span>;
-<a class="br" href="#L605" id="L605">605 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
-<a class="br" href="#L606" id="L606">606 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">msg</span>);
-<a class="br" href="#L607" id="L607">607 </a>    <span class="hid">entry.msg_flags</span> = <span class="hid">flags</span>;
-<a class="br" href="#L608" id="L608">608 </a>}
-<a class="br" href="#L609" id="L609">609 </a>
-<a class="br" href="#L610" id="L610">610 </a><span class="com">/**
-<a class="br" href="#L611" id="L611">611 </a> * Prepares `recvmsg` operation.
-<a class="br" href="#L612" id="L612">612 </a> *
-<a class="br" href="#L613" id="L613">613 </a> * Params:
-<a class="br" href="#L614" id="L614">614 </a> *      entry = `SubmissionEntry` to prepare
-<a class="br" href="#L615" id="L615">615 </a> *      fd = file descriptor of file we are operating on
-<a class="br" href="#L616" id="L616">616 </a> *      msg = message to operate with
-<a class="br" href="#L617" id="L617">617 </a> *      flags = `recvmsg` operation flags
-<a class="br" href="#L618" id="L618">618 </a> */</span>
-<a class="br" href="#L619" id="L619">619 </a><span class="type">void</span> <a class="hid" href="during.d.html#L619" title="during.prepRecvMsg">prepRecvMsg</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="kwrd">ref</span> <span class="hid">msghdr</span> <span class="hid">msg</span>, <span class="type">uint</span> <span class="hid">flags</span>)
-<a class="br" href="#L620" id="L620">620 </a>{
-<a class="br" href="#L621" id="L621">621 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.RECVMSG</span>;
-<a class="br" href="#L622" id="L622">622 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
-<a class="br" href="#L623" id="L623">623 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">msg</span>);
-<a class="br" href="#L624" id="L624">624 </a>    <span class="hid">entry.msg_flags</span> = <span class="hid">flags</span>;
-<a class="br" href="#L625" id="L625">625 </a>}
-<a class="br" href="#L626" id="L626">626 </a>
-<a class="br" href="#L627" id="L627">627 </a><span class="com">// void prepPollAdd(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L628" id="L628">628 </a><span class="com">// void prepPollRemove(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L629" id="L629">629 </a><span class="com">// void prepFsync(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L630" id="L630">630 </a><span class="com">// void prepSyncFileRange(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L631" id="L631">631 </a><span class="com">// void prepTimeout(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L632" id="L632">632 </a><span class="com">// void prepTimeoutRemove(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L633" id="L633">633 </a><span class="com">// void prepAccept(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L634" id="L634">634 </a><span class="com">// void prepAsyncCancel(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L635" id="L635">635 </a><span class="com">// void prepLinkTimeout(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L636" id="L636">636 </a><span class="com">// void prepConnect(ref SubmissionEntry entry, ...)</span>
-<a class="br" href="#L637" id="L637">637 </a>
-<a class="br" href="#L638" id="L638">638 </a><span class="kwrd">private</span>:
-<a class="br" href="#L639" id="L639">639 </a>
-<a class="br" href="#L640" id="L640">640 </a><span class="com">// uring cleanup</span>
-<a class="br" href="#L641" id="L641">641 </a><span class="type">void</span> <a class="hid" href="during.d.html#L641" title="during.dispose">dispose</a>(<span class="kwrd">ref</span> <a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> <span class="hid">uring</span>)
-<a class="br" href="#L642" id="L642">642 </a>{
-<a class="br" href="#L643" id="L643">643 </a>    <span class="kwrd">if</span> (<span class="hid">uring.payload</span> <span class="kwrd">is</span> <span class="kwrd">null</span>) <span class="kwrd">return</span>;
-<a class="br" href="#L644" id="L644">644 </a>    <span class="com">// debug printf(&quot;uring(%d): dispose(%d)\n&quot;, uring.payload.fd, uring.payload.refs);</span>
-<a class="br" href="#L645" id="L645">645 </a>    <span class="kwrd">if</span> (--<span class="hid">uring.payload.refs</span> == <span class="num">0</span>)
-<a class="br" href="#L646" id="L646">646 </a>    {
-<a class="br" href="#L647" id="L647">647 </a>        <span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">hasElaborateDestructor</span>;
-<a class="br" href="#L648" id="L648">648 </a>        <span class="com">// debug printf(&quot;uring(%d): free\n&quot;, uring.payload.fd);</span>
-<a class="br" href="#L649" id="L649">649 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">hasElaborateDestructor</span>!<a class="hid" href="during.d.html#L657" title="during.UringDesc">UringDesc</a>)
-<a class="br" href="#L650" id="L650">650 </a>            <span class="hid">destroy</span>(*<span class="hid">uring.payload</span>); <span class="com">// call possible destructors</span>
-<a class="br" href="#L651" id="L651">651 </a>        <span class="hid">free</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)<span class="hid">uring.payload</span>);
-<a class="br" href="#L652" id="L652">652 </a>    }
-<a class="br" href="#L653" id="L653">653 </a>    <span class="hid">uring.payload</span> = <span class="kwrd">null</span>;
-<a class="br" href="#L654" id="L654">654 </a>}
-<a class="br" href="#L655" id="L655">655 </a>
-<a class="br" href="#L656" id="L656">656 </a><span class="com">// system fields descriptor</span>
-<a class="br" href="#L657" id="L657">657 </a><span class="kwrd">struct</span> <a class="hid" href="during.d.html#L657" title="during.UringDesc">UringDesc</a>
-<a class="br" href="#L658" id="L658">658 </a>{
-<a class="br" href="#L659" id="L659">659 </a>    <span class="kwrd">nothrow</span> @<span class="hid">nogc</span>:
-<a class="br" href="#L660" id="L660">660 </a>
-<a class="br" href="#L661" id="L661">661 </a>    <span class="type">int</span> <span class="hid">fd</span>;
-<a class="br" href="#L662" id="L662">662 </a>    <span class="hid">size_t</span> <span class="hid">refs</span>;
-<a class="br" href="#L663" id="L663">663 </a>    <span class="hid">SetupParameters</span> <span class="hid">params</span>;
-<a class="br" href="#L664" id="L664">664 </a>    <a class="hid" href="during.d.html#L754" title="during.SubmissionQueue">SubmissionQueue</a> <span class="hid">sq</span>;
-<a class="br" href="#L665" id="L665">665 </a>    <a class="hid" href="during.d.html#L832" title="during.CompletionQueue">CompletionQueue</a> <span class="hid">cq</span>;
-<a class="br" href="#L666" id="L666">666 </a>
-<a class="br" href="#L667" id="L667">667 </a>    <span class="hid">iovec</span>[] <span class="hid">regBuffers</span>;
-<a class="br" href="#L668" id="L668">668 </a>
-<a class="br" href="#L669" id="L669">669 </a>    ~<span class="kwrd">this</span>()
-<a class="br" href="#L670" id="L670">670 </a>    {
-<a class="br" href="#L671" id="L671">671 </a>        <span class="com">//TODO: got: free(): double free detected in tcache 2 on this.. (released on kernel side?)</span>
-<a class="br" href="#L672" id="L672">672 </a>        <span class="com">// if (regBuffers) free(cast(void*)&amp;regBuffers[0]);</span>
+<a class="br" href="#L358" id="L358">358 </a>        <span class="hid">payload.regBuffers</span> = <span class="kwrd">null</span>;
+<a class="br" href="#L359" id="L359">359 </a>
+<a class="br" href="#L360" id="L360">360 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.UNREGISTER_BUFFERS</span>, <span class="kwrd">null</span>, <span class="num">0</span>);
+<a class="br" href="#L361" id="L361">361 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
+<a class="br" href="#L362" id="L362">362 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
+<a class="br" href="#L363" id="L363">363 </a>    }
+<a class="br" href="#L364" id="L364">364 </a>
+<a class="br" href="#L365" id="L365">365 </a>    <span class="com">/**
+<a class="br" href="#L366" id="L366">366 </a>     * Register files for I/O.
+<a class="br" href="#L367" id="L367">367 </a>     *
+<a class="br" href="#L368" id="L368">368 </a>     * To make use of the registered files, the `IOSQE_FIXED_FILE` flag must be set in the flags
+<a class="br" href="#L369" id="L369">369 </a>     * member of the `SubmissionEntry`, and the `fd` member is set to the index of the file in the
+<a class="br" href="#L370" id="L370">370 </a>     * file descriptor array.
+<a class="br" href="#L371" id="L371">371 </a>     *
+<a class="br" href="#L372" id="L372">372 </a>     * Files are automatically unregistered when the `io_uring` instance is torn down. An application
+<a class="br" href="#L373" id="L373">373 </a>     * need only unregister if it wishes to register a new set of fds.
+<a class="br" href="#L374" id="L374">374 </a>     *
+<a class="br" href="#L375" id="L375">375 </a>     * Use `-1` as a file descriptor to mark it as reserved in the array.*
+<a class="br" href="#L376" id="L376">376 </a>     * Params: fds = array of file descriptors to be registered
+<a class="br" href="#L377" id="L377">377 </a>     *
+<a class="br" href="#L378" id="L378">378 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
+<a class="br" href="#L379" id="L379">379 </a>     */</span>
+<a class="br" href="#L380" id="L380">380 </a>    <span class="kwrd">auto</span> <span class="hid">registerFiles</span>(<span class="kwrd">const</span>(<span class="type">int</span>)[] <span class="hid">fds</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L381" id="L381">381 </a>    {
+<a class="br" href="#L382" id="L382">382 </a>        <span class="hid">checkInitialized</span>();
+<a class="br" href="#L383" id="L383">383 </a>        <span class="kwrd">assert</span>(<span class="hid">fds.length</span>, <span class="str">&quot;No file descriptors provided&quot;</span>);
+<a class="br" href="#L384" id="L384">384 </a>        <span class="kwrd">assert</span>(<span class="hid">fds.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Too many file descriptors&quot;</span>);
+<a class="br" href="#L385" id="L385">385 </a>
+<a class="br" href="#L386" id="L386">386 </a>        <span class="com">// arg contains a pointer to an array of nr_args file descriptors (signed 32 bit integers).</span>
+<a class="br" href="#L387" id="L387">387 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.REGISTER_FILES</span>, &amp;<span class="hid">fds</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">fds.length</span>);
+<a class="br" href="#L388" id="L388">388 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
+<a class="br" href="#L389" id="L389">389 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
+<a class="br" href="#L390" id="L390">390 </a>    }
+<a class="br" href="#L391" id="L391">391 </a>
+<a class="br" href="#L392" id="L392">392 </a>    <span class="com">/*
+<a class="br" href="#L393" id="L393">393 </a>     * Register an update for an existing file set. The updates will start at
+<a class="br" href="#L394" id="L394">394 </a>     * `off` in the original array.
+<a class="br" href="#L395" id="L395">395 </a>     *
+<a class="br" href="#L396" id="L396">396 </a>     * Use `-1` as a file descriptor to mark it as reserved in the array.
+<a class="br" href="#L397" id="L397">397 </a>     *
+<a class="br" href="#L398" id="L398">398 </a>     * Params:
+<a class="br" href="#L399" id="L399">399 </a>     *      off = offset to the original registered files to be updated
+<a class="br" href="#L400" id="L400">400 </a>     *      files = array of file descriptors to update with
+<a class="br" href="#L401" id="L401">401 </a>     *
+<a class="br" href="#L402" id="L402">402 </a>     * Returns: number of files updated on success, -errno on failure.
+<a class="br" href="#L403" id="L403">403 </a>     */</span>
+<a class="br" href="#L404" id="L404">404 </a>    <span class="kwrd">auto</span> <span class="hid">registerFilesUpdate</span>(<span class="type">uint</span> <span class="hid">off</span>, <span class="kwrd">const</span>(<span class="type">int</span>)[] <span class="hid">fds</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L405" id="L405">405 </a>    {
+<a class="br" href="#L406" id="L406">406 </a>        <span class="kwrd">struct</span> <span class="hid">Update</span>
+<a class="br" href="#L407" id="L407">407 </a>        {
+<a class="br" href="#L408" id="L408">408 </a>            <span class="type">uint</span> <span class="hid">off</span>;
+<a class="br" href="#L409" id="L409">409 </a>            <span class="kwrd">const</span>(<span class="type">int</span>)* <span class="hid">fds</span>;
+<a class="br" href="#L410" id="L410">410 </a>        }
+<a class="br" href="#L411" id="L411">411 </a>
+<a class="br" href="#L412" id="L412">412 </a>        <span class="hid">checkInitialized</span>();
+<a class="br" href="#L413" id="L413">413 </a>        <span class="kwrd">assert</span>(<span class="hid">fds.length</span>, <span class="str">&quot;No file descriptors provided to update&quot;</span>);
+<a class="br" href="#L414" id="L414">414 </a>        <span class="kwrd">assert</span>(<span class="hid">fds.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Too many file descriptors&quot;</span>);
+<a class="br" href="#L415" id="L415">415 </a>
+<a class="br" href="#L416" id="L416">416 </a>        <span class="hid">Update</span> <span class="hid">u</span> = <span class="hid">Update</span>(<span class="hid">off</span>, &amp;<span class="hid">fds</span>[<span class="num">0</span>]);
+<a class="br" href="#L417" id="L417">417 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(
+<a class="br" href="#L418" id="L418">418 </a>            <span class="hid">payload.fd</span>,
+<a class="br" href="#L419" id="L419">419 </a>            <span class="hid">RegisterOpCode.REGISTER_FILES_UPDATE</span>,
+<a class="br" href="#L420" id="L420">420 </a>            &amp;<span class="hid">u</span>, <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">fds.length</span>);
+<a class="br" href="#L421" id="L421">421 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
+<a class="br" href="#L422" id="L422">422 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
+<a class="br" href="#L423" id="L423">423 </a>    }
+<a class="br" href="#L424" id="L424">424 </a>
+<a class="br" href="#L425" id="L425">425 </a>    <span class="com">/**
+<a class="br" href="#L426" id="L426">426 </a>     * All previously registered files associated with the `io_uring` instance will be unregistered.
+<a class="br" href="#L427" id="L427">427 </a>     *
+<a class="br" href="#L428" id="L428">428 </a>     * Files are automatically unregistered when the `io_uring` instance is torn down. An application
+<a class="br" href="#L429" id="L429">429 </a>     * need only unregister if it wishes to register a new set of fds.
+<a class="br" href="#L430" id="L430">430 </a>     *
+<a class="br" href="#L431" id="L431">431 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
+<a class="br" href="#L432" id="L432">432 </a>     */</span>
+<a class="br" href="#L433" id="L433">433 </a>    <span class="kwrd">auto</span> <span class="hid">unregisterFiles</span>() @<span class="hid">trusted</span>
+<a class="br" href="#L434" id="L434">434 </a>    {
+<a class="br" href="#L435" id="L435">435 </a>        <span class="hid">checkInitialized</span>();
+<a class="br" href="#L436" id="L436">436 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.UNREGISTER_FILES</span>, <span class="kwrd">null</span>, <span class="num">0</span>);
+<a class="br" href="#L437" id="L437">437 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
+<a class="br" href="#L438" id="L438">438 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
+<a class="br" href="#L439" id="L439">439 </a>    }
+<a class="br" href="#L440" id="L440">440 </a>
+<a class="br" href="#L441" id="L441">441 </a>    <span class="com">/**
+<a class="br" href="#L442" id="L442">442 </a>     * TODO
+<a class="br" href="#L443" id="L443">443 </a>     *
+<a class="br" href="#L444" id="L444">444 </a>     * Params: eventFD = TODO
+<a class="br" href="#L445" id="L445">445 </a>     *
+<a class="br" href="#L446" id="L446">446 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
+<a class="br" href="#L447" id="L447">447 </a>     */</span>
+<a class="br" href="#L448" id="L448">448 </a>    <span class="kwrd">auto</span> <span class="hid">registerEventFD</span>(<span class="type">int</span> <span class="hid">eventFD</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L449" id="L449">449 </a>    {
+<a class="br" href="#L450" id="L450">450 </a>        <span class="hid">checkInitialized</span>();
+<a class="br" href="#L451" id="L451">451 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.REGISTER_EVENTFD</span>, &amp;<span class="hid">eventFD</span>, <span class="num">1</span>);
+<a class="br" href="#L452" id="L452">452 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
+<a class="br" href="#L453" id="L453">453 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
+<a class="br" href="#L454" id="L454">454 </a>    }
+<a class="br" href="#L455" id="L455">455 </a>
+<a class="br" href="#L456" id="L456">456 </a>    <span class="com">/**
+<a class="br" href="#L457" id="L457">457 </a>     * TODO
+<a class="br" href="#L458" id="L458">458 </a>     *
+<a class="br" href="#L459" id="L459">459 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
+<a class="br" href="#L460" id="L460">460 </a>     */</span>
+<a class="br" href="#L461" id="L461">461 </a>    <span class="kwrd">auto</span> <span class="hid">unregisterEventFD</span>() @<span class="hid">trusted</span>
+<a class="br" href="#L462" id="L462">462 </a>    {
+<a class="br" href="#L463" id="L463">463 </a>        <span class="hid">checkInitialized</span>();
+<a class="br" href="#L464" id="L464">464 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.UNREGISTER_EVENTFD</span>, <span class="kwrd">null</span>, <span class="num">0</span>);
+<a class="br" href="#L465" id="L465">465 </a>        <span class="kwrd">if</span> (<span class="hid">r</span> &lt; <span class="num">0</span>) <span class="kwrd">return</span> -<span class="hid">errno</span>;
+<a class="br" href="#L466" id="L466">466 </a>        <span class="kwrd">return</span> <span class="num">0</span>;
+<a class="br" href="#L467" id="L467">467 </a>    }
+<a class="br" href="#L468" id="L468">468 </a>}
+<a class="br" href="#L469" id="L469">469 </a>
+<a class="br" href="#L470" id="L470">470 </a><span class="com">/**
+<a class="br" href="#L471" id="L471">471 </a> * Uses custom operation definition to fill fields of `SubmissionEntry`.
+<a class="br" href="#L472" id="L472">472 </a> * Can be used in cases, when builtin prep* functions aren't enough.
+<a class="br" href="#L473" id="L473">473 </a> *
+<a class="br" href="#L474" id="L474">474 </a> * Custom definition fields must correspond to fields of `SubmissionEntry` for this to work.
+<a class="br" href="#L475" id="L475">475 </a> *
+<a class="br" href="#L476" id="L476">476 </a> * Note: This doesn't touch previous state of the entry, just fills the corresponding fields.
+<a class="br" href="#L477" id="L477">477 </a> *       So it might be needed to call `clear` first on the entry (depends on usage).
+<a class="br" href="#L478" id="L478">478 </a> *
+<a class="br" href="#L479" id="L479">479 </a> * Params:
+<a class="br" href="#L480" id="L480">480 </a> *   entry = entry to set parameters to
+<a class="br" href="#L481" id="L481">481 </a> *   op = operation to fill entry with (can be custom type)
+<a class="br" href="#L482" id="L482">482 </a> */</span>
+<a class="br" href="#L483" id="L483">483 </a><span class="type">void</span> <a class="hid" href="during.d.html#L483" title="during.fill">fill</a>(<span class="hid">E</span>)(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="kwrd">auto</span> <span class="kwrd">ref</span> <span class="hid">E</span> <span class="hid">op</span>)
+<a class="br" href="#L484" id="L484">484 </a>{
+<a class="br" href="#L485" id="L485">485 </a>    <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
+<a class="br" href="#L486" id="L486">486 </a>    <span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">hasMember</span>, <span class="hid">FieldNameTuple</span>;
+<a class="br" href="#L487" id="L487">487 </a>
+<a class="br" href="#L488" id="L488">488 </a>    <span class="com">// fill entry from provided operation fields (they must have same name as in SubmissionEntry)</span>
+<a class="br" href="#L489" id="L489">489 </a>    <span class="kwrd">foreach</span> (<span class="hid">m</span>; <span class="hid">FieldNameTuple</span>!<span class="hid">E</span>)
+<a class="br" href="#L490" id="L490">490 </a>    {
+<a class="br" href="#L491" id="L491">491 </a>        <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">hasMember</span>!(<span class="hid">SubmissionEntry</span>, <span class="hid">m</span>), <span class="str">&quot;unknown member: &quot;</span> ~ <span class="hid">E.stringof</span> ~ <span class="str">&quot;.&quot;</span> ~ <span class="hid">m</span>);
+<a class="br" href="#L492" id="L492">492 </a>        <span class="kwrd">__traits</span>(<span class="hid">getMember</span>, <span class="hid">entry</span>, <span class="hid">m</span>) = <span class="kwrd">__traits</span>(<span class="hid">getMember</span>, <span class="hid">op</span>, <span class="hid">m</span>);
+<a class="br" href="#L493" id="L493">493 </a>    }
+<a class="br" href="#L494" id="L494">494 </a>}
+<a class="br" href="#L495" id="L495">495 </a>
+<a class="br" href="#L496" id="L496">496 </a><span class="com">/**
+<a class="br" href="#L497" id="L497">497 </a> * Prepares `nop` operation.
+<a class="br" href="#L498" id="L498">498 </a> *
+<a class="br" href="#L499" id="L499">499 </a> * Params:
+<a class="br" href="#L500" id="L500">500 </a> *      entry = `SubmissionEntry` to prepare
+<a class="br" href="#L501" id="L501">501 </a> */</span>
+<a class="br" href="#L502" id="L502">502 </a><span class="type">void</span> <a class="hid" href="during.d.html#L502" title="during.prepNop">prepNop</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>) @<span class="hid">safe</span>
+<a class="br" href="#L503" id="L503">503 </a>{
+<a class="br" href="#L504" id="L504">504 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.NOP</span>;
+<a class="br" href="#L505" id="L505">505 </a>}
+<a class="br" href="#L506" id="L506">506 </a>
+<a class="br" href="#L507" id="L507">507 </a><span class="com">// TODO: check offset behavior, preadv2/pwritev2 should accept -1 to work on the current file offset,</span>
+<a class="br" href="#L508" id="L508">508 </a><span class="com">// but it doesn't seem to work here.</span>
+<a class="br" href="#L509" id="L509">509 </a>
+<a class="br" href="#L510" id="L510">510 </a><span class="com">/**
+<a class="br" href="#L511" id="L511">511 </a> * Prepares `readv` operation.
+<a class="br" href="#L512" id="L512">512 </a> *
+<a class="br" href="#L513" id="L513">513 </a> * Params:
+<a class="br" href="#L514" id="L514">514 </a> *      entry = `SubmissionEntry` to prepare
+<a class="br" href="#L515" id="L515">515 </a> *      fd = file descriptor of file we are operating on
+<a class="br" href="#L516" id="L516">516 </a> *      offset = offset
+<a class="br" href="#L517" id="L517">517 </a> *      buffer = iovec buffers to be used by the operation
+<a class="br" href="#L518" id="L518">518 </a> */</span>
+<a class="br" href="#L519" id="L519">519 </a><span class="type">void</span> <a class="hid" href="during.d.html#L519" title="during.prepReadv">prepReadv</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="type">ulong</span> <span class="hid">offset</span>, <span class="hid">iovec</span>[] <span class="hid">buffer</span>...)
+<a class="br" href="#L520" id="L520">520 </a>{
+<a class="br" href="#L521" id="L521">521 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span>, <span class="str">&quot;Empty buffer&quot;</span>);
+<a class="br" href="#L522" id="L522">522 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Too many iovec buffers&quot;</span>);
+<a class="br" href="#L523" id="L523">523 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.READV</span>;
+<a class="br" href="#L524" id="L524">524 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
+<a class="br" href="#L525" id="L525">525 </a>    <span class="hid">entry.off</span> = <span class="hid">offset</span>;
+<a class="br" href="#L526" id="L526">526 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buffer</span>[<span class="num">0</span>]);
+<a class="br" href="#L527" id="L527">527 </a>    <span class="hid">entry.len</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>;
+<a class="br" href="#L528" id="L528">528 </a>}
+<a class="br" href="#L529" id="L529">529 </a>
+<a class="br" href="#L530" id="L530">530 </a><span class="com">/**
+<a class="br" href="#L531" id="L531">531 </a> * Prepares `writev` operation.
+<a class="br" href="#L532" id="L532">532 </a> *
+<a class="br" href="#L533" id="L533">533 </a> * Params:
+<a class="br" href="#L534" id="L534">534 </a> *      entry = `SubmissionEntry` to prepare
+<a class="br" href="#L535" id="L535">535 </a> *      fd = file descriptor of file we are operating on
+<a class="br" href="#L536" id="L536">536 </a> *      offset = offset
+<a class="br" href="#L537" id="L537">537 </a> *      buffer = iovec buffers to be used by the operation
+<a class="br" href="#L538" id="L538">538 </a> */</span>
+<a class="br" href="#L539" id="L539">539 </a><span class="type">void</span> <a class="hid" href="during.d.html#L539" title="during.prepWritev">prepWritev</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="type">ulong</span> <span class="hid">offset</span>, <span class="hid">iovec</span>[] <span class="hid">buffer</span>...)
+<a class="br" href="#L540" id="L540">540 </a>{
+<a class="br" href="#L541" id="L541">541 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span>, <span class="str">&quot;Empty buffer&quot;</span>);
+<a class="br" href="#L542" id="L542">542 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Too many iovec buffers&quot;</span>);
+<a class="br" href="#L543" id="L543">543 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.WRITEV</span>;
+<a class="br" href="#L544" id="L544">544 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
+<a class="br" href="#L545" id="L545">545 </a>    <span class="hid">entry.off</span> = <span class="hid">offset</span>;
+<a class="br" href="#L546" id="L546">546 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buffer</span>[<span class="num">0</span>]);
+<a class="br" href="#L547" id="L547">547 </a>    <span class="hid">entry.len</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>;
+<a class="br" href="#L548" id="L548">548 </a>}
+<a class="br" href="#L549" id="L549">549 </a>
+<a class="br" href="#L550" id="L550">550 </a><span class="com">/**
+<a class="br" href="#L551" id="L551">551 </a> * Prepares `read_fixed` operation.
+<a class="br" href="#L552" id="L552">552 </a> *
+<a class="br" href="#L553" id="L553">553 </a> * Params:
+<a class="br" href="#L554" id="L554">554 </a> *      entry = `SubmissionEntry` to prepare
+<a class="br" href="#L555" id="L555">555 </a> *      fd = file descriptor of file we are operating on
+<a class="br" href="#L556" id="L556">556 </a> *      offset = offset
+<a class="br" href="#L557" id="L557">557 </a> *      buffer = slice to preregistered buffer
+<a class="br" href="#L558" id="L558">558 </a> *      bufferIndex = index to the preregistered buffers array buffer belongs to
+<a class="br" href="#L559" id="L559">559 </a> */</span>
+<a class="br" href="#L560" id="L560">560 </a><span class="type">void</span> <a class="hid" href="during.d.html#L560" title="during.prepReadFixed">prepReadFixed</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="type">ulong</span> <span class="hid">offset</span>, <span class="type">ubyte</span>[] <span class="hid">buffer</span>, <span class="type">ushort</span> <span class="hid">bufferIndex</span>)
+<a class="br" href="#L561" id="L561">561 </a>{
+<a class="br" href="#L562" id="L562">562 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span>, <span class="str">&quot;Empty buffer&quot;</span>);
+<a class="br" href="#L563" id="L563">563 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Buffer too large&quot;</span>);
+<a class="br" href="#L564" id="L564">564 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.READ_FIXED</span>;
+<a class="br" href="#L565" id="L565">565 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
+<a class="br" href="#L566" id="L566">566 </a>    <span class="hid">entry.off</span> = <span class="hid">offset</span>;
+<a class="br" href="#L567" id="L567">567 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buffer</span>[<span class="num">0</span>]);
+<a class="br" href="#L568" id="L568">568 </a>    <span class="hid">entry.len</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>;
+<a class="br" href="#L569" id="L569">569 </a>    <span class="hid">entry.buf_index</span> = <span class="hid">bufferIndex</span>;
+<a class="br" href="#L570" id="L570">570 </a>}
+<a class="br" href="#L571" id="L571">571 </a>
+<a class="br" href="#L572" id="L572">572 </a><span class="com">/**
+<a class="br" href="#L573" id="L573">573 </a> * Prepares `write_fixed` operation.
+<a class="br" href="#L574" id="L574">574 </a> *
+<a class="br" href="#L575" id="L575">575 </a> * Params:
+<a class="br" href="#L576" id="L576">576 </a> *      entry = `SubmissionEntry` to prepare
+<a class="br" href="#L577" id="L577">577 </a> *      fd = file descriptor of file we are operating on
+<a class="br" href="#L578" id="L578">578 </a> *      offset = offset
+<a class="br" href="#L579" id="L579">579 </a> *      buffer = slice to preregistered buffer
+<a class="br" href="#L580" id="L580">580 </a> *      bufferIndex = index to the preregistered buffers array buffer belongs to
+<a class="br" href="#L581" id="L581">581 </a> */</span>
+<a class="br" href="#L582" id="L582">582 </a><span class="type">void</span> <a class="hid" href="during.d.html#L582" title="during.prepWriteFixed">prepWriteFixed</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="type">ulong</span> <span class="hid">offset</span>, <span class="type">ubyte</span>[] <span class="hid">buffer</span>, <span class="type">ushort</span> <span class="hid">bufferIndex</span>)
+<a class="br" href="#L583" id="L583">583 </a>{
+<a class="br" href="#L584" id="L584">584 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span>, <span class="str">&quot;Empty buffer&quot;</span>);
+<a class="br" href="#L585" id="L585">585 </a>    <span class="kwrd">assert</span>(<span class="hid">buffer.length</span> &lt; <span class="type">uint</span>.<span class="hid">max</span>, <span class="str">&quot;Buffer too large&quot;</span>);
+<a class="br" href="#L586" id="L586">586 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.WRITE_FIXED</span>;
+<a class="br" href="#L587" id="L587">587 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
+<a class="br" href="#L588" id="L588">588 </a>    <span class="hid">entry.off</span> = <span class="hid">offset</span>;
+<a class="br" href="#L589" id="L589">589 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buffer</span>[<span class="num">0</span>]);
+<a class="br" href="#L590" id="L590">590 </a>    <span class="hid">entry.len</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>;
+<a class="br" href="#L591" id="L591">591 </a>    <span class="hid">entry.buf_index</span> = <span class="hid">bufferIndex</span>;
+<a class="br" href="#L592" id="L592">592 </a>}
+<a class="br" href="#L593" id="L593">593 </a>
+<a class="br" href="#L594" id="L594">594 </a><span class="com">/**
+<a class="br" href="#L595" id="L595">595 </a> * Prepares `sendmsg` operation.
+<a class="br" href="#L596" id="L596">596 </a> *
+<a class="br" href="#L597" id="L597">597 </a> * Params:
+<a class="br" href="#L598" id="L598">598 </a> *      entry = `SubmissionEntry` to prepare
+<a class="br" href="#L599" id="L599">599 </a> *      fd = file descriptor of file we are operating on
+<a class="br" href="#L600" id="L600">600 </a> *      msg = message to operate with
+<a class="br" href="#L601" id="L601">601 </a> *      flags = `sendmsg` operation flags
+<a class="br" href="#L602" id="L602">602 </a> */</span>
+<a class="br" href="#L603" id="L603">603 </a><span class="type">void</span> <a class="hid" href="during.d.html#L603" title="during.prepSendMsg">prepSendMsg</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="kwrd">ref</span> <span class="hid">msghdr</span> <span class="hid">msg</span>, <span class="type">uint</span> <span class="hid">flags</span>)
+<a class="br" href="#L604" id="L604">604 </a>{
+<a class="br" href="#L605" id="L605">605 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.SENDMSG</span>;
+<a class="br" href="#L606" id="L606">606 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
+<a class="br" href="#L607" id="L607">607 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">msg</span>);
+<a class="br" href="#L608" id="L608">608 </a>    <span class="hid">entry.msg_flags</span> = <span class="hid">flags</span>;
+<a class="br" href="#L609" id="L609">609 </a>}
+<a class="br" href="#L610" id="L610">610 </a>
+<a class="br" href="#L611" id="L611">611 </a><span class="com">/**
+<a class="br" href="#L612" id="L612">612 </a> * Prepares `recvmsg` operation.
+<a class="br" href="#L613" id="L613">613 </a> *
+<a class="br" href="#L614" id="L614">614 </a> * Params:
+<a class="br" href="#L615" id="L615">615 </a> *      entry = `SubmissionEntry` to prepare
+<a class="br" href="#L616" id="L616">616 </a> *      fd = file descriptor of file we are operating on
+<a class="br" href="#L617" id="L617">617 </a> *      msg = message to operate with
+<a class="br" href="#L618" id="L618">618 </a> *      flags = `recvmsg` operation flags
+<a class="br" href="#L619" id="L619">619 </a> */</span>
+<a class="br" href="#L620" id="L620">620 </a><span class="type">void</span> <a class="hid" href="during.d.html#L620" title="during.prepRecvMsg">prepRecvMsg</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="kwrd">ref</span> <span class="hid">msghdr</span> <span class="hid">msg</span>, <span class="type">uint</span> <span class="hid">flags</span>)
+<a class="br" href="#L621" id="L621">621 </a>{
+<a class="br" href="#L622" id="L622">622 </a>    <span class="hid">entry.opcode</span> = <span class="hid">Operation.RECVMSG</span>;
+<a class="br" href="#L623" id="L623">623 </a>    <span class="hid">entry.fd</span> = <span class="hid">fd</span>;
+<a class="br" href="#L624" id="L624">624 </a>    <span class="hid">entry.addr</span> = <span class="kwrd">cast</span>(<span class="type">ulong</span>)(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">msg</span>);
+<a class="br" href="#L625" id="L625">625 </a>    <span class="hid">entry.msg_flags</span> = <span class="hid">flags</span>;
+<a class="br" href="#L626" id="L626">626 </a>}
+<a class="br" href="#L627" id="L627">627 </a>
+<a class="br" href="#L628" id="L628">628 </a><span class="com">// void prepPollAdd(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L629" id="L629">629 </a><span class="com">// void prepPollRemove(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L630" id="L630">630 </a><span class="com">// void prepFsync(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L631" id="L631">631 </a><span class="com">// void prepSyncFileRange(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L632" id="L632">632 </a><span class="com">// void prepTimeout(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L633" id="L633">633 </a><span class="com">// void prepTimeoutRemove(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L634" id="L634">634 </a><span class="com">// void prepAccept(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L635" id="L635">635 </a><span class="com">// void prepAsyncCancel(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L636" id="L636">636 </a><span class="com">// void prepLinkTimeout(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L637" id="L637">637 </a><span class="com">// void prepConnect(ref SubmissionEntry entry, ...)</span>
+<a class="br" href="#L638" id="L638">638 </a>
+<a class="br" href="#L639" id="L639">639 </a><span class="kwrd">private</span>:
+<a class="br" href="#L640" id="L640">640 </a>
+<a class="br" href="#L641" id="L641">641 </a><span class="com">// uring cleanup</span>
+<a class="br" href="#L642" id="L642">642 </a><span class="type">void</span> <a class="hid" href="during.d.html#L642" title="during.dispose">dispose</a>(<span class="kwrd">ref</span> <a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> <span class="hid">uring</span>)
+<a class="br" href="#L643" id="L643">643 </a>{
+<a class="br" href="#L644" id="L644">644 </a>    <span class="kwrd">if</span> (<span class="hid">uring.payload</span> <span class="kwrd">is</span> <span class="kwrd">null</span>) <span class="kwrd">return</span>;
+<a class="br" href="#L645" id="L645">645 </a>    <span class="com">// debug printf(&quot;uring(%d): dispose(%d)\n&quot;, uring.payload.fd, uring.payload.refs);</span>
+<a class="br" href="#L646" id="L646">646 </a>    <span class="kwrd">if</span> (--<span class="hid">uring.payload.refs</span> == <span class="num">0</span>)
+<a class="br" href="#L647" id="L647">647 </a>    {
+<a class="br" href="#L648" id="L648">648 </a>        <span class="kwrd">import</span> <span class="hid">std.traits</span> : <span class="hid">hasElaborateDestructor</span>;
+<a class="br" href="#L649" id="L649">649 </a>        <span class="com">// debug printf(&quot;uring(%d): free\n&quot;, uring.payload.fd);</span>
+<a class="br" href="#L650" id="L650">650 </a>        <span class="kwrd">static</span> <span class="kwrd">if</span> (<span class="hid">hasElaborateDestructor</span>!<a class="hid" href="during.d.html#L658" title="during.UringDesc">UringDesc</a>)
+<a class="br" href="#L651" id="L651">651 </a>            <span class="hid">destroy</span>(*<span class="hid">uring.payload</span>); <span class="com">// call possible destructors</span>
+<a class="br" href="#L652" id="L652">652 </a>        <span class="hid">free</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)<span class="hid">uring.payload</span>);
+<a class="br" href="#L653" id="L653">653 </a>    }
+<a class="br" href="#L654" id="L654">654 </a>    <span class="hid">uring.payload</span> = <span class="kwrd">null</span>;
+<a class="br" href="#L655" id="L655">655 </a>}
+<a class="br" href="#L656" id="L656">656 </a>
+<a class="br" href="#L657" id="L657">657 </a><span class="com">// system fields descriptor</span>
+<a class="br" href="#L658" id="L658">658 </a><span class="kwrd">struct</span> <a class="hid" href="during.d.html#L658" title="during.UringDesc">UringDesc</a>
+<a class="br" href="#L659" id="L659">659 </a>{
+<a class="br" href="#L660" id="L660">660 </a>    <span class="kwrd">nothrow</span> @<span class="hid">nogc</span>:
+<a class="br" href="#L661" id="L661">661 </a>
+<a class="br" href="#L662" id="L662">662 </a>    <span class="type">int</span> <span class="hid">fd</span>;
+<a class="br" href="#L663" id="L663">663 </a>    <span class="hid">size_t</span> <span class="hid">refs</span>;
+<a class="br" href="#L664" id="L664">664 </a>    <span class="hid">SetupParameters</span> <span class="hid">params</span>;
+<a class="br" href="#L665" id="L665">665 </a>    <a class="hid" href="during.d.html#L754" title="during.SubmissionQueue">SubmissionQueue</a> <span class="hid">sq</span>;
+<a class="br" href="#L666" id="L666">666 </a>    <a class="hid" href="during.d.html#L832" title="during.CompletionQueue">CompletionQueue</a> <span class="hid">cq</span>;
+<a class="br" href="#L667" id="L667">667 </a>
+<a class="br" href="#L668" id="L668">668 </a>    <span class="hid">iovec</span>[] <span class="hid">regBuffers</span>;
+<a class="br" href="#L669" id="L669">669 </a>
+<a class="br" href="#L670" id="L670">670 </a>    ~<span class="kwrd">this</span>()
+<a class="br" href="#L671" id="L671">671 </a>    {
+<a class="br" href="#L672" id="L672">672 </a>        <span class="kwrd">if</span> (<span class="hid">regBuffers</span>) <span class="hid">free</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">regBuffers</span>[<span class="num">0</span>]);
 <a class="br" href="#L673" id="L673">673 </a>        <span class="kwrd">if</span> (<span class="hid">sq.ring</span>) <span class="hid">munmap</span>(<span class="hid">sq.ring</span>, <span class="hid">sq.ringSize</span>);
 <a class="br" href="#L674" id="L674">674 </a>        <span class="kwrd">if</span> (<span class="hid">sq.sqes</span>) <span class="hid">munmap</span>(<span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">sq.sqes</span>[<span class="num">0</span>], <span class="hid">sq.sqes.length</span> * <span class="hid">SubmissionEntry.sizeof</span>);
 <a class="br" href="#L675" id="L675">675 </a>        <span class="kwrd">if</span> (<span class="hid">cq.ring</span> &amp;&amp; <span class="hid">cq.ring</span> != <span class="hid">sq.ring</span>) <span class="hid">munmap</span>(<span class="hid">cq.ring</span>, <span class="hid">cq.ringSize</span>);
@@ -832,7 +832,7 @@
 <a class="br" href="#L804" id="L804">804 </a>    {
 <a class="br" href="#L805" id="L805">805 </a>        <span class="kwrd">assert</span>(!<span class="hid">full</span>, <span class="str">&quot;SumbissionQueue is full&quot;</span>);
 <a class="br" href="#L806" id="L806">806 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>].<span class="hid">clear</span>();
-<a class="br" href="#L807" id="L807">807 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>].<a class="hid" href="during.d.html#L482" title="during.fill">fill</a>(<span class="hid">op</span>);
+<a class="br" href="#L807" id="L807">807 </a>        <span class="hid">sqes</span>[<span class="hid">tail</span> &amp; <span class="hid">ringMask</span>].<a class="hid" href="during.d.html#L483" title="during.fill">fill</a>(<span class="hid">op</span>);
 <a class="br" href="#L808" id="L808">808 </a>        <span class="hid">localTail</span>++;
 <a class="br" href="#L809" id="L809">809 </a>    }
 <a class="br" href="#L810" id="L810">810 </a>
@@ -931,7 +931,7 @@
 <a class="br" href="#L903" id="L903">903 </a>    <span class="kwrd">static</span> <span class="kwrd">assert</span>(<span class="hid">isOutputRange</span>!(<a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a>, <span class="hid">SubmissionEntry</span>));
 <a class="br" href="#L904" id="L904">904 </a>}</pre></div>
 		<div id="page-nav">
-		<div id="source-navigation"><div class="list-holder"><ul><li><a class="docs" href="../during.html">[Docs] </a><a href="#L1">during</a><ul><li><a class="docs" href="../during.io_uring.html">[Docs] </a><a href="#L10">during.io_uring</a></li><li><a href="#L12">core.atomic</a></li><li><a href="#L13">core.stdc.stdio</a></li><li><a href="#L14">core.stdc.stdlib</a></li><li><a href="#L15">core.sys.linux.errno</a></li><li><a href="#L16">core.sys.linux.sys.mman</a></li><li><a href="#L17">core.sys.linux.unistd</a></li><li><a href="#L18">core.sys.posix.signal</a></li><li><a href="#L19">core.sys.posix.sys.socket</a></li><li><a href="#L20">core.sys.posix.sys.uio</a></li><li><a href="#L21">std.algorithm.comparison</a></li><li><a class="docs" href="../during.setup.html">[Docs] </a><a href="#L36">setup</a></li><li><a class="docs" href="../during.Uring.html">[Docs] </a><a href="#L73">Uring</a><ul><li><a href="#L77">payload</a></li><li><a href="#L78">checkInitialized</a></li><li><a class="docs" href="../during.Uring.this.html">[Docs] </a><a href="#L84">this</a></li><li><a class="docs" href="../during.Uring.~this.html">[Docs] </a><a href="#L93">~this</a></li><li><a class="docs" href="../during.Uring.fd.html">[Docs] </a><a href="#L99">fd</a></li><li><a class="docs" href="../during.Uring.params.html">[Docs] </a><a href="#L106">params</a></li><li><a class="docs" href="../during.Uring.empty.html">[Docs] </a><a href="#L113">empty</a></li><li><a class="docs" href="../during.Uring.full.html">[Docs] </a><a href="#L120">full</a></li><li><a class="docs" href="../during.Uring.capacity.html">[Docs] </a><a href="#L127">capacity</a></li><li><a class="docs" href="../during.Uring.length.html">[Docs] </a><a href="#L134">length</a></li><li><a class="docs" href="../during.Uring.front.html">[Docs] </a><a href="#L141">front</a></li><li><a class="docs" href="../during.Uring.popFront.html">[Docs] </a><a href="#L148">popFront</a></li><li><a class="docs" href="../during.Uring.put.1.html">[Docs] </a><a href="#L172">put</a></li><li><a class="docs" href="../during.Uring.putWith.1.html">[Docs] </a><a href="#L180">putWith</a></li><li><a class="docs" href="../during.Uring.putWith.2.html">[Docs] </a><a href="#L188">putWith</a></li><li><a class="docs" href="../during.Uring.put.2.html">[Docs] </a><a href="#L205">put</a></li><li><a class="docs" href="../during.Uring.overflow.html">[Docs] </a><a href="#L217">overflow</a></li><li><a class="docs" href="../during.Uring.dropped.html">[Docs] </a><a href="#L224">dropped</a></li><li><a class="docs" href="../during.Uring.submit.html">[Docs] </a><a href="#L241">submit</a></li><li><a class="docs" href="../during.Uring.wait.html">[Docs] </a><a href="#L273">wait</a></li><li><a class="docs" href="../during.Uring.registerBuffers.html">[Docs] </a><a href="#L302">registerBuffers</a></li><li><a class="docs" href="../during.Uring.unregisterBuffers.html">[Docs] </a><a href="#L350">unregisterBuffers</a></li><li><a class="docs" href="../during.Uring.registerFiles.html">[Docs] </a><a href="#L379">registerFiles</a></li><li><a href="#L403">registerFilesUpdate</a></li><li><a class="docs" href="../during.Uring.unregisterFiles.html">[Docs] </a><a href="#L432">unregisterFiles</a></li><li><a class="docs" href="../during.Uring.registerEventFD.html">[Docs] </a><a href="#L447">registerEventFD</a></li><li><a class="docs" href="../during.Uring.unregisterEventFD.html">[Docs] </a><a href="#L460">unregisterEventFD</a></li></ul></li><li><a class="docs" href="../during.fill.html">[Docs] </a><a href="#L482">fill</a></li><li><a class="docs" href="../during.prepNop.html">[Docs] </a><a href="#L501">prepNop</a></li><li><a class="docs" href="../during.prepReadv.html">[Docs] </a><a href="#L518">prepReadv</a></li><li><a class="docs" href="../during.prepWritev.html">[Docs] </a><a href="#L538">prepWritev</a></li><li><a class="docs" href="../during.prepReadFixed.html">[Docs] </a><a href="#L559">prepReadFixed</a></li><li><a class="docs" href="../during.prepWriteFixed.html">[Docs] </a><a href="#L581">prepWriteFixed</a></li><li><a class="docs" href="../during.prepSendMsg.html">[Docs] </a><a href="#L602">prepSendMsg</a></li><li><a class="docs" href="../during.prepRecvMsg.html">[Docs] </a><a href="#L619">prepRecvMsg</a></li><li><a href="#L641">dispose</a></li><li><a href="#L657">UringDesc</a><ul><li><a href="#L661">fd</a></li><li><a href="#L662">refs</a></li><li><a href="#L663">params</a></li><li><a href="#L664">sq</a></li><li><a href="#L665">cq</a></li><li><a href="#L667">regBuffers</a></li><li><a href="#L669">~this</a></li><li><a href="#L679">mapRings</a></li></ul></li><li><a href="#L754">SubmissionQueue</a><ul><li><a href="#L759">khead</a></li><li><a href="#L760">ktail</a></li><li><a href="#L761">kflags</a></li><li><a href="#L762">kdropped</a></li><li><a href="#L763">ringMask</a></li><li><a href="#L766">ring</a></li><li><a href="#L767">ringSize</a></li><li><a href="#L770">sqes</a></li><li><a href="#L772">localTail</a></li><li><a href="#L774">head</a></li><li><a href="#L775">tail</a></li><li><a href="#L777">flushTail</a></li><li><a href="#L784">flags</a></li><li><a href="#L789">full</a></li><li><a href="#L791">length</a></li><li><a href="#L793">capacity</a></li><li><a href="#L795">put</a></li><li><a href="#L802">put</a></li><li><a href="#L811">putWith</a></li><li><a href="#L816">putWith</a></li><li><a href="#L821">putWithImpl</a></li><li><a href="#L829">dropped</a></li></ul></li><li><a href="#L832">CompletionQueue</a><ul><li><a href="#L837">khead</a></li><li><a href="#L838">ktail</a></li><li><a href="#L839">koverflow</a></li><li><a href="#L840">cqes</a></li><li><a href="#L842">ringMask</a></li><li><a href="#L845">ring</a></li><li><a href="#L846">ringSize</a></li><li><a href="#L848">localHead</a></li><li><a href="#L850">head</a></li><li><a href="#L851">tail</a></li><li><a href="#L853">flushHead</a></li><li><a href="#L860">empty</a></li><li><a href="#L862">front</a></li><li><a href="#L868">popFront</a></li><li><a href="#L876">length</a></li><li><a href="#L878">overflow</a></li></ul></li><li><a href="#L882">atomicStore</a></li><li><a href="#L891">atomicLoad</a></li><li><a href="#L901">std.range.primitives</a></li></ul></li></ul></div></div></div>
+		<div id="source-navigation"><div class="list-holder"><ul><li><a class="docs" href="../during.html">[Docs] </a><a href="#L1">during</a><ul><li><a class="docs" href="../during.io_uring.html">[Docs] </a><a href="#L10">during.io_uring</a></li><li><a href="#L12">core.atomic</a></li><li><a href="#L13">core.stdc.stdio</a></li><li><a href="#L14">core.stdc.stdlib</a></li><li><a href="#L15">core.sys.linux.errno</a></li><li><a href="#L16">core.sys.linux.sys.mman</a></li><li><a href="#L17">core.sys.linux.unistd</a></li><li><a href="#L18">core.sys.posix.signal</a></li><li><a href="#L19">core.sys.posix.sys.socket</a></li><li><a href="#L20">core.sys.posix.sys.uio</a></li><li><a href="#L21">std.algorithm.comparison</a></li><li><a class="docs" href="../during.setup.html">[Docs] </a><a href="#L36">setup</a></li><li><a class="docs" href="../during.Uring.html">[Docs] </a><a href="#L73">Uring</a><ul><li><a href="#L77">payload</a></li><li><a href="#L78">checkInitialized</a></li><li><a class="docs" href="../during.Uring.this.html">[Docs] </a><a href="#L84">this</a></li><li><a class="docs" href="../during.Uring.~this.html">[Docs] </a><a href="#L93">~this</a></li><li><a class="docs" href="../during.Uring.fd.html">[Docs] </a><a href="#L99">fd</a></li><li><a class="docs" href="../during.Uring.params.html">[Docs] </a><a href="#L106">params</a></li><li><a class="docs" href="../during.Uring.empty.html">[Docs] </a><a href="#L113">empty</a></li><li><a class="docs" href="../during.Uring.full.html">[Docs] </a><a href="#L120">full</a></li><li><a class="docs" href="../during.Uring.capacity.html">[Docs] </a><a href="#L127">capacity</a></li><li><a class="docs" href="../during.Uring.length.html">[Docs] </a><a href="#L134">length</a></li><li><a class="docs" href="../during.Uring.front.html">[Docs] </a><a href="#L141">front</a></li><li><a class="docs" href="../during.Uring.popFront.html">[Docs] </a><a href="#L148">popFront</a></li><li><a class="docs" href="../during.Uring.put.1.html">[Docs] </a><a href="#L172">put</a></li><li><a class="docs" href="../during.Uring.putWith.1.html">[Docs] </a><a href="#L180">putWith</a></li><li><a class="docs" href="../during.Uring.putWith.2.html">[Docs] </a><a href="#L188">putWith</a></li><li><a class="docs" href="../during.Uring.put.2.html">[Docs] </a><a href="#L205">put</a></li><li><a class="docs" href="../during.Uring.overflow.html">[Docs] </a><a href="#L217">overflow</a></li><li><a class="docs" href="../during.Uring.dropped.html">[Docs] </a><a href="#L224">dropped</a></li><li><a class="docs" href="../during.Uring.submit.html">[Docs] </a><a href="#L241">submit</a></li><li><a class="docs" href="../during.Uring.wait.html">[Docs] </a><a href="#L273">wait</a></li><li><a class="docs" href="../during.Uring.registerBuffers.html">[Docs] </a><a href="#L302">registerBuffers</a></li><li><a class="docs" href="../during.Uring.unregisterBuffers.html">[Docs] </a><a href="#L350">unregisterBuffers</a></li><li><a class="docs" href="../during.Uring.registerFiles.html">[Docs] </a><a href="#L380">registerFiles</a></li><li><a href="#L404">registerFilesUpdate</a></li><li><a class="docs" href="../during.Uring.unregisterFiles.html">[Docs] </a><a href="#L433">unregisterFiles</a></li><li><a class="docs" href="../during.Uring.registerEventFD.html">[Docs] </a><a href="#L448">registerEventFD</a></li><li><a class="docs" href="../during.Uring.unregisterEventFD.html">[Docs] </a><a href="#L461">unregisterEventFD</a></li></ul></li><li><a class="docs" href="../during.fill.html">[Docs] </a><a href="#L483">fill</a></li><li><a class="docs" href="../during.prepNop.html">[Docs] </a><a href="#L502">prepNop</a></li><li><a class="docs" href="../during.prepReadv.html">[Docs] </a><a href="#L519">prepReadv</a></li><li><a class="docs" href="../during.prepWritev.html">[Docs] </a><a href="#L539">prepWritev</a></li><li><a class="docs" href="../during.prepReadFixed.html">[Docs] </a><a href="#L560">prepReadFixed</a></li><li><a class="docs" href="../during.prepWriteFixed.html">[Docs] </a><a href="#L582">prepWriteFixed</a></li><li><a class="docs" href="../during.prepSendMsg.html">[Docs] </a><a href="#L603">prepSendMsg</a></li><li><a class="docs" href="../during.prepRecvMsg.html">[Docs] </a><a href="#L620">prepRecvMsg</a></li><li><a href="#L642">dispose</a></li><li><a href="#L658">UringDesc</a><ul><li><a href="#L662">fd</a></li><li><a href="#L663">refs</a></li><li><a href="#L664">params</a></li><li><a href="#L665">sq</a></li><li><a href="#L666">cq</a></li><li><a href="#L668">regBuffers</a></li><li><a href="#L670">~this</a></li><li><a href="#L679">mapRings</a></li></ul></li><li><a href="#L754">SubmissionQueue</a><ul><li><a href="#L759">khead</a></li><li><a href="#L760">ktail</a></li><li><a href="#L761">kflags</a></li><li><a href="#L762">kdropped</a></li><li><a href="#L763">ringMask</a></li><li><a href="#L766">ring</a></li><li><a href="#L767">ringSize</a></li><li><a href="#L770">sqes</a></li><li><a href="#L772">localTail</a></li><li><a href="#L774">head</a></li><li><a href="#L775">tail</a></li><li><a href="#L777">flushTail</a></li><li><a href="#L784">flags</a></li><li><a href="#L789">full</a></li><li><a href="#L791">length</a></li><li><a href="#L793">capacity</a></li><li><a href="#L795">put</a></li><li><a href="#L802">put</a></li><li><a href="#L811">putWith</a></li><li><a href="#L816">putWith</a></li><li><a href="#L821">putWithImpl</a></li><li><a href="#L829">dropped</a></li></ul></li><li><a href="#L832">CompletionQueue</a><ul><li><a href="#L837">khead</a></li><li><a href="#L838">ktail</a></li><li><a href="#L839">koverflow</a></li><li><a href="#L840">cqes</a></li><li><a href="#L842">ringMask</a></li><li><a href="#L845">ring</a></li><li><a href="#L846">ringSize</a></li><li><a href="#L848">localHead</a></li><li><a href="#L850">head</a></li><li><a href="#L851">tail</a></li><li><a href="#L853">flushHead</a></li><li><a href="#L860">empty</a></li><li><a href="#L862">front</a></li><li><a href="#L868">popFront</a></li><li><a href="#L876">length</a></li><li><a href="#L878">overflow</a></li></ul></li><li><a href="#L882">atomicStore</a></li><li><a href="#L891">atomicLoad</a></li><li><a href="#L901">std.range.primitives</a></li></ul></li></ul></div></div></div>
 	</div>
 	<div id="page-footer">Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a></div>
 </body>
