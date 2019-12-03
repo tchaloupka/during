@@ -625,9 +625,23 @@ void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags)
     entry.msg_flags = flags;
 }
 
+/**
+ * Prepares `fsync` operation.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      fd = file descriptor of a file to call `fsync` on
+ *      flags = `fsync` operation flags
+ */
+void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.NORMAL)
+{
+    entry.opcode = Operation.FSYNC;
+    entry.fd = fd;
+    entry.fsync_flags = flags;
+}
+
 // void prepPollAdd(ref SubmissionEntry entry, ...)
 // void prepPollRemove(ref SubmissionEntry entry, ...)
-// void prepFsync(ref SubmissionEntry entry, ...)
 // void prepSyncFileRange(ref SubmissionEntry entry, ...)
 // void prepTimeout(ref SubmissionEntry entry, ...)
 // void prepTimeoutRemove(ref SubmissionEntry entry, ...)

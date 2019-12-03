@@ -114,8 +114,15 @@ enum ReadWriteFlags : int
 
 enum FsyncFlags : uint
 {
-    NORMAL      = 0,        /// normal file integrity sync
-    DATASYNC    = (1 << 0)  /// data sync only semantics
+    /// Normal file integrity sync
+    NORMAL      = 0,
+
+    /**
+     * `fdatasync` semantics.
+     *
+     * See_Also: `fsync(2)` for details
+     */
+    DATASYNC    = (1 << 0)
 }
 
 /** Possible poll event flags.
@@ -213,7 +220,16 @@ enum SubmissionEntryFlags : ubyte
 {
     NONE        = 0,
     FIXED_FILE  = 1U << 0,  /// IOSQE_FIXED_FILE: use fixed fileset
-    IO_DRAIN    = 1U << 1,  /// IOSQE_IO_DRAIN: issue after inflight IO (from Linux 5.2)
+
+    /**
+     * `IOSQE_IO_DRAIN`: issue after inflight IO
+     *
+     * If a request is marked with `IO_DRAIN`, then previous commands must complete before this one
+     * is issued. Subsequent requests are not started until the drain has completed.
+     *
+     * Note: available from Linux 5.2
+     */
+    IO_DRAIN    = 1U << 1,
     IO_LINK     = 1U << 2,  /// IOSQE_IO_LINK: links next sqe (from Linux 5.3)
 }
 
