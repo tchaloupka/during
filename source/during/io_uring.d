@@ -230,7 +230,20 @@ enum SubmissionEntryFlags : ubyte
      * Note: available from Linux 5.2
      */
     IO_DRAIN    = 1U << 1,
-    IO_LINK     = 1U << 2,  /// IOSQE_IO_LINK: links next sqe (from Linux 5.3)
+
+    /**
+     * `IOSQE_IO_LINK`
+     *
+     * If set, the next SQE in the ring will depend on this SQE. A dependent SQE will not be started
+     * until the parent SQE has completed. If the parent SQE fails, then a dependent SQE will be
+     * failed without being started. Link chains can be arbitrarily long, the chain spans any new
+     * SQE that continues tohave the IOSQE_IO_LINK flag set. Once an SQE is encountered that does
+     * not have this flag set, that defines the end of the chain. This features allows to form
+     * dependencies between individual SQEs.
+     *
+     * Note: available from Linux 5.3
+     */
+    IO_LINK     = 1U << 2,
 }
 
 /**
@@ -507,10 +520,22 @@ enum RegisterOpCode : uint
      */
     UNREGISTER_FILES        = 3,
 
-    /// `IORING_REGISTER_EVENTFD` (from Linux 5.2)
+    /**
+     * `IORING_REGISTER_EVENTFD`
+     *
+     * Registers eventfd that would be used to notify about completions on io_uring itself.
+     *
+     * Note: available from Linux 5.2
+     */
     REGISTER_EVENTFD        = 4,
 
-    /// `IORING_UNREGISTER_EVENTFD` (from Linux 5.2)
+    /**
+     * `IORING_UNREGISTER_EVENTFD`
+     *
+     * Unregisters previously registered eventfd.
+     *
+     * Note: available from Linux 5.2
+     */
     UNREGISTER_EVENTFD      = 5,
 
     /// `IORING_REGISTER_FILES_UPDATE` (from Linux 5.5)

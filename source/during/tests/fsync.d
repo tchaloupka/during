@@ -51,17 +51,18 @@ unittest
     int off;
     foreach (i; 0..4)
     {
-        io.putWith((ref SubmissionEntry e, int fd, iovec v, int off)
+        io.putWith((ref SubmissionEntry e, int fd, iovec* v, int off)
         {
-            e.prepWritev(fd, off, v);
-        }, fd, iovecs[i], off);
+            e.prepWritev(fd, *v, off);
+            e.user_data = 1;
+        }, fd, &iovecs[i], off);
         off += 4096;
     }
 
     io.putWith((ref SubmissionEntry e, int fd)
     {
         e.prepFsync(fd, FsyncFlags.DATASYNC);
-        e.user_data = 1;
+        e.user_data = 2;
         e.flags = SubmissionEntryFlags.IO_DRAIN;
     }, fd);
 
@@ -94,8 +95,8 @@ unittest
             else throw new Exception("kernel doesn't support IOSQE_IO_DRAIN");
         }
         assert(io.front.res >= 0);
-        if (i < 4) assert(io.front.user_data == 0, "unexpected op completion");
-        else assert(io.front.user_data == 1, "unexpected op completion");
+        if (i < 4) assert(io.front.user_data == 1, "unexpected op completion");
+        else assert(io.front.user_data == 2, "unexpected op completion");
 
         io.popFront();
     }

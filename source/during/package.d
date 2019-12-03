@@ -516,15 +516,24 @@ void prepNop(ref SubmissionEntry entry) @safe
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepReadv(ref SubmissionEntry entry, int fd, ulong offset, iovec[] buffer...)
+void prepReadv(V)(ref SubmissionEntry entry, int fd, ref V buffer, ulong offset)
+    if (is(V == iovec[]) || is(V == iovec))
 {
-    assert(buffer.length, "Empty buffer");
-    assert(buffer.length < uint.max, "Too many iovec buffers");
     entry.opcode = Operation.READV;
     entry.fd = fd;
     entry.off = offset;
-    entry.addr = cast(ulong)(cast(void*)&buffer[0]);
-    entry.len = cast(uint)buffer.length;
+    static if (is(V == iovec[]))
+    {
+        assert(buffer.length, "Empty buffer");
+        assert(buffer.length < uint.max, "Too many iovec buffers");
+        entry.addr = cast(ulong)(cast(void*)&buffer[0]);
+        entry.len = cast(uint)buffer.length;
+    }
+    else
+    {
+        entry.addr = cast(ulong)(cast(void*)&buffer);
+        entry.len = 1;
+    }
 }
 
 /**
@@ -536,15 +545,24 @@ void prepReadv(ref SubmissionEntry entry, int fd, ulong offset, iovec[] buffer..
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepWritev(ref SubmissionEntry entry, int fd, ulong offset, iovec[] buffer...)
+void prepWritev(V)(ref SubmissionEntry entry, int fd, ref V buffer, ulong offset)
+    if (is(V == iovec[]) || is(V == iovec))
 {
-    assert(buffer.length, "Empty buffer");
-    assert(buffer.length < uint.max, "Too many iovec buffers");
     entry.opcode = Operation.WRITEV;
     entry.fd = fd;
     entry.off = offset;
-    entry.addr = cast(ulong)(cast(void*)&buffer[0]);
-    entry.len = cast(uint)buffer.length;
+    static if (is(V == iovec[]))
+    {
+        assert(buffer.length, "Empty buffer");
+        assert(buffer.length < uint.max, "Too many iovec buffers");
+        entry.addr = cast(ulong)(cast(void*)&buffer[0]);
+        entry.len = cast(uint)buffer.length;
+    }
+    else
+    {
+        entry.addr = cast(ulong)(cast(void*)&buffer);
+        entry.len = 1;
+    }
 }
 
 /**
@@ -600,7 +618,7 @@ void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buf
  *      msg = message to operate with
  *      flags = `sendmsg` operation flags
  */
-void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags)
+void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags = 0)
 {
     entry.opcode = Operation.SENDMSG;
     entry.fd = fd;
@@ -617,7 +635,7 @@ void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags)
  *      msg = message to operate with
  *      flags = `recvmsg` operation flags
  */
-void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags)
+void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags = 0)
 {
     entry.opcode = Operation.RECVMSG;
     entry.fd = fd;
@@ -642,11 +660,51 @@ void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.
 
 // void prepPollAdd(ref SubmissionEntry entry, ...)
 // void prepPollRemove(ref SubmissionEntry entry, ...)
+
+// /**
+//  * Prepares `sync_file_range(2)` operation.
+//  */
 // void prepSyncFileRange(ref SubmissionEntry entry, ...)
+
+// /**
+//  * This command is special in that it doesn’t mirror an existing system call, rather it adds support
+//  * fortriggering a timeout condition in the CQ ring to wake an application sleeping on events.  The
+//  * timeout is one of twoevents - a number of completions, or a specific timeout (absolute or
+//  * relative). Whatever event triggers first will queue acompletion event in the CQ ring and wake up
+//  * waiters.
+//  *
+//  * Applications may delete existing timeouts before they occur with `TIMEOUT_REMOVE` operation.
+//  */
 // void prepTimeout(ref SubmissionEntry entry, ...)
+
+// /**
+//  * Prepares operations to remove existing timeout registered using `TIMEOUT`operation.
+//  */
 // void prepTimeoutRemove(ref SubmissionEntry entry, ...)
+
+// /**
+//  * Prepares `accept4(2)` operation.
+//  */
 // void prepAccept(ref SubmissionEntry entry, ...)
+
+// /**
+//  * Prepares operation that cancels existing async work.
+//  *
+//  * This works with any read/write request, accept,send/recvmsg, etc. There’s an important
+//  * distinction to make here with the different kinds of commands. A read/write on a regular file
+//  * will generally be waiting for IO completion in an uninterruptible state. This means it’ll ignore
+//  * any signals or attempts to cancel it, as these operations are uncancellable. io_uring can cancel
+//  * these operations if they haven’t yet been started. If they have been started, cancellations on
+//  * these will fail. Network IO will generally be waiting interruptibly, and can hence be cancelled
+//  * at any time. The completion event for this request will have a result of 0 if done successfully,
+//  * `-EALREADY` if the operation is already in progress, and `-ENOENT` if the original request
+//  * specified cannot be found. For cancellation requests that return `-EALREADY`, io_uring may or may
+//  * not cause this request to be stopped sooner. For blocking IO, the original request will complete
+//  * as it originally would have. For IO that is cancellable, it will terminate sooner if at all
+//  * possible.
+//  */
 // void prepAsyncCancel(ref SubmissionEntry entry, ...)
+
 // void prepLinkTimeout(ref SubmissionEntry entry, ...)
 // void prepConnect(ref SubmissionEntry entry, ...)
 
