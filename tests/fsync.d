@@ -18,6 +18,7 @@ unittest
 
     auto fname = getTestFileName!"fsync_single";
     auto fd = openFile(fname, O_CREAT | O_WRONLY);
+    scope (exit) unlink(&fname[0]);
 
     auto ret = io
         .putWith!((ref SubmissionEntry e, int fd) => e.prepFsync(fd))(fd)
@@ -28,7 +29,6 @@ unittest
     io.popFront();
 
     close(fd);
-    unlink(&fname[0]);
 }
 
 @("barier")
@@ -41,6 +41,7 @@ unittest
 
     auto fname = getTestFileName!"fsync_barier";
     auto fd = openFile(fname, O_CREAT | O_WRONLY);
+    scope (exit) unlink(&fname[0]);
 
     iovec[4] iovecs;
     foreach (i; 0..NUM_WRITES)
@@ -105,5 +106,4 @@ unittest
     }
 
     close(fd);
-    unlink(&fname[0]);
 }

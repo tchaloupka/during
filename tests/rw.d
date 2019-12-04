@@ -7,7 +7,7 @@ import core.stdc.stdio;
 import core.stdc.stdlib;
 import core.sys.linux.fcntl;
 import core.sys.posix.sys.uio : iovec;
-import core.sys.posix.unistd : close, read, write;
+import core.sys.posix.unistd : close, read, unlink, write;
 import std.algorithm : copy, equal, map;
 import std.range : iota;
 
@@ -16,6 +16,11 @@ import std.range : iota;
 @("readv")
 unittest
 {
+    // read it and check if read correctly
+    Uring io;
+    auto res = io.setup(4);
+    assert(res >= 0, "Error initializing IO");
+
     // prepare some file
     auto fname = getTestFileName!"readv_test";
     ubyte[256] buf;
@@ -24,13 +29,7 @@ unittest
     auto wr = write(file, &buf[0], buf.length);
     assert(wr == buf.length);
     close(file);
-
-    scope (exit) remove(&fname[0]);
-
-    // read it and check if read correctly
-    Uring io;
-    auto res = io.setup(16);
-    assert(res >= 0, "Error initializing IO");
+    scope (exit) unlink(&fname[0]);
 
     file = openFile(fname, O_RDONLY);
     scope (exit) close(file);
@@ -64,22 +63,24 @@ unittest
 @("writev")
 unittest
 {
+    // prepare uring
+    Uring io;
+    auto res = io.setup(4);
+    assert(res >= 0, "Error initializing IO");
+
     // prepare file to write to
     auto fname = getTestFileName!"writev_test";
     auto f = openFile(fname, O_CREAT | O_WRONLY);
+    scope (exit) unlink(&fname[0]);
+
+    // prepare chunk buffer
+    ubyte[32] buffer;
+    iovec v;
+    v.iov_base = cast(void*)&buffer[0];
+    v.iov_len = buffer.length;
 
     {
         scope (exit) close(f);
-        // prepare chunk buffer
-        ubyte[32] buffer;
-        iovec v;
-        v.iov_base = cast(void*)&buffer[0];
-        v.iov_len = buffer.length;
-
-        // prepare uring
-        Uring io;
-        auto res = io.setup(16);
-        assert(res >= 0, "Error initializing IO");
 
         // write some data to file
         foreach (i; 0..8)
@@ -100,11 +101,10 @@ unittest
     // now check back file content
     ubyte[257] readbuf;
     f = openFile(fname, O_RDONLY);
+    scope (exit) close(f);
     auto r = read(f, cast(void*)&readbuf[0], 257);
     assert(r == 256);
     assert(readbuf[0..256].equal(iota(0, 256)));
-    close(f);
-    remove(&fname[0]);
 }
 
 @("read/write fixed")
@@ -122,6 +122,11 @@ unittest
         e.user_data = data;
     }
 
+    // prepare uring
+    Uring io;
+    auto res = io.setup(4);
+    assert(res >= 0, "Error initializing IO");
+
     // prepare some file content
     auto fname = getTestFileName!"rw_fixed_test";
     auto tgtFname = getTestFileName!"rw_fixed_test_copy";
@@ -132,25 +137,32 @@ unittest
     assert(wr == buf.length);
     close(file);
 
+    scope (exit)
     {
-        // prepare uring
-        Uring io;
-        auto res = io.setup(16);
-        assert(res >= 0, "Error initializing IO");
+        unlink(&fname[0]);
+        unlink(&tgtFname[0]);
+    }
 
-        // register buffer
-        enum batch_size = 64;
-        ubyte* bp = (cast(ubyte*)malloc(2*batch_size));
-        assert(bp);
-        ubyte[] buffer = bp[0..batch_size*2];
-        auto r = io.registerBuffers(buffer);
-        assert(r == 0);
+    // register buffer
+    enum batch_size = 64;
+    ubyte* bp = (cast(ubyte*)malloc(2*batch_size));
+    assert(bp);
+    ubyte[] buffer = bp[0..batch_size*2];
+    auto r = io.registerBuffers(buffer);
+    assert(r == 0);
 
-        // open copy files
-        auto srcFile = openFile(fname, O_RDONLY);
-        auto tgtFile = openFile(tgtFname, O_CREAT | O_WRONLY);
+    // open copy files
+    auto srcFile = openFile(fname, O_RDONLY);
+    auto tgtFile = openFile(tgtFname, O_CREAT | O_WRONLY);
 
-        // copy file
+    // copy file
+    {
+        scope (exit)
+        {
+            close(srcFile);
+            close(tgtFile);
+        }
+
         ulong roff, woff;
         bool waitWrite, waitRead;
         uint lastRead;
@@ -206,20 +218,15 @@ unittest
                 io.submit(2);
             }
         }
-
-        r = io.unregisterBuffers();
-        assert(r == 0);
-
-        close(srcFile);
-        close(tgtFile);
-        remove(&fname[0]);
     }
+
+    r = io.unregisterBuffers();
+    assert(r == 0);
 
     // and check content of the copy
     file = openFile(tgtFname, O_RDONLY);
-    auto r = read(file, cast(void*)&buf[0], 256);
-    assert(r == 256);
+    scope (exit) close(file);
+    auto rd = read(file, cast(void*)&buf[0], 256);
+    assert(rd == 256);
     assert(buf[0..256].equal(iota(0, 256)));
-    close(file);
-    remove(&tgtFname[0]);
 }

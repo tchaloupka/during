@@ -23,7 +23,7 @@ d:
   # - dmd-beta
 
 # script:
-#   - dub test --compiler=${DC}
+#   - dub test --compiler=${DC} -- -t 1
 
 jobs:
   include:
@@ -32,7 +32,7 @@ jobs:
     #     - ./betterc_ut.sh
     # - stage: codecov
     #   script:
-    #     - dub test -b unittest-cov --compiler=${DC}
+    #     - dub test -b unittest-cov --compiler=${DC} -- -t 1
     #     - bash <(curl -s https://codecov.io/bash)
     - stage: docs
       script:

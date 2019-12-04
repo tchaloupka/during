@@ -122,10 +122,12 @@ unittest
     iota(0, 16).map!(a => MyOp(Operation.NOP, a)).copy(io);
     assert(io.capacity == 0);
     assert(io.full);
-    io.submit(0); // just submit
+    res = io.submit(0); // just submit
+    assert(res == 16);
     iota(16, 32).map!(a => MyOp(Operation.NOP, a)).copy(io);
-    io.submit(32); // submit and wait
-
+    res = io.submit(32); // submit and wait
+    assert(res == 16);
     assert(!io.empty);
+    assert(io.length == 32);
     assert(io.map!(c => c.user_data).equal(iota(0, 32)));
 }

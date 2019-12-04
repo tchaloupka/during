@@ -12,6 +12,7 @@ version (unittest)
             runTests!("RW tests", during.tests.rw);
             runTests!("Fsync tests", during.tests.fsync);
             runTests!("Msg tests", during.tests.msg);
+            runTests!("Thread tests", during.tests.thread);
             printf("All unit tests have been run successfully.\n");
         }
 

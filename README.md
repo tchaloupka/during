@@ -57,3 +57,23 @@ to your `dub.sdl` project file, or
 ```
 
 to your `dub.json` project file.
+
+## Running tests
+
+For a `betterC` tests run:
+
+```
+./betterc_ut.sh
+```
+
+Dub doesn't handle correctly packages with `package.d` and is too much hassle to ron `betterC` tests with it, so the script..
+
+For a normal tests, just run:
+
+```
+dub test
+```
+
+**Note:** As we're using [silly](http://code.dlang.org/packages/silly) as a unittest runner, it runs tests in multiple threads by default.
+This can be a problem as each `io_uring` consumes some pages from `memlock` limit (see `ulimit -l`).
+To avoid that, add `-- -t 1` to the command to run it single threaded.
