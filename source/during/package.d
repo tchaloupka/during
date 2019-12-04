@@ -161,10 +161,11 @@ struct Uring
      * it's needed to call `submit()`.
      *
      * Params:
+     *     FN    = Function to fill next entry in queue by `ref` (should be faster).
+     *             It is expected to be in a form of `void function(ARGS)(ref SubmissionEntry, auto ref ARGS)`.
+     *             Note that in this case queue entry is cleaned first before function is called.
      *     entry = Custom built `SubmissionEntry` to be posted as is.
      *             Note that in this case it is copied whole over one in the `SubmissionQueue`.
-     *     fn    = Function to fill next entry in queue by `ref` (should be faster).
-     *             Note that in this case queue entry is cleaned first before function is called.
      *     args  = Optional arguments passed to the function
      *
      * Returns: reference to `Uring` structure so it's possible to chain multiple commands.
@@ -177,18 +178,11 @@ struct Uring
     }
 
     /// ditto
-    ref Uring putWith(ARGS...)(void delegate(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args) return
+    ref Uring putWith(alias FN, ARGS...)(auto ref ARGS args) return
     {
+        import std.functional : forward;
         checkInitialized();
-        payload.sq.putWith(fn, args);
-        return this;
-    }
-
-    /// ditto
-    ref Uring putWith(ARGS...)(void function(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args) return
-    {
-        checkInitialized();
-        payload.sq.putWith(fn, args);
+        payload.sq.putWith!FN(forward!args);
         return this;
     }
 
@@ -516,7 +510,7 @@ void prepNop(ref SubmissionEntry entry) @safe
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepReadv(V)(ref SubmissionEntry entry, int fd, ref V buffer, ulong offset)
+void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset)
     if (is(V == iovec[]) || is(V == iovec))
 {
     entry.opcode = Operation.READV;
@@ -545,7 +539,7 @@ void prepReadv(V)(ref SubmissionEntry entry, int fd, ref V buffer, ulong offset)
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepWritev(V)(ref SubmissionEntry entry, int fd, ref V buffer, ulong offset)
+void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset)
     if (is(V == iovec[]) || is(V == iovec))
 {
     entry.opcode = Operation.WRITEV;
@@ -901,21 +895,23 @@ struct SubmissionQueue
         localTail++;
     }
 
-    void putWith(ARGS...)(void delegate(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args)
+    private void putWith(alias FN, ARGS...)(auto ref ARGS args)
     {
-        putWithImpl(fn, args);
-    }
+        import std.traits : Parameters, ParameterStorageClass, ParameterStorageClassTuple;
 
-    void putWith(ARGS...)(void function(ref SubmissionEntry, ARGS) nothrow @nogc fn, ARGS args)
-    {
-        putWithImpl(fn, args);
-    }
+        static assert(
+            Parameters!FN.length >= 1
+            && is(Parameters!FN[0] == SubmissionEntry)
+            && ParameterStorageClassTuple!FN[0] == ParameterStorageClass.ref_,
+            "Alias function must accept at least `ref SubmissionEntry`");
 
-    private void putWithImpl(FN, ARGS...)(FN fn, ARGS args)
-    {
+        static assert(
+            is(typeof(FN(sqes[tail & ringMask], args))),
+            "Provided function is not callable with " ~ (Parameters!((ref SubmissionEntry e, ARGS args) {})).stringof);
+
         assert(!full, "SumbissionQueue is full");
         sqes[tail & ringMask].clear();
-        fn(sqes[tail & ringMask], args);
+        FN(sqes[tail & ringMask], args);
         localTail++;
     }
 

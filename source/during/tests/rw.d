@@ -42,11 +42,10 @@ unittest
     foreach (i; 0..8) // 8 operations must complete to read whole file
     {
         io
-            .putWith(
+            .putWith!(
                 (ref SubmissionEntry e, int f, int i, iovec* v)
-                    => e.prepReadv(f, *v, i*32),
-                file, i, &v
-            ).submit(1);
+                    => e.prepReadv(f, *v, i*32))(file, i, &v)
+            .submit(1);
         assert(io.front.res == 32); // number of bytes read
         assert(readbuf[] == buf[i*32..(i+1)*32]);
         io.popFront();
@@ -55,11 +54,10 @@ unittest
     // try to read after the file content too
     assert(io.empty);
     io
-        .putWith(
+        .putWith!(
             (ref SubmissionEntry e, int f, iovec* v)
-                => e.prepReadv(f, *v, 256),
-            file, &v
-        ).submit(1);
+                => e.prepReadv(f, *v, 256))(file, &v)
+        .submit(1);
     assert(io.front.res == 0); // ok we've reached the EOF
 }
 
@@ -157,7 +155,7 @@ unittest
         bool waitWrite, waitRead;
         uint lastRead;
         int bidx;
-        io.putWith(&readOp, srcFile, roff, buffer[bidx*batch_size..bidx*batch_size+batch_size], 1).submit(1);
+        io.putWith!readOp(srcFile, roff, buffer[bidx*batch_size..bidx*batch_size+batch_size], 1).submit(1);
         waitRead = true;
         while (true)
         {
@@ -194,14 +192,14 @@ unittest
                 }
 
                 // start write op (with same buffer as used in read op)
-                io.putWith(&writeOp, tgtFile, woff, buffer[bidx*batch_size..bidx*batch_size+batch_size][0..lastRead], 2);
+                io.putWith!writeOp(tgtFile, woff, buffer[bidx*batch_size..bidx*batch_size+batch_size][0..lastRead], 2);
                 waitWrite = true;
 
                 // switch buffers
                 bidx = (bidx+1) % 2;
 
                 // start next read op
-                io.putWith(&readOp, srcFile, roff, buffer[bidx*batch_size..bidx*batch_size+batch_size], 1);
+                io.putWith!readOp(srcFile, roff, buffer[bidx*batch_size..bidx*batch_size+batch_size], 1);
                 waitRead = true;
 
                 // and submit both

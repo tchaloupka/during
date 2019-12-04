@@ -26,7 +26,7 @@ unittest
     io
         .put(entry)
         .put(MyOp(Operation.NOP, 2))
-        .putWith((ref SubmissionEntry e) { e.prepNop(); e.user_data = 42; })
+        .putWith!((ref SubmissionEntry e) { e.prepNop(); e.user_data = 42; })
         .submit(1); // submit operations and wait for at least 1 completed
 
     // check completions

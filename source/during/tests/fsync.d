@@ -20,7 +20,7 @@ unittest
     auto fd = openFile(fname, O_CREAT | O_WRONLY);
 
     auto ret = io
-        .putWith((ref SubmissionEntry e, int fd) => e.prepFsync(fd), fd)
+        .putWith!((ref SubmissionEntry e, int fd) => e.prepFsync(fd))(fd)
         .submit(1);
     assert(ret == 1);
     assert(io.length == 1);
@@ -52,22 +52,22 @@ unittest
     int off;
     foreach (i; 0..NUM_WRITES)
     {
-        io.putWith((ref SubmissionEntry e, int fd, iovec* v, int off)
+        io.putWith!((ref SubmissionEntry e, int fd, ref iovec v, int off)
         {
-            e.prepWritev(fd, *v, off);
+            e.prepWritev(fd, v, off);
             e.user_data = 1;
-        }, fd, &iovecs[i], off);
+        })(fd, iovecs[i], off);
         off += 4096;
     }
 
-    io.putWith((ref SubmissionEntry e, int fd)
+    io.putWith!((ref SubmissionEntry e, int fd)
     {
         e.prepFsync(fd);//, FsyncFlags.DATASYNC);
         e.user_data = 2;
         // TODO: Works with IO_LINK but not without it: See: https://github.com/axboe/liburing/issues/33
         e.flags = cast(SubmissionEntryFlags)(SubmissionEntryFlags.IO_DRAIN | SubmissionEntryFlags.IO_LINK);
         // e.flags = SubmissionEntryFlags.IO_DRAIN;
-    }, fd);
+    })(fd);
 
     auto ret = io.submit(NUM_WRITES + 1);
     if (ret < 0)

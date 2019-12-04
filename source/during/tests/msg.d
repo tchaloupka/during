@@ -15,8 +15,6 @@ import std.range;
 @("send/recv")
 unittest
 {
-    // TODO: sendmsg/recvmsg (Linux 5.3)
-
     int[2] fd;
     int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
     assert(ret == 0, "socketpair()");
@@ -44,24 +42,20 @@ unittest
         .copy((cast(ubyte*)v[1].iov_base)[0..256]);
 
     // add recvmsg
-    io.putWith(
-        (ref SubmissionEntry e, int fd, msghdr* m)
+    io.putWith!(
+        (ref SubmissionEntry e, int fd, ref msghdr m)
         {
-            e.prepRecvMsg(fd, *m);
+            e.prepRecvMsg(fd, m);
             e.user_data = 0;
-        },
-        fd[0], &msg[0]
-    );
+        })(fd[0], msg[0]);
 
     // add sendmsg
-    io.putWith(
-        (ref SubmissionEntry e, int fd, msghdr m)
+    io.putWith!(
+        (ref SubmissionEntry e, int fd, ref msghdr m)
         {
             e.prepSendMsg(fd, m);
             e.user_data = 1;
-        },
-        fd[1], msg[1]
-    );
+        })(fd[1], msg[1]);
 
     ret = io.submit(2);
     assert(ret == 2);
