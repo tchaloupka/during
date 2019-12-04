@@ -34,6 +34,7 @@ unittest
 @("barier")
 unittest
 {
+    enum NUM_WRITES = 4;
     Uring io;
     auto res = io.setup();
     assert(res >= 0, "Error initializing IO");
@@ -42,14 +43,14 @@ unittest
     auto fd = openFile(fname, O_CREAT | O_WRONLY);
 
     iovec[4] iovecs;
-    foreach (i; 0..4)
+    foreach (i; 0..NUM_WRITES)
     {
         iovecs[i].iov_base = malloc(4096);
         iovecs[i].iov_len = 4096;
     }
 
     int off;
-    foreach (i; 0..4)
+    foreach (i; 0..NUM_WRITES)
     {
         io.putWith((ref SubmissionEntry e, int fd, iovec* v, int off)
         {
@@ -61,12 +62,14 @@ unittest
 
     io.putWith((ref SubmissionEntry e, int fd)
     {
-        e.prepFsync(fd, FsyncFlags.DATASYNC);
+        e.prepFsync(fd);//, FsyncFlags.DATASYNC);
         e.user_data = 2;
-        e.flags = SubmissionEntryFlags.IO_DRAIN;
+        // TODO: Works with IO_LINK but not without it: See: https://github.com/axboe/liburing/issues/33
+        e.flags = cast(SubmissionEntryFlags)(SubmissionEntryFlags.IO_DRAIN | SubmissionEntryFlags.IO_LINK);
+        // e.flags = SubmissionEntryFlags.IO_DRAIN;
     }, fd);
 
-    auto ret = io.submit(5);
+    auto ret = io.submit(NUM_WRITES + 1);
     if (ret < 0)
     {
         if (ret == -EINVAL)
@@ -80,23 +83,22 @@ unittest
         }
         assert(0, "submit failed");
     }
-    else assert(ret == 5);
+    else assert(ret == NUM_WRITES + 1);
 
-    assert(io.length == 5);
-    foreach (i; 0..5)
+    assert(io.length == NUM_WRITES + 1);
+    foreach (i; 0..NUM_WRITES + 1)
     {
-        // TODO: doesn't work on 5.3.11 where it should.. (available from 5.2)
         if (io.front.res == -EINVAL)
         {
             version (D_BetterC)
             {
                 errmsg = "kernel doesn't support IOSQE_IO_DRAIN";
-                return;
+                break;
             }
             else throw new Exception("kernel doesn't support IOSQE_IO_DRAIN");
         }
         assert(io.front.res >= 0);
-        if (i < 4) assert(io.front.user_data == 1, "unexpected op completion");
+        if (i < NUM_WRITES) assert(io.front.user_data == 1, "unexpected op completion");
         else assert(io.front.user_data == 2, "unexpected op completion");
 
         io.popFront();
