@@ -62,77 +62,79 @@
 <a class="br" href="#L34" id="L34">34 </a>@(<span class="str">&quot;barier&quot;</span>)
 <a class="br" href="#L35" id="L35">35 </a><span class="kwrd">unittest</span>
 <a class="br" href="#L36" id="L36">36 </a>{
-<a class="br" href="#L37" id="L37">37 </a>    <a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> <span class="hid">io</span>;
-<a class="br" href="#L38" id="L38">38 </a>    <span class="kwrd">auto</span> <span class="hid">res</span> = <span class="hid">io.setup</span>();
-<a class="br" href="#L39" id="L39">39 </a>    <span class="kwrd">assert</span>(<span class="hid">res</span> &gt;= <span class="num">0</span>, <span class="str">&quot;Error initializing IO&quot;</span>);
-<a class="br" href="#L40" id="L40">40 </a>
-<a class="br" href="#L41" id="L41">41 </a>    <span class="kwrd">auto</span> <span class="hid">fname</span> = <a class="hid" href="during.tests.base.d.html#L12" title="during.tests.base.getTestFileName">getTestFileName</a>!<span class="str">&quot;fsync_barier&quot;</span>;
-<a class="br" href="#L42" id="L42">42 </a>    <span class="kwrd">auto</span> <span class="hid">fd</span> = <a class="hid" href="during.tests.base.d.html#L33" title="during.tests.base.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_CREAT</span> | <span class="hid">O_WRONLY</span>);
-<a class="br" href="#L43" id="L43">43 </a>
-<a class="br" href="#L44" id="L44">44 </a>    <span class="hid">iovec</span>[<span class="num">4</span>] <span class="hid">iovecs</span>;
-<a class="br" href="#L45" id="L45">45 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">4</span>)
-<a class="br" href="#L46" id="L46">46 </a>    {
-<a class="br" href="#L47" id="L47">47 </a>        <span class="hid">iovecs</span>[<span class="hid">i</span>].<span class="hid">iov_base</span> = <span class="hid">malloc</span>(<span class="num">4096</span>);
-<a class="br" href="#L48" id="L48">48 </a>        <span class="hid">iovecs</span>[<span class="hid">i</span>].<span class="hid">iov_len</span> = <span class="num">4096</span>;
-<a class="br" href="#L49" id="L49">49 </a>    }
-<a class="br" href="#L50" id="L50">50 </a>
-<a class="br" href="#L51" id="L51">51 </a>    <span class="type">int</span> <span class="hid">off</span>;
-<a class="br" href="#L52" id="L52">52 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">4</span>)
-<a class="br" href="#L53" id="L53">53 </a>    {
-<a class="br" href="#L54" id="L54">54 </a>        <span class="hid">io.putWith</span>((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="hid">iovec</span>* <span class="hid">v</span>, <span class="type">int</span> <span class="hid">off</span>)
-<a class="br" href="#L55" id="L55">55 </a>        {
-<a class="br" href="#L56" id="L56">56 </a>            <span class="hid">e.prepWritev</span>(<span class="hid">fd</span>, *<span class="hid">v</span>, <span class="hid">off</span>);
-<a class="br" href="#L57" id="L57">57 </a>            <span class="hid">e.user_data</span> = <span class="num">1</span>;
-<a class="br" href="#L58" id="L58">58 </a>        }, <span class="hid">fd</span>, &amp;<span class="hid">iovecs</span>[<span class="hid">i</span>], <span class="hid">off</span>);
-<a class="br" href="#L59" id="L59">59 </a>        <span class="hid">off</span> += <span class="num">4096</span>;
-<a class="br" href="#L60" id="L60">60 </a>    }
-<a class="br" href="#L61" id="L61">61 </a>
-<a class="br" href="#L62" id="L62">62 </a>    <span class="hid">io.putWith</span>((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>)
-<a class="br" href="#L63" id="L63">63 </a>    {
-<a class="br" href="#L64" id="L64">64 </a>        <span class="hid">e.prepFsync</span>(<span class="hid">fd</span>, <span class="hid">FsyncFlags.DATASYNC</span>);
-<a class="br" href="#L65" id="L65">65 </a>        <span class="hid">e.user_data</span> = <span class="num">2</span>;
-<a class="br" href="#L66" id="L66">66 </a>        <span class="hid">e.flags</span> = <span class="hid">SubmissionEntryFlags.IO_DRAIN</span>;
-<a class="br" href="#L67" id="L67">67 </a>    }, <span class="hid">fd</span>);
-<a class="br" href="#L68" id="L68">68 </a>
-<a class="br" href="#L69" id="L69">69 </a>    <span class="kwrd">auto</span> <span class="hid">ret</span> = <span class="hid">io.submit</span>(<span class="num">5</span>);
-<a class="br" href="#L70" id="L70">70 </a>    <span class="kwrd">if</span> (<span class="hid">ret</span> &lt; <span class="num">0</span>)
-<a class="br" href="#L71" id="L71">71 </a>    {
-<a class="br" href="#L72" id="L72">72 </a>        <span class="kwrd">if</span> (<span class="hid">ret</span> == -<span class="hid">EINVAL</span>)
-<a class="br" href="#L73" id="L73">73 </a>        {
-<a class="br" href="#L74" id="L74">74 </a>            <span class="kwrd">version</span> (<span class="hid">D_BetterC</span>)
-<a class="br" href="#L75" id="L75">75 </a>            {
-<a class="br" href="#L76" id="L76">76 </a>                <a class="hid" href="during.tests.base.d.html#L10" title="during.tests.base.errmsg">errmsg</a> = <span class="str">&quot;kernel may not support barrier fsync yet&quot;</span>;
-<a class="br" href="#L77" id="L77">77 </a>                <span class="kwrd">return</span>;
-<a class="br" href="#L78" id="L78">78 </a>            }
-<a class="br" href="#L79" id="L79">79 </a>            <span class="kwrd">else</span> <span class="kwrd">throw</span> <span class="kwrd">new</span> <span class="hid">Exception</span>(<span class="str">&quot;kernel may not support barrier fsync yet&quot;</span>);
-<a class="br" href="#L80" id="L80">80 </a>        }
-<a class="br" href="#L81" id="L81">81 </a>        <span class="kwrd">assert</span>(<span class="num">0</span>, <span class="str">&quot;submit failed&quot;</span>);
-<a class="br" href="#L82" id="L82">82 </a>    }
-<a class="br" href="#L83" id="L83">83 </a>    <span class="kwrd">else</span> <span class="kwrd">assert</span>(<span class="hid">ret</span> == <span class="num">5</span>);
-<a class="br" href="#L84" id="L84">84 </a>
-<a class="br" href="#L85" id="L85">85 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">5</span>);
-<a class="br" href="#L86" id="L86">86 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="num">5</span>)
-<a class="br" href="#L87" id="L87">87 </a>    {
-<a class="br" href="#L88" id="L88">88 </a>        <span class="com">// TODO: doesn't work on 5.3.11 where it should.. (available from 5.2)</span>
-<a class="br" href="#L89" id="L89">89 </a>        <span class="kwrd">if</span> (<span class="hid">io.front.res</span> == -<span class="hid">EINVAL</span>)
-<a class="br" href="#L90" id="L90">90 </a>        {
-<a class="br" href="#L91" id="L91">91 </a>            <span class="kwrd">version</span> (<span class="hid">D_BetterC</span>)
-<a class="br" href="#L92" id="L92">92 </a>            {
-<a class="br" href="#L93" id="L93">93 </a>                <a class="hid" href="during.tests.base.d.html#L10" title="during.tests.base.errmsg">errmsg</a> = <span class="str">&quot;kernel doesn't support IOSQE_IO_DRAIN&quot;</span>;
-<a class="br" href="#L94" id="L94">94 </a>                <span class="kwrd">return</span>;
-<a class="br" href="#L95" id="L95">95 </a>            }
-<a class="br" href="#L96" id="L96">96 </a>            <span class="kwrd">else</span> <span class="kwrd">throw</span> <span class="kwrd">new</span> <span class="hid">Exception</span>(<span class="str">&quot;kernel doesn't support IOSQE_IO_DRAIN&quot;</span>);
-<a class="br" href="#L97" id="L97">97 </a>        }
-<a class="br" href="#L98" id="L98">98 </a>        <span class="kwrd">assert</span>(<span class="hid">io.front.res</span> &gt;= <span class="num">0</span>);
-<a class="br" href="#L99" id="L99">99 </a>        <span class="kwrd">if</span> (<span class="hid">i</span> &lt; <span class="num">4</span>) <span class="kwrd">assert</span>(<span class="hid">io.front.user_data</span> == <span class="num">1</span>, <span class="str">&quot;unexpected op completion&quot;</span>);
-<a class="br" href="#L100" id="L100">100 </a>        <span class="kwrd">else</span> <span class="kwrd">assert</span>(<span class="hid">io.front.user_data</span> == <span class="num">2</span>, <span class="str">&quot;unexpected op completion&quot;</span>);
-<a class="br" href="#L101" id="L101">101 </a>
-<a class="br" href="#L102" id="L102">102 </a>        <span class="hid">io.popFront</span>();
-<a class="br" href="#L103" id="L103">103 </a>    }
-<a class="br" href="#L104" id="L104">104 </a>
-<a class="br" href="#L105" id="L105">105 </a>    <span class="hid">close</span>(<span class="hid">fd</span>);
-<a class="br" href="#L106" id="L106">106 </a>    <span class="hid">unlink</span>(&amp;<span class="hid">fname</span>[<span class="num">0</span>]);
-<a class="br" href="#L107" id="L107">107 </a>}</pre></div>
+<a class="br" href="#L37" id="L37">37 </a>    <span class="kwrd">enum</span> <span class="hid">NUM_WRITES</span> = <span class="num">4</span>;
+<a class="br" href="#L38" id="L38">38 </a>    <a class="hid" href="during.d.html#L73" title="during.Uring">Uring</a> <span class="hid">io</span>;
+<a class="br" href="#L39" id="L39">39 </a>    <span class="kwrd">auto</span> <span class="hid">res</span> = <span class="hid">io.setup</span>();
+<a class="br" href="#L40" id="L40">40 </a>    <span class="kwrd">assert</span>(<span class="hid">res</span> &gt;= <span class="num">0</span>, <span class="str">&quot;Error initializing IO&quot;</span>);
+<a class="br" href="#L41" id="L41">41 </a>
+<a class="br" href="#L42" id="L42">42 </a>    <span class="kwrd">auto</span> <span class="hid">fname</span> = <a class="hid" href="during.tests.base.d.html#L12" title="during.tests.base.getTestFileName">getTestFileName</a>!<span class="str">&quot;fsync_barier&quot;</span>;
+<a class="br" href="#L43" id="L43">43 </a>    <span class="kwrd">auto</span> <span class="hid">fd</span> = <a class="hid" href="during.tests.base.d.html#L33" title="during.tests.base.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_CREAT</span> | <span class="hid">O_WRONLY</span>);
+<a class="br" href="#L44" id="L44">44 </a>
+<a class="br" href="#L45" id="L45">45 </a>    <span class="hid">iovec</span>[<span class="num">4</span>] <span class="hid">iovecs</span>;
+<a class="br" href="#L46" id="L46">46 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="hid">NUM_WRITES</span>)
+<a class="br" href="#L47" id="L47">47 </a>    {
+<a class="br" href="#L48" id="L48">48 </a>        <span class="hid">iovecs</span>[<span class="hid">i</span>].<span class="hid">iov_base</span> = <span class="hid">malloc</span>(<span class="num">4096</span>);
+<a class="br" href="#L49" id="L49">49 </a>        <span class="hid">iovecs</span>[<span class="hid">i</span>].<span class="hid">iov_len</span> = <span class="num">4096</span>;
+<a class="br" href="#L50" id="L50">50 </a>    }
+<a class="br" href="#L51" id="L51">51 </a>
+<a class="br" href="#L52" id="L52">52 </a>    <span class="type">int</span> <span class="hid">off</span>;
+<a class="br" href="#L53" id="L53">53 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="hid">NUM_WRITES</span>)
+<a class="br" href="#L54" id="L54">54 </a>    {
+<a class="br" href="#L55" id="L55">55 </a>        <span class="hid">io.putWith</span>((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="hid">iovec</span>* <span class="hid">v</span>, <span class="type">int</span> <span class="hid">off</span>)
+<a class="br" href="#L56" id="L56">56 </a>        {
+<a class="br" href="#L57" id="L57">57 </a>            <span class="hid">e.prepWritev</span>(<span class="hid">fd</span>, *<span class="hid">v</span>, <span class="hid">off</span>);
+<a class="br" href="#L58" id="L58">58 </a>            <span class="hid">e.user_data</span> = <span class="num">1</span>;
+<a class="br" href="#L59" id="L59">59 </a>        }, <span class="hid">fd</span>, &amp;<span class="hid">iovecs</span>[<span class="hid">i</span>], <span class="hid">off</span>);
+<a class="br" href="#L60" id="L60">60 </a>        <span class="hid">off</span> += <span class="num">4096</span>;
+<a class="br" href="#L61" id="L61">61 </a>    }
+<a class="br" href="#L62" id="L62">62 </a>
+<a class="br" href="#L63" id="L63">63 </a>    <span class="hid">io.putWith</span>((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>)
+<a class="br" href="#L64" id="L64">64 </a>    {
+<a class="br" href="#L65" id="L65">65 </a>        <span class="hid">e.prepFsync</span>(<span class="hid">fd</span>);<span class="com">//, FsyncFlags.DATASYNC);</span>
+<a class="br" href="#L66" id="L66">66 </a>        <span class="hid">e.user_data</span> = <span class="num">2</span>;
+<a class="br" href="#L67" id="L67">67 </a>        <span class="com">// TODO: Works with IO_LINK but not without it: See: https://github.com/axboe/liburing/issues/33</span>
+<a class="br" href="#L68" id="L68">68 </a>        <span class="hid">e.flags</span> = <span class="kwrd">cast</span>(<span class="hid">SubmissionEntryFlags</span>)(<span class="hid">SubmissionEntryFlags.IO_DRAIN</span> | <span class="hid">SubmissionEntryFlags.IO_LINK</span>);
+<a class="br" href="#L69" id="L69">69 </a>        <span class="com">// e.flags = SubmissionEntryFlags.IO_DRAIN;</span>
+<a class="br" href="#L70" id="L70">70 </a>    }, <span class="hid">fd</span>);
+<a class="br" href="#L71" id="L71">71 </a>
+<a class="br" href="#L72" id="L72">72 </a>    <span class="kwrd">auto</span> <span class="hid">ret</span> = <span class="hid">io.submit</span>(<span class="hid">NUM_WRITES</span> + <span class="num">1</span>);
+<a class="br" href="#L73" id="L73">73 </a>    <span class="kwrd">if</span> (<span class="hid">ret</span> &lt; <span class="num">0</span>)
+<a class="br" href="#L74" id="L74">74 </a>    {
+<a class="br" href="#L75" id="L75">75 </a>        <span class="kwrd">if</span> (<span class="hid">ret</span> == -<span class="hid">EINVAL</span>)
+<a class="br" href="#L76" id="L76">76 </a>        {
+<a class="br" href="#L77" id="L77">77 </a>            <span class="kwrd">version</span> (<span class="hid">D_BetterC</span>)
+<a class="br" href="#L78" id="L78">78 </a>            {
+<a class="br" href="#L79" id="L79">79 </a>                <a class="hid" href="during.tests.base.d.html#L10" title="during.tests.base.errmsg">errmsg</a> = <span class="str">&quot;kernel may not support barrier fsync yet&quot;</span>;
+<a class="br" href="#L80" id="L80">80 </a>                <span class="kwrd">return</span>;
+<a class="br" href="#L81" id="L81">81 </a>            }
+<a class="br" href="#L82" id="L82">82 </a>            <span class="kwrd">else</span> <span class="kwrd">throw</span> <span class="kwrd">new</span> <span class="hid">Exception</span>(<span class="str">&quot;kernel may not support barrier fsync yet&quot;</span>);
+<a class="br" href="#L83" id="L83">83 </a>        }
+<a class="br" href="#L84" id="L84">84 </a>        <span class="kwrd">assert</span>(<span class="num">0</span>, <span class="str">&quot;submit failed&quot;</span>);
+<a class="br" href="#L85" id="L85">85 </a>    }
+<a class="br" href="#L86" id="L86">86 </a>    <span class="kwrd">else</span> <span class="kwrd">assert</span>(<span class="hid">ret</span> == <span class="hid">NUM_WRITES</span> + <span class="num">1</span>);
+<a class="br" href="#L87" id="L87">87 </a>
+<a class="br" href="#L88" id="L88">88 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="hid">NUM_WRITES</span> + <span class="num">1</span>);
+<a class="br" href="#L89" id="L89">89 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="hid">NUM_WRITES</span> + <span class="num">1</span>)
+<a class="br" href="#L90" id="L90">90 </a>    {
+<a class="br" href="#L91" id="L91">91 </a>        <span class="kwrd">if</span> (<span class="hid">io.front.res</span> == -<span class="hid">EINVAL</span>)
+<a class="br" href="#L92" id="L92">92 </a>        {
+<a class="br" href="#L93" id="L93">93 </a>            <span class="kwrd">version</span> (<span class="hid">D_BetterC</span>)
+<a class="br" href="#L94" id="L94">94 </a>            {
+<a class="br" href="#L95" id="L95">95 </a>                <a class="hid" href="during.tests.base.d.html#L10" title="during.tests.base.errmsg">errmsg</a> = <span class="str">&quot;kernel doesn't support IOSQE_IO_DRAIN&quot;</span>;
+<a class="br" href="#L96" id="L96">96 </a>                <span class="kwrd">break</span>;
+<a class="br" href="#L97" id="L97">97 </a>            }
+<a class="br" href="#L98" id="L98">98 </a>            <span class="kwrd">else</span> <span class="kwrd">throw</span> <span class="kwrd">new</span> <span class="hid">Exception</span>(<span class="str">&quot;kernel doesn't support IOSQE_IO_DRAIN&quot;</span>);
+<a class="br" href="#L99" id="L99">99 </a>        }
+<a class="br" href="#L100" id="L100">100 </a>        <span class="kwrd">assert</span>(<span class="hid">io.front.res</span> &gt;= <span class="num">0</span>);
+<a class="br" href="#L101" id="L101">101 </a>        <span class="kwrd">if</span> (<span class="hid">i</span> &lt; <span class="hid">NUM_WRITES</span>) <span class="kwrd">assert</span>(<span class="hid">io.front.user_data</span> == <span class="num">1</span>, <span class="str">&quot;unexpected op completion&quot;</span>);
+<a class="br" href="#L102" id="L102">102 </a>        <span class="kwrd">else</span> <span class="kwrd">assert</span>(<span class="hid">io.front.user_data</span> == <span class="num">2</span>, <span class="str">&quot;unexpected op completion&quot;</span>);
+<a class="br" href="#L103" id="L103">103 </a>
+<a class="br" href="#L104" id="L104">104 </a>        <span class="hid">io.popFront</span>();
+<a class="br" href="#L105" id="L105">105 </a>    }
+<a class="br" href="#L106" id="L106">106 </a>
+<a class="br" href="#L107" id="L107">107 </a>    <span class="hid">close</span>(<span class="hid">fd</span>);
+<a class="br" href="#L108" id="L108">108 </a>    <span class="hid">unlink</span>(&amp;<span class="hid">fname</span>[<span class="num">0</span>]);
+<a class="br" href="#L109" id="L109">109 </a>}</pre></div>
 		<div id="page-nav">
 		<div id="source-navigation"><div class="list-holder"><ul><li><a href="#L1">during.tests.fsync</a><ul><li><a href="#L3">during</a></li><li><a href="#L4">during.tests.base</a></li><li><a href="#L6">core.stdc.stdlib</a></li><li><a href="#L7">core.sys.linux.errno</a></li><li><a href="#L8">core.sys.linux.fcntl</a></li><li><a href="#L9">core.sys.posix.sys.uio</a></li><li><a href="#L10">core.sys.posix.unistd</a></li></ul></li></ul></div></div></div>
 	</div>
