@@ -54,7 +54,7 @@
 <a class="br" href="#L26" id="L26">26 </a>    <span class="hid">io</span>
 <a class="br" href="#L27" id="L27">27 </a>        .<span class="hid">put</span>(<span class="hid">entry</span>)
 <a class="br" href="#L28" id="L28">28 </a>        .<span class="hid">put</span>(<span class="hid">MyOp</span>(<span class="hid">Operation.NOP</span>, <span class="num">2</span>))
-<a class="br" href="#L29" id="L29">29 </a>        .<span class="hid">putWith</span>((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>) { <span class="hid">e.prepNop</span>(); <span class="hid">e.user_data</span> = <span class="num">42</span>; })
+<a class="br" href="#L29" id="L29">29 </a>        .<span class="hid">putWith</span>!((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>) { <span class="hid">e.prepNop</span>(); <span class="hid">e.user_data</span> = <span class="num">42</span>; })
 <a class="br" href="#L30" id="L30">30 </a>        .<span class="hid">submit</span>(<span class="num">1</span>); <span class="com">// submit operations and wait for at least 1 completed</span>
 <a class="br" href="#L31" id="L31">31 </a>
 <a class="br" href="#L32" id="L32">32 </a>    <span class="com">// check completions</span>

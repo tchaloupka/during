@@ -48,7 +48,7 @@
 <a class="br" href="#L20" id="L20">20 </a>    <span class="kwrd">auto</span> <span class="hid">fd</span> = <a class="hid" href="during.tests.base.d.html#L33" title="during.tests.base.openFile">openFile</a>(<span class="hid">fname</span>, <span class="hid">O_CREAT</span> | <span class="hid">O_WRONLY</span>);
 <a class="br" href="#L21" id="L21">21 </a>
 <a class="br" href="#L22" id="L22">22 </a>    <span class="kwrd">auto</span> <span class="hid">ret</span> = <span class="hid">io</span>
-<a class="br" href="#L23" id="L23">23 </a>        .<span class="hid">putWith</span>((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>) =&gt; <span class="hid">e.prepFsync</span>(<span class="hid">fd</span>), <span class="hid">fd</span>)
+<a class="br" href="#L23" id="L23">23 </a>        .<span class="hid">putWith</span>!((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>) =&gt; <span class="hid">e.prepFsync</span>(<span class="hid">fd</span>))(<span class="hid">fd</span>)
 <a class="br" href="#L24" id="L24">24 </a>        .<span class="hid">submit</span>(<span class="num">1</span>);
 <a class="br" href="#L25" id="L25">25 </a>    <span class="kwrd">assert</span>(<span class="hid">ret</span> == <span class="num">1</span>);
 <a class="br" href="#L26" id="L26">26 </a>    <span class="kwrd">assert</span>(<span class="hid">io.length</span> == <span class="num">1</span>);
@@ -80,22 +80,22 @@
 <a class="br" href="#L52" id="L52">52 </a>    <span class="type">int</span> <span class="hid">off</span>;
 <a class="br" href="#L53" id="L53">53 </a>    <span class="kwrd">foreach</span> (<span class="hid">i</span>; <span class="num">0</span>..<span class="hid">NUM_WRITES</span>)
 <a class="br" href="#L54" id="L54">54 </a>    {
-<a class="br" href="#L55" id="L55">55 </a>        <span class="hid">io.putWith</span>((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="hid">iovec</span>* <span class="hid">v</span>, <span class="type">int</span> <span class="hid">off</span>)
+<a class="br" href="#L55" id="L55">55 </a>        <span class="hid">io.putWith</span>!((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="kwrd">ref</span> <span class="hid">iovec</span> <span class="hid">v</span>, <span class="type">int</span> <span class="hid">off</span>)
 <a class="br" href="#L56" id="L56">56 </a>        {
-<a class="br" href="#L57" id="L57">57 </a>            <span class="hid">e.prepWritev</span>(<span class="hid">fd</span>, *<span class="hid">v</span>, <span class="hid">off</span>);
+<a class="br" href="#L57" id="L57">57 </a>            <span class="hid">e.prepWritev</span>(<span class="hid">fd</span>, <span class="hid">v</span>, <span class="hid">off</span>);
 <a class="br" href="#L58" id="L58">58 </a>            <span class="hid">e.user_data</span> = <span class="num">1</span>;
-<a class="br" href="#L59" id="L59">59 </a>        }, <span class="hid">fd</span>, &amp;<span class="hid">iovecs</span>[<span class="hid">i</span>], <span class="hid">off</span>);
+<a class="br" href="#L59" id="L59">59 </a>        })(<span class="hid">fd</span>, <span class="hid">iovecs</span>[<span class="hid">i</span>], <span class="hid">off</span>);
 <a class="br" href="#L60" id="L60">60 </a>        <span class="hid">off</span> += <span class="num">4096</span>;
 <a class="br" href="#L61" id="L61">61 </a>    }
 <a class="br" href="#L62" id="L62">62 </a>
-<a class="br" href="#L63" id="L63">63 </a>    <span class="hid">io.putWith</span>((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>)
+<a class="br" href="#L63" id="L63">63 </a>    <span class="hid">io.putWith</span>!((<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">e</span>, <span class="type">int</span> <span class="hid">fd</span>)
 <a class="br" href="#L64" id="L64">64 </a>    {
 <a class="br" href="#L65" id="L65">65 </a>        <span class="hid">e.prepFsync</span>(<span class="hid">fd</span>);<span class="com">//, FsyncFlags.DATASYNC);</span>
 <a class="br" href="#L66" id="L66">66 </a>        <span class="hid">e.user_data</span> = <span class="num">2</span>;
 <a class="br" href="#L67" id="L67">67 </a>        <span class="com">// TODO: Works with IO_LINK but not without it: See: https://github.com/axboe/liburing/issues/33</span>
 <a class="br" href="#L68" id="L68">68 </a>        <span class="hid">e.flags</span> = <span class="kwrd">cast</span>(<span class="hid">SubmissionEntryFlags</span>)(<span class="hid">SubmissionEntryFlags.IO_DRAIN</span> | <span class="hid">SubmissionEntryFlags.IO_LINK</span>);
 <a class="br" href="#L69" id="L69">69 </a>        <span class="com">// e.flags = SubmissionEntryFlags.IO_DRAIN;</span>
-<a class="br" href="#L70" id="L70">70 </a>    }, <span class="hid">fd</span>);
+<a class="br" href="#L70" id="L70">70 </a>    })(<span class="hid">fd</span>);
 <a class="br" href="#L71" id="L71">71 </a>
 <a class="br" href="#L72" id="L72">72 </a>    <span class="kwrd">auto</span> <span class="hid">ret</span> = <span class="hid">io.submit</span>(<span class="hid">NUM_WRITES</span> + <span class="num">1</span>);
 <a class="br" href="#L73" id="L73">73 </a>    <span class="kwrd">if</span> (<span class="hid">ret</span> &lt; <span class="num">0</span>)
