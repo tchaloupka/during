@@ -617,6 +617,8 @@ void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buf
  *      fd = file descriptor of file we are operating on
  *      msg = message to operate with
  *      flags = `sendmsg` operation flags
+ *
+ * Note: Available from Linux 5.3
  */
 void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags = 0)
 {
@@ -634,6 +636,8 @@ void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags =
  *      fd = file descriptor of file we are operating on
  *      msg = message to operate with
  *      flags = `recvmsg` operation flags
+ *
+ * Note: Available from Linux 5.3
  */
 void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags = 0)
 {
@@ -663,6 +667,8 @@ void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.
 
 // /**
 //  * Prepares `sync_file_range(2)` operation.
+//  *
+//  * Note: available from Linux 5.2
 //  */
 // void prepSyncFileRange(ref SubmissionEntry entry, ...)
 
@@ -674,16 +680,22 @@ void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.
 //  * waiters.
 //  *
 //  * Applications may delete existing timeouts before they occur with `TIMEOUT_REMOVE` operation.
+//  *
+//  * Note: Available from Linux 5.4
 //  */
 // void prepTimeout(ref SubmissionEntry entry, ...)
 
 // /**
 //  * Prepares operations to remove existing timeout registered using `TIMEOUT`operation.
+//  *
+//  * Note: Available from Linux 5.5
 //  */
 // void prepTimeoutRemove(ref SubmissionEntry entry, ...)
 
 // /**
 //  * Prepares `accept4(2)` operation.
+//  *
+//  * Note: Available from Linux 5.5
 //  */
 // void prepAccept(ref SubmissionEntry entry, ...)
 
@@ -702,10 +714,19 @@ void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.
 //  * not cause this request to be stopped sooner. For blocking IO, the original request will complete
 //  * as it originally would have. For IO that is cancellable, it will terminate sooner if at all
 //  * possible.
+//  *
+//  * Note: Available from Linux 5.5
 //  */
 // void prepAsyncCancel(ref SubmissionEntry entry, ...)
 
+// /**
+//  * Note: Available from Linux 5.5
+//  */
 // void prepLinkTimeout(ref SubmissionEntry entry, ...)
+
+// /**
+//  * Note: Available from Linux 5.5
+//  */
 // void prepConnect(ref SubmissionEntry entry, ...)
 
 private:
