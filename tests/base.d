@@ -18,7 +18,7 @@ auto getTestFileName(string baseName)()
     timespec t;
     auto tr = clock_gettime(CLOCK_REALTIME, &t);
     assert(tr == 0);
-    srand(cast(uint)t.tv_nsec);
+    srand(cast(uint)(t.tv_nsec * gettid()));
 
     static immutable ubyte[] let = cast(immutable(ubyte[]))"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     char[baseName.length + 16] fname = baseName ~ "_**********.dat\0";
@@ -33,6 +33,8 @@ auto getTestFileName(string baseName)()
 auto openFile(T)(T fname, int flags)
 {
     auto f = open(&fname[0], flags, 0x1a4); //0644 (std.conv.octal doesn't work with betterC)
-    assert(f > 0, "Failed to open file");
+    assert(f >= 0, "Failed to open file");
     return f;
 }
+
+extern (C) int gettid(); // missing in druntime

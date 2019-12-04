@@ -16,4 +16,6 @@ configuration "betterC" {
 
 configuration "unittest" {
     dependency "silly" version="~>1.0.0"
+    importPaths "tests"
+    sourcePaths "tests"
 }
