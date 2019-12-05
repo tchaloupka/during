@@ -11,29 +11,31 @@ notifications:
 
 d:
   - dmd-2.089.0
-  # - dmd-2.088.1
-  # - dmd-2.087.1
-  # - dmd-2.086.1
-  # - dmd-2.085.1
-  # - ldc-1.18.0
-  # - ldc-1.17.0
-  # - ldc-1.16.0
-  # - ldc-1.15.0
-  # - ldc-1.14.0
-  # - dmd-beta
+  - dmd-2.088.1
+  - dmd-2.087.1
+  - dmd-2.086.1
+  - dmd-2.085.1
+  - ldc-1.18.0
+  - ldc-1.17.0
+  - ldc-1.16.0
+  - ldc-1.15.0
+  - ldc-1.14.0
+  - dmd-beta
 
-# script:
+script:
+  - make buildTest
 #   - dub test --compiler=${DC} -- -t 1
 
 jobs:
   include:
-    # - stage: betterC
-    #   script:
-    #     - ./betterc_ut.sh
-    # - stage: codecov
-    #   script:
-    #     - dub test -b unittest-cov --compiler=${DC} -- -t 1
-    #     - bash <(curl -s https://codecov.io/bash)
+    - stage: betterC
+      script:
+        - make buildTestBC
+    - stage: codecov
+      script:
+        # - dub test -b unittest-cov --compiler=${DC} -- -t 1
+        - make codecov
+        - bash <(curl -s https://codecov.io/bash)
     - stage: docs
       script:
         - wget https://github.com/adamdruppe/adrdox/archive/master.zip

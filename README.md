@@ -74,6 +74,8 @@ For a normal tests, just run:
 dub test
 ```
 
+See also `Makefile` for various targets.
+
 **Note:** As we're using [silly](http://code.dlang.org/packages/silly) as a unittest runner, it runs tests in multiple threads by default.
 This can be a problem as each `io_uring` consumes some pages from `memlock` limit (see `ulimit -l`).
 To avoid that, add `-- -t 1` to the command to run it single threaded.

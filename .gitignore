@@ -1,4 +1,4 @@
 .dub
 *.o
 *.a
-*-test-*
+during-test*
