@@ -40,7 +40,7 @@ struct SubmissionEntry
         FsyncFlags          fsync_flags;
         PollEvents          poll_events;
         SyncFileRangeFlags  sync_range_flags;   /// from Linux 5.2
-        uint                msg_flags;          /// from Linux 5.3
+        MsgFlags            msg_flags;          /// from Linux 5.3
         TimeoutFlags        timeout_flags;      /// from Linux 5.4
         uint                accept_flags;       /// from Linux 5.5
         uint                cancel_flags;       /// from Linux 5.5
@@ -195,6 +195,91 @@ enum SyncFileRangeFlags : uint
     /// This is a write-for-data-integrity operation that will ensure that all pages in the
     /// specified range which were dirty when sync_file_range() was called are committed to disk.
     WRITE_AND_WAIT  = WAIT_BEFORE | WRITE | WAIT_AFTER
+}
+
+/**
+ * Flags for `sendmsg(2)` and `recvmsg(2)` operations.
+ *
+ * See_Also: man pages for the operations.
+ */
+enum MsgFlags : uint
+{
+    /// No flags defined
+    NONE = 0,
+
+    /// Sends out-of-band data on sockets that support this notion (e.g., of type `SOCK_STREAM`); the
+    /// underlying protocol must also support out-of-band data.
+    OOB = 0x01,
+
+    /// This flag causes the receive operation to return data from the beginning of the receive
+    /// queue without removing that data from the queue. Thus, a subsequent receive call will return
+    /// the same data.
+    PEEK = 0x02,
+
+    /// Don't use a gateway to send out the packet, send to hosts only on directly connected
+    /// networks. This is usually used only by diagnostic or routing programs. This is defined only
+    /// for protocol families that route; packet sockets don't.
+    DONTROUTE = 0x04,
+
+    /// For raw (`AF_PACKET`), Internet datagram (since Linux 2.4.27/2.6.8), netlink (since Linux
+    /// 2.6.22), and UNIX datagram (since Linux 3.4) sockets: return the real length of the packet
+    /// or datagram, even when it was longer than the passed buffer.
+    ///
+    /// For use with Internet stream sockets, see `tcp(7)`.
+    TRUNC = 0x20,
+
+    /// Enables nonblocking operation; if the operation would block, EAGAIN or EWOULDBLOCK is
+    /// returned. This provides similar behavior to setting the O_NONBLOCK flag (via the `fcntl(2)`
+    /// F_SETFL operation), but differs in that `MSG_DONTWAIT` is a per-call option, whereas
+    /// `O_NONBLOCK` is a setting on the open file description (see `open(2)`), which will affect
+    /// all threads in the calling process and as well as other processes that hold file descriptors
+    /// referring to the same open file description.
+    DONTWAIT = 0x40,
+
+    /// Terminates a record (when this notion is supported, as for sockets of type `SOCK_SEQPACKET`).
+    EOR = 0x80,
+
+    /// This flag requests that the operation block until the full request is satisfied. However,
+    /// the call may still return less data than requested if a signal is caught, an error or
+    /// disconnect occurs, or the next data to be received is of a different type than that
+    /// returned. This flag has no effect for datagram sockets.
+    WAITALL = 0x100,
+
+    /// Tell the link layer that forward progress happened: you got a successful reply from the
+    /// other side. If the link layer doesn't get this it will regularly reprobe the neighbor (e.g.,
+    /// via a unicast ARP). Valid  only  on SOCK_DGRAM and SOCK_RAW sockets and currently
+    /// implemented only for IPv4 and IPv6. See arp(7) for details.
+    CONFIRM = 0x800,
+
+    /// This flag specifies that queued errors should be received from the socket error queue. The
+    /// error is passed in an ancillary message with a type dependent on the protocol (for IPv4
+    /// `IP_RECVERR`). The user should supply a buffer of sufficient size. See `cmsg(3)` and `ip(7)`
+    /// for more information. The payload of the original packet that caused the error is passed as
+    /// normal data via msg_iovec. The original destination address of the datagram that caused the
+    /// error is supplied via `msg_name`.
+    ERRQUEUE = 0x2000,
+
+    /// Don't generate a `SIGPIPE` signal if the peer on a stream-oriented socket has closed the
+    /// connection. The `EPIPE` error is still returned. This provides similar behavior to using
+    /// `sigaction(2)` to ignore `SIGPIPE`, but, whereas `MSG_NOSIGNAL` is a per-call feature,
+    /// ignoring `SIGPIPE` sets a process attribute that affects all threads in the process.
+    NOSIGNAL = 0x4000,
+
+    /// The caller has more data to send. This flag is used with TCP sockets to obtain the same
+    /// effect as the `TCP_CORK` socket option (see `tcp(7)`), with the difference that this flag can be
+    /// set on a per-call basis.
+    ///
+    /// Since Linux 2.6, this flag is also supported for UDP sockets, and informs the kernel to
+    /// package all of the data sent in calls with this flag set into a single datagram which is
+    /// transmitted only when a call is performed that does not specify this flag.
+    ///
+    /// See_Also: the `UDP_CORK` socket option described in `udp(7)`
+    MORE = 0x8000,
+
+    /// Set the close-on-exec flag for the file descriptor received via a UNIX domain file
+    /// descriptor using the `SCM_RIGHTS` operation (described in `unix(7)`). This flag is useful
+    /// for the same reasons as the `O_CLOEXEC` flag of `open(2)`. (recvmsg only)
+    CMSG_CLOEXEC = 0x40000000
 }
 
 /** sqe->timeout_flags

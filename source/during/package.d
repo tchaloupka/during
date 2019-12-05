@@ -604,7 +604,7 @@ void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buf
 }
 
 /**
- * Prepares `sendmsg` operation.
+ * Prepares `sendmsg(2)` operation.
  *
  * Params:
  *      entry = `SubmissionEntry` to prepare
@@ -613,8 +613,10 @@ void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buf
  *      flags = `sendmsg` operation flags
  *
  * Note: Available from Linux 5.3
+ *
+ * See_Also: `sendmsg(2)` man page for details.
  */
-void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags = 0)
+void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
 {
     entry.opcode = Operation.SENDMSG;
     entry.fd = fd;
@@ -623,7 +625,7 @@ void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags =
 }
 
 /**
- * Prepares `recvmsg` operation.
+ * Prepares `recvmsg(2)` operation.
  *
  * Params:
  *      entry = `SubmissionEntry` to prepare
@@ -632,8 +634,10 @@ void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags =
  *      flags = `recvmsg` operation flags
  *
  * Note: Available from Linux 5.3
+ *
+ * See_Also: `recvmsg(2)` man page for details.
  */
-void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, uint flags = 0)
+void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
 {
     entry.opcode = Operation.RECVMSG;
     entry.fd = fd;
