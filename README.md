@@ -18,7 +18,6 @@ Main features:
   * range interface to submit and receive operations
   * helper functions to prepare operations
   * chainable function calls
-* `@safe` wrappers
 * up to date with not yet released Linux 5.5
 
 **Note:**

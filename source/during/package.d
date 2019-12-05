@@ -20,7 +20,6 @@ import core.sys.posix.sys.socket;
 import core.sys.posix.sys.uio;
 import std.algorithm.comparison : among;
 
-@trusted: //TODO: remove this and use selectively where it makes sense
 nothrow @nogc:
 
 /**
@@ -293,7 +292,7 @@ struct Uring
      *
      * Returns: On success, returns 0.  On error, `-errno` is returned.
      */
-    auto registerBuffers(T)(T buffers) @trusted
+    auto registerBuffers(T)(T buffers)
         if (is(T == ubyte[]) || is(T == ubyte[][])) // TODO: something else?
     {
         checkInitialized();
@@ -371,7 +370,7 @@ struct Uring
      *
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
-    auto registerFiles(const(int)[] fds) @trusted
+    auto registerFiles(const(int)[] fds)
     {
         checkInitialized();
         assert(fds.length, "No file descriptors provided");
@@ -496,7 +495,7 @@ void fill(E)(ref SubmissionEntry entry, auto ref E op)
  *
  * Note: data are passed by ref and must live during whole operation.
  */
-void setUserData(D)(ref SubmissionEntry entry, ref D data) @trusted
+void setUserData(D)(ref SubmissionEntry entry, ref D data)
 {
     entry.user_data = cast(ulong)(cast(void*)&data);
 }
@@ -525,7 +524,7 @@ void prepNop(ref SubmissionEntry entry) @safe
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset) @trusted
+void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset)
     if (is(V == iovec[]) || is(V == iovec))
 {
     entry.opcode = Operation.READV;
@@ -554,7 +553,7 @@ void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong o
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset) @trusted
+void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset)
     if (is(V == iovec[]) || is(V == iovec))
 {
     entry.opcode = Operation.WRITEV;
@@ -584,7 +583,7 @@ void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong 
  *      buffer = slice to preregistered buffer
  *      bufferIndex = index to the preregistered buffers array buffer belongs to
  */
-void prepReadFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex) @trusted
+void prepReadFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex)
 {
     assert(buffer.length, "Empty buffer");
     assert(buffer.length < uint.max, "Buffer too large");
@@ -606,7 +605,7 @@ void prepReadFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buff
  *      buffer = slice to preregistered buffer
  *      bufferIndex = index to the preregistered buffers array buffer belongs to
  */
-void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex) @trusted
+void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex)
 {
     assert(buffer.length, "Empty buffer");
     assert(buffer.length < uint.max, "Buffer too large");
@@ -631,7 +630,7 @@ void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buf
  *
  * See_Also: `sendmsg(2)` man page for details.
  */
-void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE) @trusted
+void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
 {
     entry.opcode = Operation.SENDMSG;
     entry.fd = fd;
@@ -652,7 +651,7 @@ void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags fla
  *
  * See_Also: `recvmsg(2)` man page for details.
  */
-void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE) @trusted
+void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
 {
     entry.opcode = Operation.RECVMSG;
     entry.fd = fd;
@@ -700,7 +699,7 @@ void prepPollAdd(ref SubmissionEntry entry, int fd, PollEvents events) @safe
  *      entry = `SubmissionEntry` to prepare
  *      userData = data with the previously issued poll operation
  */
-void prepPollRemove(D)(ref SubmissionEntry entry, ref D userData) @trusted
+void prepPollRemove(D)(ref SubmissionEntry entry, ref D userData)
 {
     entry.opcode = Operation.POLL_REMOVE;
     entry.fd = -1;
@@ -756,7 +755,7 @@ void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len
  * Note: Available from Linux 5.4
  */
 void prepTimeout(ref SubmissionEntry entry, ref KernelTimespec time,
-    ulong count = 0, TimeoutFlags flags = TimeoutFlags.REL) @trusted
+    ulong count = 0, TimeoutFlags flags = TimeoutFlags.REL)
 {
     entry.opcode = Operation.TIMEOUT;
     entry.fd = -1;
@@ -781,7 +780,7 @@ void prepTimeout(ref SubmissionEntry entry, ref KernelTimespec time,
  *
  * Note: Available from Linux 5.5
  */
-void prepTimeoutRemove(D)(ref SubmissionEntry entry, ref D userData) @trusted
+void prepTimeoutRemove(D)(ref SubmissionEntry entry, ref D userData)
 {
     entry.opcode = Operation.TIMEOUT_REMOVE;
     entry.fd = -1;
@@ -802,7 +801,7 @@ void prepTimeoutRemove(D)(ref SubmissionEntry entry, ref D userData) @trusted
  * Note: Available from Linux 5.5
  */
 void prepAccept(ADDR)(ref SubmissionEntry entry, int fd, ref ADDR addr, ref socklen_t addrlen,
-    AcceptFlags flags = AcceptFlags.NONE) @trusted
+    AcceptFlags flags = AcceptFlags.NONE)
 {
     entry.opcode = Operation.ACCEPT;
     entry.fd = fd;
@@ -833,7 +832,7 @@ void prepAccept(ADDR)(ref SubmissionEntry entry, int fd, ref ADDR addr, ref sock
  *
  * Note: Available from Linux 5.5
  */
-void prepCancel(D)(ref SubmissionEntry entry, ref D userData/*, uint flags = 0*/) @trusted
+void prepCancel(D)(ref SubmissionEntry entry, ref D userData/*, uint flags = 0*/)
 {
     entry.opcode = Operation.ASYNC_CANCEL;
     entry.fd = -1;
@@ -860,7 +859,7 @@ void prepCancel(D)(ref SubmissionEntry entry, ref D userData/*, uint flags = 0*/
  *      time = time specification
  *      flags = define if it's a relative or absolute time
  */
-void prepLinkTimeout(ref SubmissionEntry entry, ref KernelTimespec time, TimeoutFlags flags = TimeoutFlags.REL) @trusted
+void prepLinkTimeout(ref SubmissionEntry entry, ref KernelTimespec time, TimeoutFlags flags = TimeoutFlags.REL)
 {
     entry.opcode = Operation.LINK_TIMEOUT;
     entry.fd = -1;
@@ -872,7 +871,7 @@ void prepLinkTimeout(ref SubmissionEntry entry, ref KernelTimespec time, Timeout
 /**
  * Note: Available from Linux 5.5
  */
-void prepConnect(ADDR)(ref SubmissionEntry entry, int fd, ref const(ADDR) addr) @trusted
+void prepConnect(ADDR)(ref SubmissionEntry entry, int fd, ref const(ADDR) addr)
 {
     entry.opcode = Operation.CONNECT;
     entry.fd = fd;
