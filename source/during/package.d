@@ -488,6 +488,20 @@ void fill(E)(ref SubmissionEntry entry, auto ref E op)
 }
 
 /**
+ * Template function to help set `SubmissionEntry` `user_data` field.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      data = data to set to the `SubmissionEntry`
+ *
+ * Note: data are passed by ref and must live during whole operation.
+ */
+void setUserData(D)(ref SubmissionEntry entry, ref D data) @trusted
+{
+    entry.user_data = cast(ulong)(cast(void*)&data);
+}
+
+/**
  * Prepares `nop` operation.
  *
  * Params:
@@ -496,6 +510,7 @@ void fill(E)(ref SubmissionEntry entry, auto ref E op)
 void prepNop(ref SubmissionEntry entry) @safe
 {
     entry.opcode = Operation.NOP;
+    entry.fd = -1;
 }
 
 // TODO: check offset behavior, preadv2/pwritev2 should accept -1 to work on the current file offset,
@@ -510,7 +525,7 @@ void prepNop(ref SubmissionEntry entry) @safe
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset)
+void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset) @trusted
     if (is(V == iovec[]) || is(V == iovec))
 {
     entry.opcode = Operation.READV;
@@ -539,7 +554,7 @@ void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong o
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset)
+void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset) @trusted
     if (is(V == iovec[]) || is(V == iovec))
 {
     entry.opcode = Operation.WRITEV;
@@ -569,7 +584,7 @@ void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong 
  *      buffer = slice to preregistered buffer
  *      bufferIndex = index to the preregistered buffers array buffer belongs to
  */
-void prepReadFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex)
+void prepReadFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex) @trusted
 {
     assert(buffer.length, "Empty buffer");
     assert(buffer.length < uint.max, "Buffer too large");
@@ -591,7 +606,7 @@ void prepReadFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buff
  *      buffer = slice to preregistered buffer
  *      bufferIndex = index to the preregistered buffers array buffer belongs to
  */
-void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex)
+void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex) @trusted
 {
     assert(buffer.length, "Empty buffer");
     assert(buffer.length < uint.max, "Buffer too large");
@@ -616,7 +631,7 @@ void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buf
  *
  * See_Also: `sendmsg(2)` man page for details.
  */
-void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
+void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE) @trusted
 {
     entry.opcode = Operation.SENDMSG;
     entry.fd = fd;
@@ -637,7 +652,7 @@ void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags fla
  *
  * See_Also: `recvmsg(2)` man page for details.
  */
-void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
+void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE) @trusted
 {
     entry.opcode = Operation.RECVMSG;
     entry.fd = fd;
@@ -653,15 +668,44 @@ void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags fla
  *      fd = file descriptor of a file to call `fsync` on
  *      flags = `fsync` operation flags
  */
-void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.NORMAL)
+void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.NORMAL) @safe
 {
     entry.opcode = Operation.FSYNC;
     entry.fd = fd;
     entry.fsync_flags = flags;
 }
 
-// void prepPollAdd(ref SubmissionEntry entry, ...)
-// void prepPollRemove(ref SubmissionEntry entry, ...)
+/**
+ * Poll the fd specified in the submission queue entry for the events specified in the poll_events
+ * field. Unlike poll or epoll without `EPOLLONESHOT`, this interface always works in one shot mode.
+ * That is, once the poll operation is completed, it will have to be resubmitted.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      fd = file descriptor to poll
+ *      events = events to poll on the FD
+ */
+void prepPollAdd(ref SubmissionEntry entry, int fd, PollEvents events) @safe
+{
+    entry.opcode = Operation.POLL_ADD;
+    entry.fd = fd;
+    entry.poll_events = events;
+}
+
+/**
+ * Remove an existing poll request. If found, the res field of the `CompletionEntry` will contain
+ * `0`.  If not found, res will contain `-ENOENT`.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      userData = data with the previously issued poll operation
+ */
+void prepPollRemove(D)(ref SubmissionEntry entry, ref D userData) @trusted
+{
+    entry.opcode = Operation.POLL_REMOVE;
+    entry.fd = -1;
+    entry.addr = cast(ulong)(cast(void*)&userData);
+}
 
 /**
  * Prepares `sync_file_range(2)` operation.
@@ -672,6 +716,7 @@ void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.
  * If `len` is 0, then all bytes from `offset` through to the end of file are synchronized.
  *
  * Params:
+ *      entry = `SubmissionEntry` to prepare
  *      fd = is the file descriptor to sync
  *      offset = the starting byte of the file range to be synchronized
  *      len = the length of the range to be synchronized, in bytes
@@ -681,7 +726,7 @@ void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.
  *
  * Note: available from Linux 5.2
  */
-void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len, SyncFileRangeFlags flags)
+void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len, SyncFileRangeFlags flags) @safe
 {
     entry.opcode = Operation.SYNC_FILE_RANGE;
     entry.fd = fd;
@@ -690,62 +735,150 @@ void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len
     entry.sync_range_flags = flags;
 }
 
-// /**
-//  * This command is special in that it doesn’t mirror an existing system call, rather it adds support
-//  * fortriggering a timeout condition in the CQ ring to wake an application sleeping on events.  The
-//  * timeout is one of twoevents - a number of completions, or a specific timeout (absolute or
-//  * relative). Whatever event triggers first will queue acompletion event in the CQ ring and wake up
-//  * waiters.
-//  *
-//  * Applications may delete existing timeouts before they occur with `TIMEOUT_REMOVE` operation.
-//  *
-//  * Note: Available from Linux 5.4
-//  */
-// void prepTimeout(ref SubmissionEntry entry, ...)
+/**
+ * This command will register a timeout operation.
+ *
+ * A timeout will trigger a wakeup event on the completion ring for anyone waiting for events. A
+ * timeout condition is met when either the specified timeout expires, or the specified number of
+ * events have completed. Either condition will trigger the event. The request will complete with
+ * `-ETIME` if the timeout got completed through expiration of the timer, or `0` if the timeout got
+ * completed through requests completing on their own. If the timeout was cancelled before it
+ * expired, the request will complete with `-ECANCELED`.
+ *
+ * Applications may delete existing timeouts before they occur with `TIMEOUT_REMOVE` operation.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      time = reference to `time64` data structure
+ *      count = completion event count
+ *      flags = define if it's a relative or absolute time
+ *
+ * Note: Available from Linux 5.4
+ */
+void prepTimeout(ref SubmissionEntry entry, ref KernelTimespec time,
+    ulong count = 0, TimeoutFlags flags = TimeoutFlags.REL) @trusted
+{
+    entry.opcode = Operation.TIMEOUT;
+    entry.fd = -1;
+    entry.addr = cast(ulong)(cast(void*)&time);
+    entry.len = 1;
+    entry.off = count;
+    entry.timeout_flags = flags;
+}
 
-// /**
-//  * Prepares operations to remove existing timeout registered using `TIMEOUT`operation.
-//  *
-//  * Note: Available from Linux 5.5
-//  */
-// void prepTimeoutRemove(ref SubmissionEntry entry, ...)
+/**
+ * Prepares operations to remove existing timeout registered using `TIMEOUT`operation.
+ *
+ * Attempt to remove an existing timeout operation. If the specified timeout request is found and
+ * cancelled successfully, this request will terminate with a result value of `-ECANCELED`. If the
+ * timeout request was found but expiration was already in progress, this request will terminate
+ * with a result value of `-EALREADY`. If the timeout request wasn't found, the request will
+ * terminate with a result value of `-ENOENT`.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      userData = user data provided with the previously issued timeout operation
+ *
+ * Note: Available from Linux 5.5
+ */
+void prepTimeoutRemove(D)(ref SubmissionEntry entry, ref D userData) @trusted
+{
+    entry.opcode = Operation.TIMEOUT_REMOVE;
+    entry.fd = -1;
+    entry.addr = cast(ulong)(cast(void*)&userData);
+}
 
-// /**
-//  * Prepares `accept4(2)` operation.
-//  *
-//  * Note: Available from Linux 5.5
-//  */
-// void prepAccept(ref SubmissionEntry entry, ...)
+/**
+ * Prepares `accept4(2)` operation.
+ *
+ * See_Also: `accept4(2)`` for the general description of the related system call.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      fd = socket file descriptor
+ *      addr = reference to one of sockaddr structires to be filled with accepted client address
+ *      addrlen = reference to addrlen field that would be filled with accepted client address length
+ *
+ * Note: Available from Linux 5.5
+ */
+void prepAccept(ADDR)(ref SubmissionEntry entry, int fd, ref ADDR addr, ref socklen_t addrlen,
+    AcceptFlags flags = AcceptFlags.NONE) @trusted
+{
+    entry.opcode = Operation.ACCEPT;
+    entry.fd = fd;
+    entry.addr = cast(ulong)(cast(void*)&addr);
+    entry.addr2 = cast(ulong)(cast(void*)&addrlen);
+    entry.accept_flags = flags;
+}
 
-// /**
-//  * Prepares operation that cancels existing async work.
-//  *
-//  * This works with any read/write request, accept,send/recvmsg, etc. There’s an important
-//  * distinction to make here with the different kinds of commands. A read/write on a regular file
-//  * will generally be waiting for IO completion in an uninterruptible state. This means it’ll ignore
-//  * any signals or attempts to cancel it, as these operations are uncancellable. io_uring can cancel
-//  * these operations if they haven’t yet been started. If they have been started, cancellations on
-//  * these will fail. Network IO will generally be waiting interruptibly, and can hence be cancelled
-//  * at any time. The completion event for this request will have a result of 0 if done successfully,
-//  * `-EALREADY` if the operation is already in progress, and `-ENOENT` if the original request
-//  * specified cannot be found. For cancellation requests that return `-EALREADY`, io_uring may or may
-//  * not cause this request to be stopped sooner. For blocking IO, the original request will complete
-//  * as it originally would have. For IO that is cancellable, it will terminate sooner if at all
-//  * possible.
-//  *
-//  * Note: Available from Linux 5.5
-//  */
-// void prepAsyncCancel(ref SubmissionEntry entry, ...)
+/**
+ * Prepares operation that cancels existing async work.
+ *
+ * This works with any read/write request, accept,send/recvmsg, etc. There’s an important
+ * distinction to make here with the different kinds of commands. A read/write on a regular file
+ * will generally be waiting for IO completion in an uninterruptible state. This means it’ll ignore
+ * any signals or attempts to cancel it, as these operations are uncancellable. io_uring can cancel
+ * these operations if they haven’t yet been started. If they have been started, cancellations on
+ * these will fail. Network IO will generally be waiting interruptibly, and can hence be cancelled
+ * at any time. The completion event for this request will have a result of 0 if done successfully,
+ * `-EALREADY` if the operation is already in progress, and `-ENOENT` if the original request
+ * specified cannot be found. For cancellation requests that return `-EALREADY`, io_uring may or may
+ * not cause this request to be stopped sooner. For blocking IO, the original request will complete
+ * as it originally would have. For IO that is cancellable, it will terminate sooner if at all
+ * possible.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      userData = `user_data` field of the request that should be cancelled
+ *
+ * Note: Available from Linux 5.5
+ */
+void prepCancel(D)(ref SubmissionEntry entry, ref D userData/*, uint flags = 0*/) @trusted
+{
+    entry.opcode = Operation.ASYNC_CANCEL;
+    entry.fd = -1;
+    entry.addr = cast(ulong)(cast(void*)&userData);
+    // entry.cancel_flags = flags; // TODO: there are none yet
+}
 
-// /**
-//  * Note: Available from Linux 5.5
-//  */
-// void prepLinkTimeout(ref SubmissionEntry entry, ...)
+/**
+ * Prepares linked timeout operation.
+ *
+ * This request must be linked with another request through `IOSQE_IO_LINK` which is described below.
+ * Unlike `IORING_OP_TIMEOUT`, `IORING_OP_LINK_TIMEOUT` acts on the linked request, not the completion
+ * queue. The format of the command is otherwise like `IORING_OP_TIMEOUT`, except there's no
+ * completion event count as it's tied to a specific request. If used, the timeout specified in the
+ * command will cancel the linked command, unless the linked command completes before the
+ * timeout. The timeout will complete with `-ETIME` if the timer expired and the linked request was
+ * attempted cancelled, or `-ECANCELED` if the timer got cancelled because of completion of the linked
+ * request.
+ *
+ * Note: Available from Linux 5.5
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      time = time specification
+ *      flags = define if it's a relative or absolute time
+ */
+void prepLinkTimeout(ref SubmissionEntry entry, ref KernelTimespec time, TimeoutFlags flags = TimeoutFlags.REL) @trusted
+{
+    entry.opcode = Operation.LINK_TIMEOUT;
+    entry.fd = -1;
+    entry.addr = cast(ulong)(cast(void*)&time);
+    entry.len = 1;
+    entry.timeout_flags = flags;
+}
 
-// /**
-//  * Note: Available from Linux 5.5
-//  */
-// void prepConnect(ref SubmissionEntry entry, ...)
+/**
+ * Note: Available from Linux 5.5
+ */
+void prepConnect(ADDR)(ref SubmissionEntry entry, int fd, ref const(ADDR) addr) @trusted
+{
+    entry.opcode = Operation.CONNECT;
+    entry.fd = fd;
+    entry.addr = cast(ulong)(cast(void*)&addr);
+    entry.off = ADDR.sizeof;
+}
 
 private:
 

@@ -42,8 +42,8 @@ struct SubmissionEntry
         SyncFileRangeFlags  sync_range_flags;   /// from Linux 5.2
         MsgFlags            msg_flags;          /// from Linux 5.3
         TimeoutFlags        timeout_flags;      /// from Linux 5.4
-        uint                accept_flags;       /// from Linux 5.5
-        uint                cancel_flags;       /// from Linux 5.5
+        AcceptFlags         accept_flags;       /// from Linux 5.5
+        // uint                cancel_flags;       /// from Linux 5.5 (TODO: not any yet)
     }
 
     ulong user_data;                        /// data to be passed back at completion time
@@ -286,8 +286,25 @@ enum MsgFlags : uint
  */
 enum TimeoutFlags : uint
 {
+    REL = 0,
+    ABS = 1U << 0   /// `IORING_TIMEOUT_ABS` (from Linux 5.5)
+}
+
+/**
+ * Flags that can be used with the `accept4(2)` operation.
+ */
+enum AcceptFlags : uint
+{
+    /// Same as `accept()`
     NONE = 0,
-    TIMEOUT_ABS = 1U << 0   /// `IORING_TIMEOUT_ABS` (from Linux 5.5)
+
+    /// Set the `O_NONBLOCK` file status flag on the new open file description. Using this flag saves
+    /// extra calls to `fcntl(2)` to achieve the same result.
+    NONBLOCK = 0x800, // octal 00004000
+
+    /// Set the close-on-exec (`FD_CLOEXEC`) flag on the new file descriptor. See the description of
+    /// the `O_CLOEXEC` flag in `open(2)` for reasons why this may be useful.
+    CLOEXEC = 0x80000 // octal 02000000
 }
 
 /**
@@ -658,6 +675,13 @@ enum EnterFlags: uint
     NONE        = 0,
     GETEVENTS   = (1 << 0), /// `IORING_ENTER_GETEVENTS`
     SQ_WAKEUP   = (1 << 1), /// `IORING_ENTER_SQ_WAKEUP`
+}
+
+/// Time specification as defined in kernel headers (used by TIMEOUT operations)
+struct KernelTimespec
+{
+    long tv_sec; /// seconds
+    long tv_nsec; /// nanoseconds
 }
 
 static assert(CompletionEntry.sizeof == 16);
