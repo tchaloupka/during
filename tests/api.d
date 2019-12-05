@@ -131,3 +131,51 @@ unittest
     assert(io.length == 32);
     assert(io.map!(c => c.user_data).equal(iota(0, 32)));
 }
+
+@("sample")
+unittest
+{
+    import during;
+    import std.range : drop, iota;
+    import std.algorithm : copy, equal, map;
+
+    Uring io;
+    auto res = io.setup();
+    assert(res >= 0, "Error initializing IO");
+
+    SubmissionEntry entry;
+    entry.opcode = Operation.NOP;
+    entry.user_data = 1;
+
+    // custom operation to allow usage customization
+    struct MyOp { Operation opcode = Operation.NOP; ulong user_data; }
+
+    // chain operations
+    res = io
+        .put(entry) // whole entry as defined by io_uring
+        .put(MyOp(Operation.NOP, 2)) // custom op that would be filled over submission queue entry
+        .putWith!((ref SubmissionEntry e) // own function to directly fill entry in a queue
+            {
+                e.prepNop();
+                e.user_data = 42;
+            })
+        .submit(1); // submit operations and wait for at least 1 completed
+
+    assert(res == 3); // 3 operations were submitted to the submission queue
+    assert(!io.empty); // at least one operation has been completed
+    assert(io.front.user_data == 1);
+    io.popFront(); // drop it from the completion queue
+
+    // wait for and drop rest of the operations
+    io.wait(2);
+    io.drop(2);
+
+    // use range API to post some operations
+    iota(0, 16).map!(a => MyOp(Operation.NOP, a)).copy(io);
+
+    // submit them and wait for their completion
+    res = io.submit(16);
+    assert(res == 16);
+    assert(io.length == 16); // all operations has completed
+    assert(io.map!(c => c.user_data).equal(iota(0, 16)));
+}

@@ -42,7 +42,8 @@ path/to/adrdox/doc2 --genSearchIndex --genSource -o generated-docs source
 
 ```D
 import during;
-import std.range;
+import std.range : drop, iota;
+import std.algorithm : copy, equal, map;
 
 Uring io;
 auto res = io.setup();
@@ -56,7 +57,7 @@ entry.user_data = 1;
 struct MyOp { Operation opcode = Operation.NOP; ulong user_data; }
 
 // chain operations
-auto res = io
+res = io
     .put(entry) // whole entry as defined by io_uring
     .put(MyOp(Operation.NOP, 2)) // custom op that would be filled over submission queue entry
     .putWith!((ref SubmissionEntry e) // own function to directly fill entry in a queue
@@ -68,7 +69,7 @@ auto res = io
 
 assert(res == 3); // 3 operations were submitted to the submission queue
 assert(!io.empty); // at least one operation has been completed
-assert(!io.front.user_data == 1);
+assert(io.front.user_data == 1);
 io.popFront(); // drop it from the completion queue
 
 // wait for and drop rest of the operations
