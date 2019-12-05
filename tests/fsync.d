@@ -107,3 +107,10 @@ unittest
 
     close(fd);
 }
+
+@("range")
+unittest
+{
+    version (D_BetterC) errmsg = "Not implemented";
+    else throw new Exception("Not implemented");
+}

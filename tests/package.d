@@ -9,10 +9,14 @@ version (unittest)
         extern(C) void main()
         {
             runTests!("API tests", during.tests.api);
+            runTests!("Thread tests", during.tests.thread);
             runTests!("RW tests", during.tests.rw);
             runTests!("Fsync tests", during.tests.fsync);
             runTests!("Msg tests", during.tests.msg);
-            runTests!("Thread tests", during.tests.thread);
+            runTests!("Poll tests", during.tests.poll);
+            runTests!("Timeout tests", during.tests.timeout);
+            runTests!("Cancel tests", during.tests.cancel);
+            runTests!("Socket tests", during.tests.socket);
             printf("All unit tests have been run successfully.\n");
         }
 

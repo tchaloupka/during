@@ -36,14 +36,14 @@ struct SubmissionEntry
 
     union
     {
-        ReadWriteFlags  rw_flags;
-        FsyncFlags      fsync_flags;
-        PollEvents      poll_events;
-        uint            sync_range_flags;   /// from Linux 5.2
-        uint            msg_flags;          /// from Linux 5.3
-        TimeoutFlags    timeout_flags;      /// from Linux 5.4
-        uint            accept_flags;       /// from Linux 5.5
-        uint            cancel_flags;       /// from Linux 5.5
+        ReadWriteFlags      rw_flags;
+        FsyncFlags          fsync_flags;
+        PollEvents          poll_events;
+        SyncFileRangeFlags  sync_range_flags;   /// from Linux 5.2
+        uint                msg_flags;          /// from Linux 5.3
+        TimeoutFlags        timeout_flags;      /// from Linux 5.4
+        uint                accept_flags;       /// from Linux 5.5
+        uint                cancel_flags;       /// from Linux 5.5
     }
 
     ulong user_data;                        /// data to be passed back at completion time
@@ -170,6 +170,31 @@ enum PollEvents : ushort
      *  channel has been consumed.
      */
     HUP     = POLLHUP,
+}
+
+/**
+ * Flags for `sync_file_range(2)` operation.
+ *
+ * See_Also: `sync_file_range(2)` for details
+ */
+enum SyncFileRangeFlags : uint
+{
+    NOOP            = 0, /// no operation
+    /// Wait upon write-out of all pages in the specified range that have already been submitted to
+    /// the device driver for write-out before performing any write.
+    WAIT_BEFORE     = 1U << 0,
+
+    /// Initiate write-out of all dirty pages in the specified range which are not presently
+    /// submitted write-out.  Note that even this may block if you attempt to write more than
+    /// request queue size.
+    WRITE           = 1U << 1,
+
+    /// Wait upon write-out of all pages in the range after performing any write.
+    WAIT_AFTER      = 1U << 2,
+
+    /// This is a write-for-data-integrity operation that will ensure that all pages in the
+    /// specified range which were dirty when sync_file_range() was called are committed to disk.
+    WRITE_AND_WAIT  = WAIT_BEFORE | WRITE | WAIT_AFTER
 }
 
 /** sqe->timeout_flags

@@ -659,12 +659,32 @@ void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.
 // void prepPollAdd(ref SubmissionEntry entry, ...)
 // void prepPollRemove(ref SubmissionEntry entry, ...)
 
-// /**
-//  * Prepares `sync_file_range(2)` operation.
-//  *
-//  * Note: available from Linux 5.2
-//  */
-// void prepSyncFileRange(ref SubmissionEntry entry, ...)
+/**
+ * Prepares `sync_file_range(2)` operation.
+ *
+ * Sync a file segment with disk, permits fine control when synchronizing the open file referred to
+ * by the file descriptor fd with disk.
+ *
+ * If `len` is 0, then all bytes from `offset` through to the end of file are synchronized.
+ *
+ * Params:
+ *      fd = is the file descriptor to sync
+ *      offset = the starting byte of the file range to be synchronized
+ *      len = the length of the range to be synchronized, in bytes
+ *      flags = the flags for the command.
+ *
+ * See_Also: `sync_file_range(2)` for the general description of the related system call.
+ *
+ * Note: available from Linux 5.2
+ */
+void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len, SyncFileRangeFlags flags)
+{
+    entry.opcode = Operation.SYNC_FILE_RANGE;
+    entry.fd = fd;
+    entry.off = offset;
+    entry.len = len;
+    entry.sync_range_flags = flags;
+}
 
 // /**
 //  * This command is special in that it doesn’t mirror an existing system call, rather it adds support
