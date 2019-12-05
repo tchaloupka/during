@@ -6,11 +6,7 @@
 [![codecov](https://codecov.io/gh/tchaloupka/during/branch/master/graph/badge.svg)](https://codecov.io/gh/tchaloupka/during)
 [![license](https://img.shields.io/github/license/tchaloupka/during.svg)](https://github.com/tchaloupka/during/blob/master/LICENSE)
 
-
-**NOTE: Not ready for use yet!**
-
-Simple idiomatic [dlang](https://dlang.org) wrapper around linux [io_uring](https://kernel.dk/io_uring.pdf)([news](https://kernel.dk/io_uring-whatsnew.pdf))
-asynchronous API.
+Simple idiomatic [dlang](https://dlang.org) wrapper around linux [io_uring](https://kernel.dk/io_uring.pdf)([news](https://kernel.dk/io_uring-whatsnew.pdf)) asynchronous API.
 
 It's just a low level wrapper, doesn't try to do fancy higher level stuff, but attempts to provide building blocks for it.
 
@@ -20,8 +16,17 @@ Main features:
 * `@nogc`, `nothrow`, `betterC` are supported
 * simple usage with provided API D interface
   * range interface to submit and receive operations
-  * helpers to post operations
+  * helper functions to prepare operations
   * chainable function calls
+* `@safe` wrappers
+* up to date with not yet released Linux 5.5
+
+**Note:**
+
+* not all operations are properly tested yet
+* Travis CI doesn't run on required linux kernels so it tests only builds (at least Linux 5.1 is needed)
+* same with the code coverage - as all tests fails when run
+* PR's are always welcome
 
 ## Docs
 
@@ -36,9 +41,52 @@ path/to/adrdox/doc2 --genSearchIndex --genSource -o generated-docs source
 
 ## Usage example
 
-> TODO
+```D
+import during;
+import std.range;
 
-For more examples, see `tests` subfolder.
+Uring io;
+auto res = io.setup();
+assert(res >= 0, "Error initializing IO");
+
+SubmissionEntry entry;
+entry.opcode = Operation.NOP;
+entry.user_data = 1;
+
+// custom operation to allow usage customization
+struct MyOp { Operation opcode = Operation.NOP; ulong user_data; }
+
+// chain operations
+auto res = io
+    .put(entry) // whole entry es defined by io_uring
+    .put(MyOp(Operation.NOP, 2)) // custom op that would be filled over submission queue entry
+    .putWith!((ref SubmissionEntry e) // own function to directly fill entry in a queue
+        {
+            e.prepNop();
+            e.user_data = 42;
+        })
+    .submit(1); // submit operations and wait for at least 1 completed
+
+assert(res == 3);
+assert(!io.empty);
+assert(!io.front.user_data == 1);
+io.popFront();
+
+// wait for and drop rest of the operations
+io.wait(2);
+io.drop(2);
+
+// use range API to post some operations
+iota(0, 16).map!(a => MyOp(Operation.NOP, a)).copy(io);
+
+// submit them and wait for their completion
+res = io.submit(16);
+assert(res == 16);
+assert(io.length == 16); // operations has completed
+assert(io.map!(c => c.user_data).equal(iota(0, 32)));
+```
+
+For more examples, see `tests` subfolder or the documentation.
 
 ## How to use the library
 
