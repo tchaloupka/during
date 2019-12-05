@@ -18,4 +18,5 @@ configuration "unittest" {
     dependency "silly" version="~>1.0.0"
     importPaths "tests"
     sourcePaths "tests"
+    excludedSourceFiles "tests/fake_dub_root.d"
 }
