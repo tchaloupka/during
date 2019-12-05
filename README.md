@@ -58,7 +58,7 @@ struct MyOp { Operation opcode = Operation.NOP; ulong user_data; }
 
 // chain operations
 auto res = io
-    .put(entry) // whole entry es defined by io_uring
+    .put(entry) // whole entry as defined by io_uring
     .put(MyOp(Operation.NOP, 2)) // custom op that would be filled over submission queue entry
     .putWith!((ref SubmissionEntry e) // own function to directly fill entry in a queue
         {
@@ -67,10 +67,10 @@ auto res = io
         })
     .submit(1); // submit operations and wait for at least 1 completed
 
-assert(res == 3);
-assert(!io.empty);
+assert(res == 3); // 3 operations were submitted to the submission queue
+assert(!io.empty); // at least one operation has been completed
 assert(!io.front.user_data == 1);
-io.popFront();
+io.popFront(); // drop it from the completion queue
 
 // wait for and drop rest of the operations
 io.wait(2);
@@ -82,8 +82,8 @@ iota(0, 16).map!(a => MyOp(Operation.NOP, a)).copy(io);
 // submit them and wait for their completion
 res = io.submit(16);
 assert(res == 16);
-assert(io.length == 16); // operations has completed
-assert(io.map!(c => c.user_data).equal(iota(0, 32)));
+assert(io.length == 16); // all operations has completed
+assert(io.map!(c => c.user_data).equal(iota(0, 16)));
 ```
 
 For more examples, see `tests` subfolder or the documentation.
@@ -108,21 +108,13 @@ to your `dub.json` project file.
 
 ## Running tests
 
-For a `betterC` tests run:
-
-```
-./betterc_ut.sh
-```
-
-Dub doesn't handle correctly packages with `package.d` and is too much hassle to ron `betterC` tests with it, so the script..
-
 For a normal tests, just run:
 
 ```
 dub test
 ```
 
-See also `Makefile` for various targets.
+See also `Makefile` for other targets.
 
 **Note:** As we're using [silly](http://code.dlang.org/packages/silly) as a unittest runner, it runs tests in multiple threads by default.
 This can be a problem as each `io_uring` consumes some pages from `memlock` limit (see `ulimit -l`).
