@@ -22,7 +22,7 @@ Main features:
 
 **Note:**
 
-* not all operations are properly tested yet
+* not all operations are properly tested yet (from Kernel 5.4, 5.5)
 * Travis CI doesn't run on required linux kernels so it tests only builds (at least Linux 5.1 is needed)
 * same with the code coverage - as all tests fails when run
 * PR's are always welcome
