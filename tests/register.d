@@ -4,6 +4,13 @@ import during;
 import during.tests.base;
 
 import core.stdc.stdlib;
+import core.sys.linux.errno;
+import core.sys.linux.fcntl;
+import core.sys.posix.sys.uio : iovec;
+import core.sys.posix.unistd;
+
+import std.algorithm : copy, equal, map;
+import std.range : iota;
 
 @("buffers")
 unittest
@@ -61,9 +68,61 @@ unittest
 @("files")
 unittest
 {
-    // register, unregister, update (5.5)
-    version (D_BetterC) errmsg = "Not implemented";
-    else throw new Exception("Not implemented");
+    // prepare uring
+    Uring io;
+    auto res = io.setup(4);
+    assert(res >= 0, "Error initializing IO");
+
+    // prepare some file
+    auto fname = getTestFileName!"reg_files";
+    ubyte[256] buf;
+    iota(0, 256).map!(a => cast(ubyte)a).copy(buf[]);
+    auto file = openFile(fname, O_CREAT | O_WRONLY);
+    auto wr = write(file, &buf[0], buf.length);
+    assert(wr == buf.length);
+    close(file);
+    scope (exit) unlink(&fname[0]);
+
+    // register file
+    file = openFile(fname, O_RDONLY);
+    int[] files = (cast(int*)&file)[0..1];
+    auto ret = io.registerFiles(files);
+    assert(ret == 0);
+
+    // read file
+    iovec v;
+    v.iov_base = cast(void*)&buf[0];
+    v.iov_len = buf.length;
+    ret = io.putWith!((ref SubmissionEntry e, ref iovec v)
+        {
+            e.prepReadv(0, v, 0); // 0 points to the array of registered fds
+            e.flags = SubmissionEntryFlags.FIXED_FILE;
+        })(v)
+        .submit(1);
+    assert(ret == 1);
+    assert(!io.empty);
+    assert(io.front.res == buf.length);
+    assert(buf[].equal(iota(0, 256)));
+    io.popFront();
+
+    // close and update reg files (5.5)
+    close(file);
+    files[0] = -1;
+    ret = io.registerFilesUpdate(0, files);
+    if (ret == -EINVAL)
+    {
+        version (D_BetterC)
+        {
+            errmsg = "kernel may not support IORING_REGISTER_FILES_UPDATE";
+            return;
+        }
+        else throw new Exception("kernel may not support IORING_REGISTER_FILES_UPDATE");
+    }
+    else assert(ret == 0);
+
+    // unregister files
+    ret = io.unregisterFiles();
+    assert(ret == 0);
 }
 
 @("eventfd")
