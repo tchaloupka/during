@@ -290,7 +290,7 @@ struct Uring
      * Params:
      *   buffer = Buffers to be registered
      *
-     * Returns: On success, returns 0.  On error, `-errno` is returned.
+     * Returns: On success, returns 0. On error, `-errno` is returned.
      */
     auto registerBuffers(T)(T buffers)
         if (is(T == ubyte[]) || is(T == ubyte[][])) // TODO: something else?
