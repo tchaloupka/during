@@ -6,6 +6,7 @@ import during.tests.base;
 import core.stdc.stdlib;
 import core.sys.linux.errno;
 import core.sys.linux.fcntl;
+import core.sys.linux.sys.eventfd;
 import core.sys.posix.sys.uio : iovec;
 import core.sys.posix.unistd;
 
@@ -128,6 +129,35 @@ unittest
 @("eventfd")
 unittest
 {
-    version (D_BetterC) errmsg = "Not implemented";
-    else throw new Exception("Not implemented");
+    // prepare uring
+    Uring io;
+    auto res = io.setup(4);
+    assert(res >= 0, "Error initializing IO");
+
+    // prepare event fd
+    auto evt = eventfd(0, EFD_NONBLOCK);
+    assert(evt != -1, "eventfd()");
+
+    // register it
+    long ret = io.registerEventFD(evt);
+    assert(ret == 0);
+
+    // check that reading from eventfd would block now
+    ulong evtData;
+    ret = read(evt, &evtData, 8);
+    assert(ret == -1);
+    assert(errno == EAGAIN);
+
+    // post some op to io_uring
+    ret = io.putWith!((ref SubmissionEntry e) => e.prepNop()).submit(1);
+    assert(ret == 1);
+
+    // check that event has triggered
+    ret = read(evt, &evtData, 8);
+    assert(ret == 8);
+    assert(!io.empty);
+
+    // and unregister it
+    ret = io.unregisterEventFD();
+    assert(ret == 0);
 }
