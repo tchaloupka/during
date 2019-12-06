@@ -1,19 +1,26 @@
-module during.tests.timeout;
+module during.tests.register;
 
+import during;
 import during.tests.base;
 
-@("timeout set/remove")
+@("buffers")
 unittest
 {
-    // set 5.4, remove 5.5
     version (D_BetterC) errmsg = "Not implemented";
     else throw new Exception("Not implemented");
 }
 
-@("link timeout")
+@("files")
 unittest
 {
-    // 5.5
+    // register, unregister, update (5.5)
+    version (D_BetterC) errmsg = "Not implemented";
+    else throw new Exception("Not implemented");
+}
+
+@("eventfd")
+unittest
+{
     version (D_BetterC) errmsg = "Not implemented";
     else throw new Exception("Not implemented");
 }

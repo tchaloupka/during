@@ -1,6 +1,7 @@
 module during.tests.api;
 
 import during;
+import during.tests.base;
 
 version (D_Exceptions) import std.exception : assertThrown;
 import std.range;
@@ -178,4 +179,28 @@ unittest
     assert(res == 16);
     assert(io.length == 16); // all operations has completed
     assert(io.map!(c => c.user_data).equal(iota(0, 16)));
+}
+
+@("single mmap")
+unittest
+{
+    // 5.4
+    version (D_BetterC) errmsg = "Not implemented";
+    else throw new Exception("Not implemented");
+}
+
+@("nodrop")
+unittest
+{
+    // 5.5
+    version (D_BetterC) errmsg = "Not implemented";
+    else throw new Exception("Not implemented");
+}
+
+@("cqsize")
+unittest
+{
+    // 5.5
+    version (D_BetterC) errmsg = "Not implemented";
+    else throw new Exception("Not implemented");
 }

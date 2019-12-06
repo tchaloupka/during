@@ -7,14 +7,15 @@ version (D_BetterC)
     extern(C) void main()
     {
         runTests!("API tests", during.tests.api);
-        runTests!("Thread tests", during.tests.thread);
-        runTests!("RW tests", during.tests.rw);
+        runTests!("Cancel tests", during.tests.cancel);
         runTests!("Fsync tests", during.tests.fsync);
         runTests!("Msg tests", during.tests.msg);
         runTests!("Poll tests", during.tests.poll);
-        runTests!("Timeout tests", during.tests.timeout);
-        runTests!("Cancel tests", during.tests.cancel);
+        runTests!("Register tests", during.tests.register);
+        runTests!("RW tests", during.tests.rw);
         runTests!("Socket tests", during.tests.socket);
+        runTests!("Thread tests", during.tests.thread);
+        runTests!("Timeout tests", during.tests.timeout);
         printf("All unit tests have been run successfully.\n");
     }
 
