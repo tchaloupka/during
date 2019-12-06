@@ -43,7 +43,7 @@ unittest
     auto fd = openFile(fname, O_CREAT | O_WRONLY);
     scope (exit) unlink(&fname[0]);
 
-    iovec[4] iovecs;
+    iovec[NUM_WRITES] iovecs;
     foreach (i; 0..NUM_WRITES)
     {
         iovecs[i].iov_base = malloc(4096);
@@ -63,7 +63,7 @@ unittest
 
     io.putWith!((ref SubmissionEntry e, int fd)
     {
-        e.prepFsync(fd);//, FsyncFlags.DATASYNC);
+        e.prepFsync(fd, FsyncFlags.DATASYNC);
         e.user_data = 2;
         // TODO: Works with IO_LINK but not without it: See: https://github.com/axboe/liburing/issues/33
         e.flags = cast(SubmissionEntryFlags)(SubmissionEntryFlags.IO_DRAIN | SubmissionEntryFlags.IO_LINK);
@@ -111,6 +111,65 @@ unittest
 @("range")
 unittest
 {
-    version (D_BetterC) errmsg = "Not implemented";
-    else throw new Exception("Not implemented");
+    enum NUM_WRITES = 4;
+    Uring io;
+    auto res = io.setup();
+    assert(res >= 0, "Error initializing IO");
+
+    auto fname = getTestFileName!"fsync_range";
+    auto fd = openFile(fname, O_CREAT | O_WRONLY);
+    scope (exit) unlink(&fname[0]);
+
+    iovec[NUM_WRITES] iovecs;
+    foreach (i; 0..NUM_WRITES)
+    {
+        iovecs[i].iov_base = malloc(4096);
+        iovecs[i].iov_len = 4096;
+    }
+
+    int off;
+    foreach (i; 0..NUM_WRITES)
+    {
+        io.putWith!((ref SubmissionEntry e, int fd, ref iovec v, int off)
+        {
+            e.prepWritev(fd, v, off);
+            e.user_data = 1;
+            e.flags = SubmissionEntryFlags.IO_LINK;
+        })(fd, iovecs[i], off);
+        off += 4096;
+    }
+
+    io.putWith!((ref SubmissionEntry e, int fd)
+    {
+        e.prepSyncFileRange(fd, (NUM_WRITES - 1) * 4096, 4096);
+        e.user_data = 2;
+        e.flags = SubmissionEntryFlags.IO_LINK;
+    })(fd);
+
+    auto ret = io.submit(NUM_WRITES + 1);
+    if (ret < 0)
+    {
+        if (ret == -EINVAL)
+        {
+            version (D_BetterC)
+            {
+                errmsg = "kernel may not support range file sync yet";
+                return;
+            }
+            else throw new Exception("kernel may not support range file sync yet");
+        }
+        assert(0, "submit failed");
+    }
+    else assert(ret == NUM_WRITES + 1);
+
+    assert(io.length == NUM_WRITES + 1);
+    foreach (i; 0..NUM_WRITES + 1)
+    {
+        assert(io.front.res >= 0);
+        if (i < NUM_WRITES) assert(io.front.user_data == 1, "unexpected op completion");
+        else assert(io.front.user_data == 2, "unexpected op completion");
+        io.popFront();
+    }
+
+    close(fd);
 }

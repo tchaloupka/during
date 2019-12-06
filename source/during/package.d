@@ -726,7 +726,8 @@ void prepPollRemove(D)(ref SubmissionEntry entry, ref D userData)
  *
  * Note: available from Linux 5.2
  */
-void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len, SyncFileRangeFlags flags) @safe
+void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len,
+    SyncFileRangeFlags flags = SyncFileRangeFlags.WRITE_AND_WAIT) @safe
 {
     entry.opcode = Operation.SYNC_FILE_RANGE;
     entry.fd = fd;
