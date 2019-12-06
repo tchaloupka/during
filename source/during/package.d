@@ -432,9 +432,10 @@ struct Uring
     }
 
     /**
-     * TODO
+     * Registers event file descriptor that would be used as a notification mechanism on completion
+     * queue change.
      *
-     * Params: eventFD = TODO
+     * Params: eventFD = event filedescriptor to be notified about change
      *
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
@@ -447,7 +448,7 @@ struct Uring
     }
 
     /**
-     * TODO
+     * Unregister previously registered notification event file descriptor.
      *
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */

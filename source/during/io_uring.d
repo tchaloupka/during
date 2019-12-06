@@ -286,8 +286,8 @@ enum MsgFlags : uint
  */
 enum TimeoutFlags : uint
 {
-    REL = 0,
-    ABS = 1U << 0   /// `IORING_TIMEOUT_ABS` (from Linux 5.5)
+    REL = 0,        /// Relative time is the default
+    ABS = 1U << 0   /// Absolute time - `IORING_TIMEOUT_ABS` (from Linux 5.5)
 }
 
 /**
@@ -346,7 +346,13 @@ enum Operation : ubyte
 enum SubmissionEntryFlags : ubyte
 {
     NONE        = 0,
-    FIXED_FILE  = 1U << 0,  /// IOSQE_FIXED_FILE: use fixed fileset
+
+    /// Use fixed fileset (`IOSQE_FIXED_FILE`)
+    ///
+    /// When this flag is specified, fd is an index into the files array registered with the
+    /// io_uring instance (see the `IORING_REGISTER_FILES` section of the io_uring_register(2) man
+    /// page).
+    FIXED_FILE  = 1U << 0,
 
     /**
      * `IOSQE_IO_DRAIN`: issue after inflight IO
