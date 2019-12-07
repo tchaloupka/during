@@ -4,7 +4,7 @@ SRC_FILES = -Isource/ source/*.d
 DURING_FILES = -I../../source/ ../../source/during/*.d
 DEBUG_FLAGS = -debug -g -w -vcolumns
 RELEASE_FLAGS = -O -release -inline -noboundscheck
-MEMPOOLED_DIR = ~/.dub/packages/mempooled-0.1.1/mempooled
+MEMPOOLED_DIR = ~/.dub/packages/mempooled-0.1.2/mempooled
 MEMPOOLED_FILES = $(MEMPOOLED_DIR)/source/mempooled/fixed.d
 
 ifeq ($(DC),ldc2)
