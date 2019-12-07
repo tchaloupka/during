@@ -86,7 +86,7 @@ assert(io.length == 16); // all operations has completed
 assert(io.map!(c => c.user_data).equal(iota(0, 16)));
 ```
 
-For more examples, see `tests` subfolder or the documentation.
+For more examples, see `tests` and `examples` subfolders or the documentation.
 
 ## How to use the library
 
@@ -119,3 +119,7 @@ See also `Makefile` for other targets.
 **Note:** As we're using [silly](http://code.dlang.org/packages/silly) as a unittest runner, it runs tests in multiple threads by default.
 This can be a problem as each `io_uring` consumes some pages from `memlock` limit (see `ulimit -l`).
 To avoid that, add `-- -t 1` to the command to run it single threaded.
+
+## Benchmark
+
+See [echo_server](https://github.com/tchaloupka/during/tree/master/examples/echo_server/README.md) sample implementation.

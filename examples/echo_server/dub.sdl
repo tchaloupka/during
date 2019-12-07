@@ -1,1 +1,4 @@
 name "echo_server"
+
+dependency "during" path="../.."
+dependency "mempooled" version="~>0.1.2"
