@@ -122,4 +122,4 @@ To avoid that, add `-- -t 1` to the command to run it single threaded.
 
 ## Benchmark
 
-See [echo_server](https://github.com/tchaloupka/during/tree/master/examples/echo_server/README.md) sample implementation.
+See [echo_server](https://github.com/tchaloupka/during/tree/master/examples/echo_server) sample implementation.

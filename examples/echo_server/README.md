@@ -4,9 +4,15 @@ Sample single threaded echo server using `during` library.
 
 It uses [mempooled](https://github.com/tchaloupka/mempooled) fixed memory pool to preallocate io buffers that are registered with `io_uring`.
 
+**Note:** As it uses preallocated io buffer, it can consume pages over `memlock` user limit. So if it fails to init `io_uring` try one of:
+
+* run it with root privileges
+* higher the user's `memlock` limit
+* lower `MAX_CLIENTS` constant defined on top of the `app.d` source file
+
 ## How to build it
 
-Just run `dub build` or call `make build`.
+Just run `dub build` or `make build`.
 
 ## Benchmarks
 
