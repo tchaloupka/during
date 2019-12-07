@@ -22,6 +22,9 @@ d:
   - ldc-1.14.0
   - dmd-beta
 
+before_script:
+  - dub fetch mempooled --version="0.1.2"
+
 script:
   - make buildTest
   - make -C examples/echo_server/
