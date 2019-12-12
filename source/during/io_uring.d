@@ -3,7 +3,7 @@
  *
  * See: https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring.h
  *
- * Last changes from: f8e85cf255ad57d65eeb9a9d0e59e3dec55bdd9e (20191123)
+ * Last changes from: da8c96906990f1108cb626ee7865e69267a3263b (20191203)
 */
 module during.io_uring;
 
@@ -502,9 +502,48 @@ enum SetupFlags : uint
 /// `io_uring_params->features` flags
 enum SetupFeatures : uint
 {
-    NONE        = 0,
-    SINGLE_MMAP = 1U << 0,  /// `IORING_FEAT_SINGLE_MMAP` (from Linux 5.4)
-    NODROP      = 1U << 1   /// `IORING_FEAT_NODROP` (from Linux 5.5)
+    NONE            = 0,
+
+    /**
+     * `IORING_FEAT_SINGLE_MMAP` (from Linux 5.4)
+     *
+     * Indicates that we can use single mmap feature to map both sq and cq rings and so to avoid the
+     * second mmap.
+     */
+    SINGLE_MMAP     = 1U << 0,
+
+    /**
+     * `IORING_FEAT_NODROP` (from Linux 5.5)
+     *
+     * Currently we drop completion events, if the CQ ring is full. That's fine
+     * for requests with bounded completion times, but it may make it harder or
+     * impossible to use io_uring with networked IO where request completion
+     * times are generally unbounded. Or with POLL, for example, which is also
+     * unbounded.
+     *
+     * After this patch, we never overflow the ring, we simply store requests
+     * in a backlog for later flushing. This flushing is done automatically by
+     * the kernel. To prevent the backlog from growing indefinitely, if the
+     * backlog is non-empty, we apply back pressure on IO submissions. Any
+     * attempt to submit new IO with a non-empty backlog will get an -EBUSY
+     * return from the kernel. This is a signal to the application that it has
+     * backlogged CQ events, and that it must reap those before being allowed
+     * to submit more IO.
+     *
+     * Note that if we do return -EBUSY, we will have filled whatever
+     * backlogged events into the CQ ring first, if there's room. This means
+     * the application can safely reap events WITHOUT entering the kernel and
+     * waiting for them, they are already available in the CQ ring.
+     */
+    NODROP          = 1U << 1,
+
+    /**
+     * `IORING_FEAT_SUBMIT_STABLE` (from Linux 5.5)
+     *
+     * If this flag is set, applications can be certain that any data for async offload has been
+     * consumed when the kernel has consumed the SQE.
+     */
+    SUBMIT_STABLE   = 1U << 2
 }
 
 /**
