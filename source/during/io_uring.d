@@ -3,7 +3,7 @@
  *
  * See: https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring.h
  *
- * Last changes from: da8c96906990f1108cb626ee7865e69267a3263b (20191203)
+ * Last changes from: 9e3aa61ae3e01ce1ce6361a41ef725e1f4d1d2bf (20191212)
 */
 module during.io_uring;
 
@@ -377,6 +377,26 @@ enum SubmissionEntryFlags : ubyte
      * Note: available from Linux 5.3
      */
     IO_LINK     = 1U << 2,
+
+    /**
+     * `IOSQE_IO_HARDLINK` - like LINK, but stronger
+     *
+     * Some commands will invariably end in a failure in the sense that the
+     * completion result will be less than zero. One such example is timeouts
+     * that don't have a completion count set, they will always complete with
+     * `-ETIME` unless cancelled.
+     *
+     * For linked commands, we sever links and fail the rest of the chain if
+     * the result is less than zero. Since we have commands where we know that
+     * will happen, add IOSQE_IO_HARDLINK as a stronger link that doesn't sever
+     * regardless of the completion result. Note that the link will still sever
+     * if we fail submitting the parent request, hard links are only resilient
+     * in the presence of completion results for requests that did submit
+     * correctly.
+     *
+     * Note: available from Linux 5.5
+     */
+    IO_HARDLINK = 1U << 3,
 }
 
 /**
