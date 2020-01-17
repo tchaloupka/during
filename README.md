@@ -93,7 +93,7 @@ For more examples, see `tests` and `examples` subfolders or the documentation.
 Just add
 
 ```
-depends "during" version=">~0.1.0"
+dependency "during" version="~>0.1.0"
 ```
 
 to your `dub.sdl` project file, or
