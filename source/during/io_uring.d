@@ -3,8 +3,8 @@
  *
  * See: https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring.h
  *
- * Last changes from: 9e3aa61ae3e01ce1ce6361a41ef725e1f4d1d2bf (20191212)
-*/
+ * Last changes from: f2a8d5c7a218b9c24befb756c4eb30aa550ce822 (20200517)
+ */
 module during.io_uring;
 
 version (linux):
@@ -31,7 +31,11 @@ struct SubmissionEntry
         ulong addr2;                        /// from Linux 5.5
     }
 
-    ulong addr;                             /// pointer to buffer or iovecs
+    union
+    {
+        ulong addr;                         /// pointer to buffer or iovecs
+        ulong splice_off_in;
+    }
     uint len;                               /// buffer size or number of iovecs
 
     union
@@ -43,14 +47,28 @@ struct SubmissionEntry
         MsgFlags            msg_flags;          /// from Linux 5.3
         TimeoutFlags        timeout_flags;      /// from Linux 5.4
         AcceptFlags         accept_flags;       /// from Linux 5.5
-        // uint                cancel_flags;       /// from Linux 5.5 (TODO: not any yet)
+        uint                cancel_flags;       /// from Linux 5.5
+        uint                open_flags;         /// from Linux 5.6
+        uint                statx_flags;        /// from Linux 5.6
+        uint                fadvise_advice;     /// from Linux 5.6
+        uint                splice_flags;       /// from Linux 5.7
     }
 
     ulong user_data;                        /// data to be passed back at completion time
 
     union
     {
-        ushort buf_index;                   /// index into fixed buffers, if used
+        struct
+        {
+            union
+            {
+                ushort buf_index;   /// index into fixed buffers, if used
+                ushort buf_group;   /// for grouped buffer selection
+            }
+            ushort personality;     /// personality to use, if used
+            int splice_fd_in;
+        }
+
         ulong[3] __pad2;
     }
 
@@ -291,6 +309,12 @@ enum TimeoutFlags : uint
 }
 
 /**
+ * sqe->splice_flags
+ * extends splice(2) flags
+ */
+enum SPLICE_F_FD_IN_FIXED = 1U << 31; /* the last bit of __u32 */
+
+/**
  * Flags that can be used with the `accept4(2)` operation.
  */
 enum AcceptFlags : uint
@@ -334,12 +358,35 @@ enum Operation : ubyte
     // available from Linux 5.4
     TIMEOUT = 11,           /// IORING_OP_TIMEOUT
 
-    // available from Linux 5.5 (in master now)
+    // available from Linux 5.5
     TIMEOUT_REMOVE = 12,    /// IORING_OP_TIMEOUT_REMOVE
     ACCEPT = 13,            /// IORING_OP_ACCEPT
     ASYNC_CANCEL = 14,      /// IORING_OP_ASYNC_CANCEL
     LINK_TIMEOUT = 15,      /// IORING_OP_LINK_TIMEOUT
     CONNECT = 16,           /// IORING_OP_CONNECT
+
+    // available from Linux 5.6
+    FALLOCATE = 17,         /// IORING_OP_FALLOCATE
+    OPENAT = 18,            /// IORING_OP_OPENAT
+    CLOSE = 19,             /// IORING_OP_CLOSE
+    FILES_UPDATE = 20,      /// IORING_OP_FILES_UPDATE
+    STATX = 21,             /// IORING_OP_STATX
+    READ = 22,              /// IORING_OP_READ
+	WRITE = 23,             /// IORING_OP_WRITE
+    FADVISE = 24,           /// IORING_OP_FADVISE
+    MADVISE = 25,           /// IORING_OP_MADVISE
+    SEND = 26,              /// IORING_OP_SEND
+	RECV = 27,              /// IORING_OP_RECV
+    OPENAT2 = 28,           /// IORING_OP_OPENAT2
+    EPOLL_CTL = 29,         /// IORING_OP_EPOLL_CTL
+
+    // available from Linux 5.7
+    SPLICE = 30,            /// IORING_OP_SPLICE
+    PROVIDE_BUFFERS = 31,   /// IORING_OP_PROVIDE_BUFFERS
+    REMOVE_BUFFERS = 32,    /// IORING_OP_REMOVE_BUFFERS
+
+    // available from Linux 5.8
+    TEE = 33,               /// IORING_OP_TEE
 }
 
 /// sqe->flags
@@ -397,6 +444,48 @@ enum SubmissionEntryFlags : ubyte
      * Note: available from Linux 5.5
      */
     IO_HARDLINK = 1U << 3,
+
+    /**
+     * `IOSQE_ASYNC`
+     *
+     * io_uring defaults to always doing inline submissions, if at all possible. But for larger
+     * copies, even if the data is fully cached, that can take a long time. Add an IOSQE_ASYNC flag
+     * that the application can set on the SQE - if set, it'll ensure that we always go async for
+     * those kinds of requests.
+     *
+     * Note: available from Linux 5.6
+     */
+    ASYNC       = 1U << 4,    /* always go async */
+
+    /**
+     * `IOSQE_BUFFER_SELECT`
+     * If a server process has tons of pending socket connections, generally it uses epoll to wait
+     * for activity. When the socket is ready for reading (or writing), the task can select a buffer
+     * and issue a recv/send on the given fd.
+     *
+     * Now that we have fast (non-async thread) support, a task can have tons of pending reads or
+     * writes pending. But that means they need buffers to back that data, and if the number of
+     * connections is high enough, having them preallocated for all possible connections is
+     * unfeasible.
+     *
+     * With IORING_OP_PROVIDE_BUFFERS, an application can register buffers to use for any request.
+     * The request then sets IOSQE_BUFFER_SELECT in the sqe, and a given group ID in sqe->buf_group.
+     * When the fd becomes ready, a free buffer from the specified group is selected. If none are
+     * available, the request is terminated with -ENOBUFS. If successful, the CQE on completion will
+     * contain the buffer ID chosen in the cqe->flags member, encoded as:
+     *
+     * `(buffer_id << IORING_CQE_BUFFER_SHIFT) | IORING_CQE_F_BUFFER;`
+     *
+     * Once a buffer has been consumed by a request, it is no longer available and must be
+     * registered again with IORING_OP_PROVIDE_BUFFERS.
+     *
+     * Requests need to support this feature. For now, IORING_OP_READ and IORING_OP_RECV support it.
+     * This is checked on SQE submission, a CQE with res == -EOPNOTSUPP will be posted if attempted
+     * on unsupported requests.
+     *
+     * Note: available from Linux 5.7
+     */
+    IOSQE_BUFFER_SELECT = 1U << 5, /* select buffer from sqe->buf_group */
 }
 
 /**
@@ -406,9 +495,19 @@ enum SubmissionEntryFlags : ubyte
  */
 struct CompletionEntry
 {
-    ulong   user_data;  /* sqe->data submission passed back */
-    int     res;        /* result code for this event */
-    uint    flags;
+    ulong       user_data;  /** sqe->data submission passed back */
+    int         res;        /** result code for this event */
+    CQEFlags    flags;
+}
+
+/// Flags used with `CompletionEntry`
+enum CQEFlags : uint
+{
+    NONE = 0, /// No flags set
+
+    /// `IORING_CQE_F_BUFFER` If set, the upper 16 bits are the buffer ID
+    /// Note: available from Linux 5.7
+    BUFFER = 1U << 0
 }
 
 /**
@@ -444,7 +543,8 @@ struct SetupParameters
     /// until kernel poll thread goes to sleep.
     uint                        sq_thread_idle;
     SetupFeatures               features;       /// (from Linux 5.4)
-    private uint[4]             resv;           // reserved
+    uint                        wq_fd;          /// (from Linux 5.6)
+    private uint[3]             resv;           // reserved
     SubmissionQueueRingOffsets  sq_off;         /// (output) submission queue ring data field offsets
     CompletionQueueRingOffsets  cq_off;         /// (output) completion queue ring data field offsets
 }
@@ -517,6 +617,37 @@ enum SetupFlags : uint
      * Note: Available from Linux 5.5
      */
     CQSIZE  = 1U << 3,
+
+    /**
+     * `IORING_SETUP_CLAMP`
+     *
+     * Some applications like to start small in terms of ring size, and then ramp up as needed. This
+     * is a bit tricky to do currently, since we don't advertise the max ring size.
+     *
+     * This adds IORING_SETUP_CLAMP. If set, and the values for SQ or CQ ring size exceed what we
+     * support, then clamp them at the max values instead of returning -EINVAL. Since we return the
+     * chosen ring sizes after setup, no further changes are needed on the application side.
+     * io_uring already changes the ring sizes if the application doesn't ask for power-of-two
+     * sizes, for example.
+     *
+     * Note: Available from Linux 5.6
+     */
+    CLAMP   = 1U << 4, /* clamp SQ/CQ ring sizes */
+
+    /**
+     * `IORING_SETUP_ATTACH_WQ`
+     *
+     * If IORING_SETUP_ATTACH_WQ is set, it expects wq_fd in io_uring_params to be a valid io_uring
+     * fd io-wq of which will be shared with the newly created io_uring instance. If the flag is set
+     * but it can't share io-wq, it fails.
+     *
+     * This allows creation of "sibling" io_urings, where we prefer to keep the SQ/CQ private, but
+     * want to share the async backend to minimize the amount of overhead associated with having
+     * multiple rings that belong to the same backend.
+     *
+     * Note: Available from Linux 5.6
+     */
+    ATTACH_WQ = 1U << 5, /* attach to existing wq */
 }
 
 /// `io_uring_params->features` flags
@@ -563,7 +694,49 @@ enum SetupFeatures : uint
      * If this flag is set, applications can be certain that any data for async offload has been
      * consumed when the kernel has consumed the SQE.
      */
-    SUBMIT_STABLE   = 1U << 2
+    SUBMIT_STABLE   = 1U << 2,
+
+    /**
+     * `IORING_FEAT_RW_CUR_POS` (from Linux 5.6)
+     *
+     * If this flag is set, applications can know if setting `-1` as file offsets (meaning to work
+     * with current file position) is supported.
+     */
+    RW_CUR_POS = 1U << 3,
+
+    /**
+     * `IORING_FEAT_CUR_PERSONALITY` (from Linux 5.6)
+     * We currently setup the io_wq with a static set of mm and creds. Even for a single-use io-wq
+     * per io_uring, this is suboptimal as we have may have multiple enters of the ring. For
+     * sharing the io-wq backend, it doesn't work at all.
+     *
+     * Switch to passing in the creds and mm when the work item is setup. This means that async
+     * work is no longer deferred to the io_uring mm and creds, it is done with the current mm and
+     * creds.
+     *
+     * Flag this behavior with IORING_FEAT_CUR_PERSONALITY, so applications know they can rely on
+     * the current personality (mm and creds) being the same for direct issue and async issue.
+     */
+    CUR_PERSONALITY = 1U << 4,
+
+    /**
+     * `IORING_FEAT_FAST_POLL` (from Linux 5.7)
+     * Currently io_uring tries any request in a non-blocking manner, if it can, and then retries
+     * from a worker thread if we get -EAGAIN. Now that we have a new and fancy poll based retry
+     * backend, use that to retry requests if the file supports it.
+     *
+     * This means that, for example, an IORING_OP_RECVMSG on a socket no longer requires an async
+     * thread to complete the IO. If we get -EAGAIN reading from the socket in a non-blocking
+     * manner, we arm a poll handler for notification on when the socket becomes readable. When it
+     * does, the pending read is executed directly by the task again, through the io_uring task
+     * work handlers. Not only is this faster and more efficient, it also means we're not
+     * generating potentially tons of async threads that just sit and block, waiting for the IO to
+     * complete.
+     *
+     * The feature is marked with IORING_FEAT_FAST_POLL, meaning that async pollable IO is fast,
+     * and that poll<link>other_op is fast as well.
+     */
+    FAST_POLL = 1U << 5,
 }
 
 /**
@@ -645,7 +818,22 @@ struct CompletionQueueRingOffsets
     /// Offset to array of completion queue entries
     uint cqes;
 
-    private ulong[2] resv; // reserved
+    CQRingFlags flags;             /// (available from Linux 5.8)
+    private uint _resv1;
+    private ulong _resv2;
+}
+
+/// CompletionQueue ring flags
+enum CQRingFlags : uint
+{
+    NONE = 0, /// No flags set
+
+    /// `IORING_CQ_EVENTFD_DISABLED` disable eventfd notifications (available from Linux 5.8)
+    /// This new flag should be set/clear from the application to disable/enable eventfd notifications when a request is completed and queued to the CQ ring.
+    ///
+    /// Before this patch, notifications were always sent if an eventfd is registered, so IORING_CQ_EVENTFD_DISABLED is not set during the initialization.
+    /// It will be up to the application to set the flag after initialization if no notifications are required at the beginning.
+    EVENTFD_DISABLED = 1U << 0,
 }
 
 /// io_uring_register(2) opcodes and arguments
@@ -732,6 +920,50 @@ enum RegisterOpCode : uint
 
     /// `IORING_REGISTER_FILES_UPDATE` (from Linux 5.5)
     REGISTER_FILES_UPDATE   = 6,
+
+    /**
+     * `IORING_REGISTER_EVENTFD_ASYNC` (from Linux 5.6)
+     *
+     * If an application is using eventfd notifications with poll to know when new SQEs can be
+     * issued, it's expecting the following read/writes to complete inline. And with that, it knows
+     * that there are events available, and don't want spurious wakeups on the eventfd for those
+     * requests.
+     *
+     * This adds IORING_REGISTER_EVENTFD_ASYNC, which works just like IORING_REGISTER_EVENTFD,
+     * except it only triggers notifications for events that happen from async completions (IRQ, or
+     * io-wq worker completions). Any completions inline from the submission itself will not
+     * trigger notifications.
+     */
+    REGISTER_EVENTFD_ASYNC = 7,
+
+    /**
+     * `IORING_REGISTER_PROBE` (from Linux 5.6)
+     *
+     * The application currently has no way of knowing if a given opcode is supported or not
+     * without having to try and issue one and see if we get -EINVAL or not. And even this approach
+     * is fraught with peril, as maybe we're getting -EINVAL due to some fields being missing, or
+     * maybe it's just not that easy to issue that particular command without doing some other leg
+     * work in terms of setup first.
+     *
+     * This adds IORING_REGISTER_PROBE, which fills in a structure with info on what it supported
+     * or not. This will work even with sparse opcode fields, which may happen in the future or
+     * even today if someone backports specific features to older kernels.
+     */
+    REGISTER_PROBE = 8,
+
+    /**
+     * `IORING_REGISTER_PERSONALITY` (from Linux 5.6)
+     *
+     * If an application wants to use a ring with different kinds of credentials, it can register
+     * them upfront. We don't lookup credentials, the credentials of the task calling
+     * IORING_REGISTER_PERSONALITY is used.
+     *
+     * An 'id' is returned for the application to use in subsequent personality support.
+     */
+    REGISTER_PERSONALITY = 9,
+
+    /// `IORING_UNREGISTER_PERSONALITY` (from Linux 5.6)
+    UNREGISTER_PERSONALITY = 10,
 }
 
 /// io_uring_enter(2) flags
@@ -754,6 +986,26 @@ static assert(CompletionQueueRingOffsets.sizeof == 40);
 static assert(SetupParameters.sizeof == 120);
 static assert(SubmissionEntry.sizeof == 64);
 static assert(SubmissionQueueRingOffsets.sizeof == 40);
+
+/// Indicating that OP is supported by the kernel
+enum IO_URING_OP_SUPPORTED = 1U << 0;
+
+struct io_uring_probe_op
+{
+    ubyte op;
+    ubyte resv;
+    ushort flags; /* IO_URING_OP_* flags */
+    uint resv2;
+}
+
+struct io_uring_probe
+{
+    ubyte last_op; /* last opcode supported */
+    ubyte ops_len; /* length of ops[] array below */
+    ushort resv;
+    uint[3] resv2;
+    io_uring_probe_op[0] ops;
+}
 
 /**
  * Setup a context for performing asynchronous I/O.

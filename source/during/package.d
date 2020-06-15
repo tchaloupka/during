@@ -398,15 +398,18 @@ struct Uring
     {
         struct Update
         {
-            uint off;
-            const(int)* fds;
+            uint offset;
+            uint _resv;
+            ulong pfds;
         }
+
+        static assert (Update.sizeof == 16);
 
         checkInitialized();
         assert(fds.length, "No file descriptors provided to update");
         assert(fds.length < uint.max, "Too many file descriptors");
 
-        Update u = Update(off, &fds[0]);
+        Update u = { offset: off, pfds: cast(ulong)&fds[0] };
         auto r = io_uring_register(
             payload.fd,
             RegisterOpCode.REGISTER_FILES_UPDATE,
@@ -991,6 +994,7 @@ struct UringDesc
         cq.ringMask     = *cast(uint*)(cq.ring + params.cq_off.ring_mask);
         cq.koverflow    = cast(uint*)(cq.ring + params.cq_off.overflow);
         cq.cqes         = (cast(CompletionEntry*)(cq.ring + params.cq_off.cqes))[0..entries];
+        cq.kflags       = cast(uint*)(cq.ring + params.cq_off.flags);
         return 0;
     }
 }
@@ -1084,6 +1088,7 @@ struct CompletionQueue
     uint* khead; // controlled by us (increment after entry at head was read)
     uint* ktail; // updated by kernel
     uint* koverflow;
+    uint* kflags;
     CompletionEntry[] cqes; // array of entries (fixed length)
 
     uint ringMask; // constant mask used to determine array index from head/tail
@@ -1123,6 +1128,9 @@ struct CompletionQueue
     size_t length() const { return tail - localHead; }
 
     uint overflow() const { return atomicLoad!(MemoryOrder.raw)(*koverflow); }
+
+    /// Runtime CQ flags - written by the application, shouldn't be modified by the kernel.
+    void flags(CQRingFlags flags) { atomicStore!(MemoryOrder.raw)(*kflags, flags); }
 }
 
 // just a helper to use atomicStore more easily with older compilers

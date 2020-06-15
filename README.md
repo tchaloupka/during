@@ -12,17 +12,17 @@ It's just a low level wrapper, doesn't try to do fancy higher level stuff, but a
 
 Main features:
 
-* doesn't use [liburing](https://git.kernel.dk/cgit/liburing/) (licensing issues, doesn't do anything we can't do directly with kernel syscalls, ...)
+* doesn't use [liburing](https://git.kernel.dk/cgit/liburing/) (doesn't do anything we can't do directly with kernel syscalls in a more D idiomatic way)
 * `@nogc`, `nothrow`, `betterC` are supported
 * simple usage with provided API D interface
   * range interface to submit and receive operations
   * helper functions to prepare operations
   * chainable function calls
-* up to date with not yet released Linux 5.5
+* up to date with not yet released Linux 5.8
 
 **Note:**
 
-* not all operations are properly tested yet (from Kernel 5.4, 5.5)
+* not all operations are properly tested yet (from Kernel 5.4, 5.5, 5.6, 5.7, 5.8)
 * Travis CI doesn't run on required linux kernels so it tests only builds (at least Linux 5.1 is needed)
 * same with the code coverage - as all tests fails when run
 * PR's are always welcome
