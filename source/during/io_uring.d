@@ -372,11 +372,11 @@ enum Operation : ubyte
     FILES_UPDATE = 20,      /// IORING_OP_FILES_UPDATE
     STATX = 21,             /// IORING_OP_STATX
     READ = 22,              /// IORING_OP_READ
-	WRITE = 23,             /// IORING_OP_WRITE
+    WRITE = 23,             /// IORING_OP_WRITE
     FADVISE = 24,           /// IORING_OP_FADVISE
     MADVISE = 25,           /// IORING_OP_MADVISE
     SEND = 26,              /// IORING_OP_SEND
-	RECV = 27,              /// IORING_OP_RECV
+    RECV = 27,              /// IORING_OP_RECV
     OPENAT2 = 28,           /// IORING_OP_OPENAT2
     EPOLL_CTL = 29,         /// IORING_OP_EPOLL_CTL
 
@@ -812,7 +812,7 @@ struct CompletionQueueRingOffsets
     uint ring_entries;
 
     /// incremented by the kernel every time it failed to queue a
-	/// completion event because the ring was full.
+    /// completion event because the ring was full.
     uint overflow;
 
     /// Offset to array of completion queue entries
