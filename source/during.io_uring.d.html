@@ -400,11 +400,11 @@
 <a class="br" href="#L372" id="L372">372 </a>    <span class="hid">FILES_UPDATE</span> = <span class="num">20</span>,      <span class="com">/// IORING_OP_FILES_UPDATE</span>
 <a class="br" href="#L373" id="L373">373 </a>    <span class="hid">STATX</span> = <span class="num">21</span>,             <span class="com">/// IORING_OP_STATX</span>
 <a class="br" href="#L374" id="L374">374 </a>    <span class="hid">READ</span> = <span class="num">22</span>,              <span class="com">/// IORING_OP_READ</span>
-<a class="br" href="#L375" id="L375">375 </a>	<span class="hid">WRITE</span> = <span class="num">23</span>,             <span class="com">/// IORING_OP_WRITE</span>
+<a class="br" href="#L375" id="L375">375 </a>    <span class="hid">WRITE</span> = <span class="num">23</span>,             <span class="com">/// IORING_OP_WRITE</span>
 <a class="br" href="#L376" id="L376">376 </a>    <span class="hid">FADVISE</span> = <span class="num">24</span>,           <span class="com">/// IORING_OP_FADVISE</span>
 <a class="br" href="#L377" id="L377">377 </a>    <span class="hid">MADVISE</span> = <span class="num">25</span>,           <span class="com">/// IORING_OP_MADVISE</span>
 <a class="br" href="#L378" id="L378">378 </a>    <span class="hid">SEND</span> = <span class="num">26</span>,              <span class="com">/// IORING_OP_SEND</span>
-<a class="br" href="#L379" id="L379">379 </a>	<span class="hid">RECV</span> = <span class="num">27</span>,              <span class="com">/// IORING_OP_RECV</span>
+<a class="br" href="#L379" id="L379">379 </a>    <span class="hid">RECV</span> = <span class="num">27</span>,              <span class="com">/// IORING_OP_RECV</span>
 <a class="br" href="#L380" id="L380">380 </a>    <span class="hid">OPENAT2</span> = <span class="num">28</span>,           <span class="com">/// IORING_OP_OPENAT2</span>
 <a class="br" href="#L381" id="L381">381 </a>    <span class="hid">EPOLL_CTL</span> = <span class="num">29</span>,         <span class="com">/// IORING_OP_EPOLL_CTL</span>
 <a class="br" href="#L382" id="L382">382 </a>
@@ -840,7 +840,7 @@
 <a class="br" href="#L812" id="L812">812 </a>    <span class="type">uint</span> <span class="hid">ring_entries</span>;
 <a class="br" href="#L813" id="L813">813 </a>
 <a class="br" href="#L814" id="L814">814 </a>    <span class="com">/// incremented by the kernel every time it failed to queue a</span>
-<a class="br" href="#L815" id="L815">815 </a>	<span class="com">/// completion event because the ring was full.</span>
+<a class="br" href="#L815" id="L815">815 </a>    <span class="com">/// completion event because the ring was full.</span>
 <a class="br" href="#L816" id="L816">816 </a>    <span class="type">uint</span> <span class="hid">overflow</span>;
 <a class="br" href="#L817" id="L817">817 </a>
 <a class="br" href="#L818" id="L818">818 </a>    <span class="com">/// Offset to array of completion queue entries</span>
