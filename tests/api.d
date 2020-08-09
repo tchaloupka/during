@@ -91,20 +91,34 @@ unittest
 
     // cause overflow
     foreach (_; 0..2) io.put(Nop());
-    io.submit(2);
+    immutable sub = io.submit(2);
     assert(io.length == 32);
-    assert(io.overflow == 1); // oops
+    if ((io.params.features & SetupFeatures.NODROP) == 0)
+    {
+        assert(io.overflow == 1);
 
-    io.drop(32);
-    assert(io.empty);
-    assert(io.length == 0);
+        io.drop(32);
+        assert(io.empty);
+        assert(io.length == 0);
+    }
+    else
+    {
+        // Linux 5.5 has NODROP feature
+        assert(!io.overflow);
+        io.drop(32);
+        io.wait(1);
+        assert(!io.empty);
+        assert(io.length == 1);
+        io.drop(1);
+    }
 
     // put there another batch
     foreach (_; 0..16) io.put(Nop());
     io.submit(0);
     io.wait(16);
     assert(io.length == 16);
-    assert(io.overflow == 1);
+    if ((io.params.features & SetupFeatures.NODROP) == 0) assert(io.overflow == 1);
+    else assert(!io.overflow);
 }
 
 @("Range interface")

@@ -59,15 +59,13 @@ unittest
     // and remove/cancel it - now should pass ok
     res = io.putWith!((ref SubmissionEntry e, ref const(int) evt) => e.prepPollRemove(evt))(evt).submit(1);
     assert(res == 1);
-    assert(io.front.res == 0);
-    io.popFront();
 
-    // next we're expecting completion of the poll operation itself
-    io.wait(1);
-    assert(!io.empty);
-    // TODO: probably should return -ECANCELED, but at least on 5.3.13 returns 0
-    assert(io.front.res.among(0, -ECANCELED));
-    assert(io.front.user_data == cast(ulong)cast(void*)&evt);
-    io.popFront();
-    assert(io.empty);
+    io.wait(2);
+    foreach (_; 0..2)
+    {
+        if (io.front.user_data == cast(ulong)cast(void*)&evt)
+            assert(io.front.res == -ECANCELED);
+        else assert(!io.front.res);
+        io.popFront();
+    }
 }
