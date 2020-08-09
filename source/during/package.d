@@ -8,10 +8,12 @@ version (linux) {}
 else static assert(0, "io_uring is available on linux only");
 
 public import during.io_uring;
+import during.openat2;
 
 import core.atomic : MemoryOrder;
 debug import core.stdc.stdio;
 import core.stdc.stdlib;
+import core.sys.linux.epoll;
 import core.sys.linux.errno;
 import core.sys.linux.sys.mman;
 import core.sys.linux.unistd;
@@ -504,6 +506,22 @@ void setUserData(D)(ref SubmissionEntry entry, ref D data)
     entry.user_data = cast(ulong)(cast(void*)&data);
 }
 
+private void prepRW(ref SubmissionEntry entry, Operation op,
+    int fd = -1, const void* addr = null, uint len = 0, ulong offset = 0) @safe
+{
+    pragma(inline, true);
+    entry.opcode = op;
+    entry.fd = fd;
+    entry.off = offset;
+    entry.flags = SubmissionEntryFlags.NONE;
+    entry.ioprio = 0;
+    entry.addr = cast(ulong)addr;
+    entry.len = len;
+    entry.rw_flags = ReadWriteFlags.NONE;
+	entry.user_data = 0;
+    entry.__pad2[0] = entry.__pad2[1] = entry.__pad2[2] = 0;
+}
+
 /**
  * Prepares `nop` operation.
  *
@@ -512,12 +530,8 @@ void setUserData(D)(ref SubmissionEntry entry, ref D data)
  */
 void prepNop(ref SubmissionEntry entry) @safe
 {
-    entry.opcode = Operation.NOP;
-    entry.fd = -1;
+    entry.prepRW(Operation.NOP);
 }
-
-// TODO: check offset behavior, preadv2/pwritev2 should accept -1 to work on the current file offset,
-// but it doesn't seem to work here.
 
 /**
  * Prepares `readv` operation.
@@ -528,24 +542,16 @@ void prepNop(ref SubmissionEntry entry) @safe
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset)
+void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, long offset)
     if (is(V == iovec[]) || is(V == iovec))
 {
-    entry.opcode = Operation.READV;
-    entry.fd = fd;
-    entry.off = offset;
     static if (is(V == iovec[]))
     {
         assert(buffer.length, "Empty buffer");
         assert(buffer.length < uint.max, "Too many iovec buffers");
-        entry.addr = cast(ulong)(cast(void*)&buffer[0]);
-        entry.len = cast(uint)buffer.length;
+        entry.prepRW(Operation.READV, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
     }
-    else
-    {
-        entry.addr = cast(ulong)(cast(void*)&buffer);
-        entry.len = 1;
-    }
+    else entry.prepRW(Operation.READV, fd, cast(void*)&buffer, 1, offset);
 }
 
 /**
@@ -557,24 +563,16 @@ void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong o
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong offset)
+void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, long offset)
     if (is(V == iovec[]) || is(V == iovec))
 {
-    entry.opcode = Operation.WRITEV;
-    entry.fd = fd;
-    entry.off = offset;
     static if (is(V == iovec[]))
     {
         assert(buffer.length, "Empty buffer");
         assert(buffer.length < uint.max, "Too many iovec buffers");
-        entry.addr = cast(ulong)(cast(void*)&buffer[0]);
-        entry.len = cast(uint)buffer.length;
+        entry.prepRW(Operation.WRITEV, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
     }
-    else
-    {
-        entry.addr = cast(ulong)(cast(void*)&buffer);
-        entry.len = 1;
-    }
+    else entry.prepRW(Operation.WRITEV, fd, cast(void*)&buffer, 1, offset);
 }
 
 /**
@@ -587,15 +585,11 @@ void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, ulong 
  *      buffer = slice to preregistered buffer
  *      bufferIndex = index to the preregistered buffers array buffer belongs to
  */
-void prepReadFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex)
+void prepReadFixed(ref SubmissionEntry entry, int fd, long offset, ubyte[] buffer, ushort bufferIndex)
 {
     assert(buffer.length, "Empty buffer");
     assert(buffer.length < uint.max, "Buffer too large");
-    entry.opcode = Operation.READ_FIXED;
-    entry.fd = fd;
-    entry.off = offset;
-    entry.addr = cast(ulong)(cast(void*)&buffer[0]);
-    entry.len = cast(uint)buffer.length;
+    entry.prepRW(Operation.READ_FIXED, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
     entry.buf_index = bufferIndex;
 }
 
@@ -609,37 +603,12 @@ void prepReadFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buff
  *      buffer = slice to preregistered buffer
  *      bufferIndex = index to the preregistered buffers array buffer belongs to
  */
-void prepWriteFixed(ref SubmissionEntry entry, int fd, ulong offset, ubyte[] buffer, ushort bufferIndex)
+void prepWriteFixed(ref SubmissionEntry entry, int fd, long offset, ubyte[] buffer, ushort bufferIndex)
 {
     assert(buffer.length, "Empty buffer");
     assert(buffer.length < uint.max, "Buffer too large");
-    entry.opcode = Operation.WRITE_FIXED;
-    entry.fd = fd;
-    entry.off = offset;
-    entry.addr = cast(ulong)(cast(void*)&buffer[0]);
-    entry.len = cast(uint)buffer.length;
+    entry.prepRW(Operation.WRITE_FIXED, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
     entry.buf_index = bufferIndex;
-}
-
-/**
- * Prepares `sendmsg(2)` operation.
- *
- * Params:
- *      entry = `SubmissionEntry` to prepare
- *      fd = file descriptor of file we are operating on
- *      msg = message to operate with
- *      flags = `sendmsg` operation flags
- *
- * Note: Available from Linux 5.3
- *
- * See_Also: `sendmsg(2)` man page for details.
- */
-void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
-{
-    entry.opcode = Operation.SENDMSG;
-    entry.fd = fd;
-    entry.addr = cast(ulong)(cast(void*)&msg);
-    entry.msg_flags = flags;
 }
 
 /**
@@ -657,9 +626,26 @@ void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags fla
  */
 void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
 {
-    entry.opcode = Operation.RECVMSG;
-    entry.fd = fd;
-    entry.addr = cast(ulong)(cast(void*)&msg);
+    entry.prepRW(Operation.RECVMSG, fd, cast(void*)&msg, 1, 0);
+    entry.msg_flags = flags;
+}
+
+/**
+ * Prepares `sendmsg(2)` operation.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      fd = file descriptor of file we are operating on
+ *      msg = message to operate with
+ *      flags = `sendmsg` operation flags
+ *
+ * Note: Available from Linux 5.3
+ *
+ * See_Also: `sendmsg(2)` man page for details.
+ */
+void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
+{
+    entry.prepRW(Operation.SENDMSG, fd, cast(void*)&msg, 1, 0);
     entry.msg_flags = flags;
 }
 
@@ -673,8 +659,7 @@ void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags fla
  */
 void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.NORMAL) @safe
 {
-    entry.opcode = Operation.FSYNC;
-    entry.fd = fd;
+    entry.prepRW(Operation.FSYNC, fd);
     entry.fsync_flags = flags;
 }
 
@@ -692,13 +677,11 @@ void prepPollAdd(ref SubmissionEntry entry, int fd, PollEvents events) @safe
 {
     import std.system : endian, Endian;
 
-    entry.opcode = Operation.POLL_ADD;
-    entry.fd = fd;
+    entry.prepRW(Operation.POLL_ADD, fd);
     static if (endian == Endian.bigEndian)
-    {
         entry.poll_events32 = (events & 0x0000ffffUL) << 16 | (events & 0xffff0000) >> 16;
-    }
-    else entry.poll_events32 = events;
+    else
+        entry.poll_events32 = events;
 }
 
 /**
@@ -711,9 +694,7 @@ void prepPollAdd(ref SubmissionEntry entry, int fd, PollEvents events) @safe
  */
 void prepPollRemove(D)(ref SubmissionEntry entry, ref D userData)
 {
-    entry.opcode = Operation.POLL_REMOVE;
-    entry.fd = -1;
-    entry.addr = cast(ulong)(cast(void*)&userData);
+    entry.prepRW(Operation.POLL_REMOVE, -1, cast(void*)&userData);
 }
 
 /**
@@ -768,11 +749,7 @@ void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len
 void prepTimeout(ref SubmissionEntry entry, ref KernelTimespec time,
     ulong count = 0, TimeoutFlags flags = TimeoutFlags.REL)
 {
-    entry.opcode = Operation.TIMEOUT;
-    entry.fd = -1;
-    entry.addr = cast(ulong)(cast(void*)&time);
-    entry.len = 1;
-    entry.off = count;
+    entry.prepRW(Operation.TIMEOUT, -1, cast(void*)&time, 1, count);
     entry.timeout_flags = flags;
 }
 
@@ -793,9 +770,7 @@ void prepTimeout(ref SubmissionEntry entry, ref KernelTimespec time,
  */
 void prepTimeoutRemove(D)(ref SubmissionEntry entry, ref D userData)
 {
-    entry.opcode = Operation.TIMEOUT_REMOVE;
-    entry.fd = -1;
-    entry.addr = cast(ulong)(cast(void*)&userData);
+    entry.prepRW(Operation.TIMEOUT_REMOVE, -1, cast(void*)&userData);
 }
 
 /**
@@ -814,10 +789,7 @@ void prepTimeoutRemove(D)(ref SubmissionEntry entry, ref D userData)
 void prepAccept(ADDR)(ref SubmissionEntry entry, int fd, ref ADDR addr, ref socklen_t addrlen,
     AcceptFlags flags = AcceptFlags.NONE)
 {
-    entry.opcode = Operation.ACCEPT;
-    entry.fd = fd;
-    entry.addr = cast(ulong)(cast(void*)&addr);
-    entry.addr2 = cast(ulong)(cast(void*)&addrlen);
+    entry.prepRW(Operation.ACCEPT, fd, cast(void*)&addr, 0, cast(ulong)(cast(void*)&addrlen));
     entry.accept_flags = flags;
 }
 
@@ -843,12 +815,10 @@ void prepAccept(ADDR)(ref SubmissionEntry entry, int fd, ref ADDR addr, ref sock
  *
  * Note: Available from Linux 5.5
  */
-void prepCancel(D)(ref SubmissionEntry entry, ref D userData/*, uint flags = 0*/)
+void prepCancel(D)(ref SubmissionEntry entry, ref D userData, uint flags = 0)
 {
-    entry.opcode = Operation.ASYNC_CANCEL;
-    entry.fd = -1;
-    entry.addr = cast(ulong)(cast(void*)&userData);
-    // entry.cancel_flags = flags; // TODO: there are none yet
+    entry.prepRW(Operation.ASYNC_CANCEL, -1, cast(void*)&userData);
+    entry.cancel_flags = flags;
 }
 
 /**
@@ -872,10 +842,7 @@ void prepCancel(D)(ref SubmissionEntry entry, ref D userData/*, uint flags = 0*/
  */
 void prepLinkTimeout(ref SubmissionEntry entry, ref KernelTimespec time, TimeoutFlags flags = TimeoutFlags.REL)
 {
-    entry.opcode = Operation.LINK_TIMEOUT;
-    entry.fd = -1;
-    entry.addr = cast(ulong)(cast(void*)&time);
-    entry.len = 1;
+    entry.prepRW(Operation.LINK_TIMEOUT, -1, cast(void*)&time, 1, 0);
     entry.timeout_flags = flags;
 }
 
@@ -884,10 +851,160 @@ void prepLinkTimeout(ref SubmissionEntry entry, ref KernelTimespec time, Timeout
  */
 void prepConnect(ADDR)(ref SubmissionEntry entry, int fd, ref const(ADDR) addr)
 {
-    entry.opcode = Operation.CONNECT;
-    entry.fd = fd;
-    entry.addr = cast(ulong)(cast(void*)&addr);
-    entry.off = ADDR.sizeof;
+    entry.prepRW(Operation.CONNECT, fd, cast(void*)&addr, 0, ADDR.sizeof);
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepFilesUpdate(ref SubmissionEntry entry, int[] fds, int offset)
+{
+    entry.prepRW(Operation.FILES_UPDATE, -1, cast(void*)&fds[0], cast(uint)fds.length, offset);
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepFallocate(ref SubmissionEntry entry, int fd, int mode, long offset, long len)
+{
+    entry.prepRW(Operation.FALLOCATE, fd, cast(void*)len, mode, offset);
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepOpenat(ref SubmissionEntry entry, int fd, const char* path, int flags, uint mode)
+{
+    entry.prepRW(Operation.OPENAT, fd, cast(void*)path, mode, 0);
+    entry.open_flags = flags;
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepClose(ref SubmissionEntry entry, int fd)
+{
+    entry.prepRW(Operation.CLOSE, fd);
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepRead(ref SubmissionEntry entry, int fd, ubyte[] buffer, long offset)
+{
+    entry.prepRW(Operation.READ, fd, cast(void*)buffer[0], cast(uint)buffer.length, offset);
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepWrite(ref SubmissionEntry entry, int fd, const(ubyte)[] buffer, long offset)
+{
+    entry.prepRW(Operation.WRITE, fd, cast(void*)buffer[0], cast(uint)buffer.length, offset);
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepStatx(Statx)(ref SubmissionEntry entry, int fd, const char* path, int flags, uint mask, ref Statx statxbuf)
+{
+    entry.prepRW(Operation.STATX, fd, cast(void*)path, mask, cast(ulong)(cast(void*)&statxbuf));
+    entry.statx_flags = flags;
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepFadvise(ref SubmissionEntry entry, int fd, long offset, uint len, int advice)
+{
+    entry.prepRW(Operation.FADVISE, fd, null, len, offset);
+    entry.fadvise_advice = advice;
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepMadvise(ref SubmissionEntry entry, const(ubyte)[] block, int advice)
+{
+    entry.prepRW(Operation.MADVISE, -1, cast(void*)&block[0], cast(uint)block.length, 0);
+    entry.fadvise_advice = advice;
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepSend(ref SubmissionEntry entry, int sockfd, const(ubyte)[] buf, MsgFlags flags)
+{
+    entry.prepRW(Operation.SEND, sockfd, cast(void*)&buf[0], cast(uint)buf.length, 0);
+    entry.msg_flags = flags;
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepRecv(ref SubmissionEntry entry, int sockfd, ubyte[] buf, MsgFlags flags)
+{
+    entry.prepRW(Operation.RECV, sockfd, cast(void*)&buf[0], cast(uint)buf.length, 0);
+    entry.msg_flags = flags;
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepOpenat2(ref SubmissionEntry entry, int fd, const char *path, ref OpenHow how)
+{
+    entry.prepRW(Operation.OPENAT2, fd, cast(void*)path, cast(uint)OpenHow.sizeof, cast(ulong)(cast(void*)&how));
+}
+
+/**
+ * Note: Available from Linux 5.6
+ */
+void prepEpollCtl(ref SubmissionEntry entry, int epfd, int fd, int op, ref epoll_event ev)
+{
+    entry.prepRW(Operation.EPOLL_CTL, epfd, cast(void*)&ev, op, fd);
+}
+
+/**
+ * Note: Available from Linux 5.7
+ */
+void prepSplice(ref SubmissionEntry entry,
+    int fd_in, ulong off_in,
+    int fd_out, ulong off_out,
+    uint nbytes, uint splice_flags)
+{
+    entry.prepRW(Operation.SPLICE, fd_out, null, nbytes, off_out);
+    entry.splice_off_in = off_in;
+    entry.splice_fd_in = fd_in;
+    entry.splice_flags = splice_flags;
+}
+
+/**
+ * Note: Available from Linux 5.7
+ */
+void prepProvideBuffers(ref SubmissionEntry entry, ubyte[] buf, int nr, ushort bgid, int bid)
+{
+    entry.prepRW(Operation.PROVIDE_BUFFERS, nr, cast(void*)&buf[0], cast(uint)buf.length, bid);
+    entry.buf_group = bgid;
+}
+
+/**
+ * Note: Available from Linux 5.7
+ */
+void prepRemoveBuffers(ref SubmissionEntry entry, int nr, ushort bgid)
+{
+    entry.prepRW(Operation.REMOVE_BUFFERS, nr);
+    entry.buf_group = bgid;
+}
+
+/**
+ * Note: Available from Linux 5.8
+ */
+void prepTee(ref SubmissionEntry entry, int fd_in, int fd_out, uint nbytes, uint flags)
+{
+    entry.prepRW(Operation.TEE, fd_out, null, nbytes, 0);
+    entry.splice_off_in = 0;
+    entry.splice_fd_in = fd_in;
+    entry.splice_flags = flags;
 }
 
 private:
