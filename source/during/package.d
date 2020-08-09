@@ -690,9 +690,15 @@ void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.
  */
 void prepPollAdd(ref SubmissionEntry entry, int fd, PollEvents events) @safe
 {
+    import std.system : endian, Endian;
+
     entry.opcode = Operation.POLL_ADD;
     entry.fd = fd;
-    entry.poll_events = events;
+    static if (endian == Endian.bigEndian)
+    {
+        entry.poll_events32 = (events & 0x0000ffffUL) << 16 | (events & 0xffff0000) >> 16;
+    }
+    else entry.poll_events32 = events;
 }
 
 /**

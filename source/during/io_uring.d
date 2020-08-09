@@ -3,7 +3,7 @@
  *
  * See: https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring.h
  *
- * Last changes from: f2a8d5c7a218b9c24befb756c4eb30aa550ce822 (20200517)
+ * Last changes from: 760618f7a8e3b63aa06266efb301719c374e29d4 (20200724)
  */
 module during.io_uring;
 
@@ -42,7 +42,8 @@ struct SubmissionEntry
     {
         ReadWriteFlags      rw_flags;
         FsyncFlags          fsync_flags;
-        PollEvents          poll_events;
+        PollEvents          poll_events;        // changed in https://github.com/torvalds/linux/commit/5769a351b89cd4d82016f18fa5f6c4077403564d
+        uint                poll_events32;      /// from Linux 5.9 - word-reversed for BE
         SyncFileRangeFlags  sync_range_flags;   /// from Linux 5.2
         MsgFlags            msg_flags;          /// from Linux 5.3
         TimeoutFlags        timeout_flags;      /// from Linux 5.4
@@ -146,7 +147,7 @@ enum FsyncFlags : uint
 /** Possible poll event flags.
  *  See: poll(2)
  */
-enum PollEvents : ushort
+enum PollEvents : uint
 {
     /// There is data to read.
     IN      = POLLIN,
@@ -188,6 +189,21 @@ enum PollEvents : ushort
      *  channel has been consumed.
      */
     HUP     = POLLHUP,
+
+    /** (since Linux 2.6.17)
+     * Stream socket peer closed connection, or shut down writing half of connection.
+     */
+    RDHUP   = 0x2000,
+
+    /** (since Linux 4.5)
+     * Sets an exclusive wakeup mode for the epoll file descriptor that is being attached to the
+     * target file descriptor, fd. When a wakeup event occurs and multiple epoll file descriptors
+     * are attached to the same target file using EPOLLEXCLUSIVE, one or more of the epoll file
+     * descriptors will receive an event with epoll_wait(2).  The default in this scenario (when
+     * EPOLLEXCLUSIVE is not set) is for all epoll file descriptors to receive an event.
+     * EPOLLEXCLUSIVE is thus useful for avoiding thundering herd problems in certain scenarios.
+     */
+    EXCLUSIVE = 0x10000000,
 }
 
 /**
@@ -737,6 +753,15 @@ enum SetupFeatures : uint
      * and that poll<link>other_op is fast as well.
      */
     FAST_POLL = 1U << 5,
+
+    /**
+     * `IORING_FEAT_POLL_32BITS` (from Linux 5.9)
+     * Poll events should be 32-bits to cover EPOLLEXCLUSIVE.
+     * Explicit word-swap the poll32_events for big endian to make sure the ABI is not changed.  We
+     * call this feature IORING_FEAT_POLL_32BITS, applications who want to use EPOLLEXCLUSIVE should
+     * check the feature bit first.
+     */
+    POLL_32BITS = 1U << 6
 }
 
 /**
@@ -783,7 +808,18 @@ enum SubmissionQueueFlags: uint
 
     /// `IORING_SQ_NEED_WAKEUP`: needs io_uring_enter wakeup
     /// set by kernel poll thread when it goes sleeping, and reset on wakeup
-    NEED_WAKEUP = 1U << 0
+    NEED_WAKEUP = 1U << 0,
+
+    /// `IORING_SQ_CQ_OVERFLOW`: CQ ring is overflown
+    /// Since Kernel 5.8
+    /// For those applications which are not willing to use io_uring_enter() to reap and handle
+    /// cqes, they may completely rely on liburing's io_uring_peek_cqe(), but if cq ring has
+    /// overflowed, currently because io_uring_peek_cqe() is not aware of this overflow, it won't
+    /// enter kernel to flush cqes.
+    /// To fix this issue, export cq overflow status to userspace by adding new
+    /// IORING_SQ_CQ_OVERFLOW flag, then helper functions() in liburing, such as io_uring_peek_cqe,
+    /// can be aware of this cq overflow and do flush accordingly.
+    CQ_OVERFLOW = 1U << 1
 }
 
 /**
