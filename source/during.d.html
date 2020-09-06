@@ -920,7 +920,7 @@
 <a class="br" href="#L892" id="L892">892 </a> */</span>
 <a class="br" href="#L893" id="L893">893 </a><span class="type">void</span> <a class="hid" href="during.d.html#L893" title="during.prepRead">prepRead</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="type">ubyte</span>[] <span class="hid">buffer</span>, <span class="type">long</span> <span class="hid">offset</span>)
 <a class="br" href="#L894" id="L894">894 </a>{
-<a class="br" href="#L895" id="L895">895 </a>    <span class="hid">entry.prepRW</span>(<span class="hid">Operation.READ</span>, <span class="hid">fd</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*)<span class="hid">buffer</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>, <span class="hid">offset</span>);
+<a class="br" href="#L895" id="L895">895 </a>    <span class="hid">entry.prepRW</span>(<span class="hid">Operation.READ</span>, <span class="hid">fd</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buffer</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>, <span class="hid">offset</span>);
 <a class="br" href="#L896" id="L896">896 </a>}
 <a class="br" href="#L897" id="L897">897 </a>
 <a class="br" href="#L898" id="L898">898 </a><span class="com">/**
@@ -928,7 +928,7 @@
 <a class="br" href="#L900" id="L900">900 </a> */</span>
 <a class="br" href="#L901" id="L901">901 </a><span class="type">void</span> <a class="hid" href="during.d.html#L901" title="during.prepWrite">prepWrite</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">fd</span>, <span class="kwrd">const</span>(<span class="type">ubyte</span>)[] <span class="hid">buffer</span>, <span class="type">long</span> <span class="hid">offset</span>)
 <a class="br" href="#L902" id="L902">902 </a>{
-<a class="br" href="#L903" id="L903">903 </a>    <span class="hid">entry.prepRW</span>(<span class="hid">Operation.WRITE</span>, <span class="hid">fd</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*)<span class="hid">buffer</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>, <span class="hid">offset</span>);
+<a class="br" href="#L903" id="L903">903 </a>    <span class="hid">entry.prepRW</span>(<span class="hid">Operation.WRITE</span>, <span class="hid">fd</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buffer</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buffer.length</span>, <span class="hid">offset</span>);
 <a class="br" href="#L904" id="L904">904 </a>}
 <a class="br" href="#L905" id="L905">905 </a>
 <a class="br" href="#L906" id="L906">906 </a><span class="com">/**
