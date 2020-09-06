@@ -892,7 +892,7 @@ void prepClose(ref SubmissionEntry entry, int fd)
  */
 void prepRead(ref SubmissionEntry entry, int fd, ubyte[] buffer, long offset)
 {
-    entry.prepRW(Operation.READ, fd, cast(void*)buffer[0], cast(uint)buffer.length, offset);
+    entry.prepRW(Operation.READ, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
 }
 
 /**
@@ -900,7 +900,7 @@ void prepRead(ref SubmissionEntry entry, int fd, ubyte[] buffer, long offset)
  */
 void prepWrite(ref SubmissionEntry entry, int fd, const(ubyte)[] buffer, long offset)
 {
-    entry.prepRW(Operation.WRITE, fd, cast(void*)buffer[0], cast(uint)buffer.length, offset);
+    entry.prepRW(Operation.WRITE, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
 }
 
 /**
