@@ -961,7 +961,7 @@
 <a class="br" href="#L933" id="L933">933 </a><span class="com">/**
 <a class="br" href="#L934" id="L934">934 </a> * Note: Available from Linux 5.6
 <a class="br" href="#L935" id="L935">935 </a> */</span>
-<a class="br" href="#L936" id="L936">936 </a><span class="type">void</span> <a class="hid" href="during.d.html#L936" title="during.prepSend">prepSend</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">sockfd</span>, <span class="kwrd">const</span>(<span class="type">ubyte</span>)[] <span class="hid">buf</span>, <span class="hid">MsgFlags</span> <span class="hid">flags</span>)
+<a class="br" href="#L936" id="L936">936 </a><span class="type">void</span> <a class="hid" href="during.d.html#L936" title="during.prepSend">prepSend</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">sockfd</span>, <span class="kwrd">const</span>(<span class="type">ubyte</span>)[] <span class="hid">buf</span>, <span class="hid">MsgFlags</span> <span class="hid">flags</span> = <span class="hid">MsgFlags.NONE</span>)
 <a class="br" href="#L937" id="L937">937 </a>{
 <a class="br" href="#L938" id="L938">938 </a>    <span class="hid">entry.prepRW</span>(<span class="hid">Operation.SEND</span>, <span class="hid">sockfd</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buf</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buf.length</span>, <span class="num">0</span>);
 <a class="br" href="#L939" id="L939">939 </a>    <span class="hid">entry.msg_flags</span> = <span class="hid">flags</span>;
@@ -970,7 +970,7 @@
 <a class="br" href="#L942" id="L942">942 </a><span class="com">/**
 <a class="br" href="#L943" id="L943">943 </a> * Note: Available from Linux 5.6
 <a class="br" href="#L944" id="L944">944 </a> */</span>
-<a class="br" href="#L945" id="L945">945 </a><span class="type">void</span> <a class="hid" href="during.d.html#L945" title="during.prepRecv">prepRecv</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">sockfd</span>, <span class="type">ubyte</span>[] <span class="hid">buf</span>, <span class="hid">MsgFlags</span> <span class="hid">flags</span>)
+<a class="br" href="#L945" id="L945">945 </a><span class="type">void</span> <a class="hid" href="during.d.html#L945" title="during.prepRecv">prepRecv</a>(<span class="kwrd">ref</span> <span class="hid">SubmissionEntry</span> <span class="hid">entry</span>, <span class="type">int</span> <span class="hid">sockfd</span>, <span class="type">ubyte</span>[] <span class="hid">buf</span>, <span class="hid">MsgFlags</span> <span class="hid">flags</span> = <span class="hid">MsgFlags.NONE</span>)
 <a class="br" href="#L946" id="L946">946 </a>{
 <a class="br" href="#L947" id="L947">947 </a>    <span class="hid">entry.prepRW</span>(<span class="hid">Operation.RECV</span>, <span class="hid">sockfd</span>, <span class="kwrd">cast</span>(<span class="type">void</span>*)&amp;<span class="hid">buf</span>[<span class="num">0</span>], <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">buf.length</span>, <span class="num">0</span>);
 <a class="br" href="#L948" id="L948">948 </a>    <span class="hid">entry.msg_flags</span> = <span class="hid">flags</span>;
