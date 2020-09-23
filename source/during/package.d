@@ -76,13 +76,13 @@ struct Uring
     nothrow @nogc:
 
     private UringDesc* payload;
-    private void checkInitialized() const
+    private void checkInitialized() const @safe pure
     {
         assert(payload !is null, "Uring hasn't been initialized yet");
     }
 
     /// Copy constructor
-    this(ref return scope Uring rhs)
+    this(ref return scope Uring rhs) @safe pure
     {
         assert(rhs.payload !is null, "rhs payload is null");
         // debug printf("uring(%d): copy\n", rhs.payload.fd);
@@ -91,62 +91,62 @@ struct Uring
     }
 
     /// Destructor
-    ~this()
+    ~this() @safe
     {
         dispose(this);
     }
 
     /// Native io_uring file descriptor
-    auto fd() const
+    auto fd() const @safe pure
     {
         checkInitialized();
         return payload.fd;
     }
 
     /// io_uring parameters
-    SetupParameters params() const return
+    SetupParameters params() const @safe pure return
     {
         checkInitialized();
         return payload.params;
     }
 
     /// Check if there is some `CompletionEntry` to process.
-    bool empty() const
+    bool empty() const @safe pure
     {
         checkInitialized();
         return payload.cq.empty;
     }
 
     /// Check if there is space for another `SubmissionEntry` to submit.
-    bool full() const
+    bool full() const @safe pure
     {
         checkInitialized();
         return payload.sq.full;
     }
 
     /// Available space in submission queue before it becomes full
-    size_t capacity() const
+    size_t capacity() const @safe pure
     {
         checkInitialized();
         return payload.sq.capacity;
     }
 
     /// Number of entries in completion queue
-    size_t length() const
+    size_t length() const @safe pure
     {
         checkInitialized();
         return payload.cq.length;
     }
 
     /// Get first `CompletionEntry` from cq ring
-    ref CompletionEntry front() return
+    ref CompletionEntry front() @safe pure return
     {
         checkInitialized();
         return payload.cq.front;
     }
 
     /// Move to next `CompletionEntry`
-    void popFront()
+    void popFront() @safe pure
     {
         checkInitialized();
         return payload.cq.popFront;
@@ -171,7 +171,7 @@ struct Uring
      *
      * Returns: reference to `Uring` structure so it's possible to chain multiple commands.
      */
-    ref Uring put()(auto ref SubmissionEntry entry) return
+    ref Uring put()(auto ref SubmissionEntry entry) @safe pure return
     {
         checkInitialized();
         payload.sq.put(entry);
@@ -206,17 +206,26 @@ struct Uring
     }
 
     /**
+     * Advances the userspace submision queue and returns last `SubmissionEntry`.
+     */
+    ref SubmissionEntry next()() @safe pure
+    {
+        checkInitialized();
+        return payload.sq.next();
+    }
+
+    /**
      * If completion queue is full, the new event maybe dropped.
      * This value records number of dropped events.
      */
-    uint overflow() const
+    uint overflow() const @safe pure
     {
         checkInitialized();
         return payload.cq.overflow;
     }
 
     /// Counter of invalid submissions (out-of-bound index in submission array)
-    uint dropped() const
+    uint dropped() const @safe pure
     {
         checkInitialized();
         return payload.sq.dropped;
@@ -479,7 +488,7 @@ struct Uring
  *   entry = entry to set parameters to
  *   op = operation to fill entry with (can be custom type)
  */
-void fill(E)(ref SubmissionEntry entry, auto ref E op)
+ref SubmissionEntry fill(E)(return ref SubmissionEntry entry, auto ref E op)
 {
     pragma(inline);
     import std.traits : hasMember, FieldNameTuple;
@@ -490,6 +499,8 @@ void fill(E)(ref SubmissionEntry entry, auto ref E op)
         static assert(hasMember!(SubmissionEntry, m), "unknown member: " ~ E.stringof ~ "." ~ m);
         __traits(getMember, entry, m) = __traits(getMember, op, m);
     }
+
+    return entry;
 }
 
 /**
@@ -501,15 +512,42 @@ void fill(E)(ref SubmissionEntry entry, auto ref E op)
  *
  * Note: data are passed by ref and must live during whole operation.
  */
-void setUserData(D)(ref SubmissionEntry entry, ref D data)
+ref SubmissionEntry setUserData(D)(return ref SubmissionEntry entry, ref D data) @trusted
 {
+    pragma(inline);
     entry.user_data = cast(ulong)(cast(void*)&data);
+    return entry;
 }
 
-private void prepRW(ref SubmissionEntry entry, Operation op,
+/**
+ * Template function to help set `SubmissionEntry` `user_data` field. This differs to `setUserData`
+ * in that it emplaces the provided data directly into SQE `user_data` field and not the pointer to
+ * the data.
+ *
+ * Because of that, data must be of `ulong.sizeof`.
+ */
+ref SubmissionEntry setUserDataRaw(D)(return ref SubmissionEntry entry, auto ref D data) @trusted
+    if (D.sizeof == ulong.sizeof)
+{
+    pragma(inline);
+    entry.user_data = *(cast(ulong*)(cast(void*)&data));
+    return entry;
+}
+
+/**
+ * Helper function to retrieve data set directly to the `CompletionEntry` user_data (set by `setUserDataRaw`).
+ */
+D userDataAs(D)(ref CompletionEntry entry) @trusted
+    if (D.sizeof == ulong.sizeof)
+{
+    pragma(inline);
+    return *(cast(D*)(cast(void*)&entry.user_data));
+}
+
+ref SubmissionEntry prepRW(return ref SubmissionEntry entry, Operation op,
     int fd = -1, const void* addr = null, uint len = 0, ulong offset = 0) @safe
 {
-    pragma(inline, true);
+    pragma(inline);
     entry.opcode = op;
     entry.fd = fd;
     entry.off = offset;
@@ -520,6 +558,7 @@ private void prepRW(ref SubmissionEntry entry, Operation op,
     entry.rw_flags = ReadWriteFlags.NONE;
 	entry.user_data = 0;
     entry.__pad2[0] = entry.__pad2[1] = entry.__pad2[2] = 0;
+    return entry;
 }
 
 /**
@@ -528,9 +567,10 @@ private void prepRW(ref SubmissionEntry entry, Operation op,
  * Params:
  *      entry = `SubmissionEntry` to prepare
  */
-void prepNop(ref SubmissionEntry entry) @safe
+ref SubmissionEntry prepNop(return ref SubmissionEntry entry) @safe
 {
     entry.prepRW(Operation.NOP);
+    return entry;
 }
 
 /**
@@ -542,16 +582,16 @@ void prepNop(ref SubmissionEntry entry) @safe
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, long offset)
+ref SubmissionEntry prepReadv(V)(return ref SubmissionEntry entry, int fd, ref const V buffer, long offset) @trusted
     if (is(V == iovec[]) || is(V == iovec))
 {
     static if (is(V == iovec[]))
     {
         assert(buffer.length, "Empty buffer");
         assert(buffer.length < uint.max, "Too many iovec buffers");
-        entry.prepRW(Operation.READV, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
+        return entry.prepRW(Operation.READV, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
     }
-    else entry.prepRW(Operation.READV, fd, cast(void*)&buffer, 1, offset);
+    else return entry.prepRW(Operation.READV, fd, cast(void*)&buffer, 1, offset);
 }
 
 /**
@@ -563,16 +603,16 @@ void prepReadv(V)(ref SubmissionEntry entry, int fd, ref const V buffer, long of
  *      offset = offset
  *      buffer = iovec buffers to be used by the operation
  */
-void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, long offset)
+ref SubmissionEntry prepWritev(V)(return ref SubmissionEntry entry, int fd, ref const V buffer, long offset) @trusted
     if (is(V == iovec[]) || is(V == iovec))
 {
     static if (is(V == iovec[]))
     {
         assert(buffer.length, "Empty buffer");
         assert(buffer.length < uint.max, "Too many iovec buffers");
-        entry.prepRW(Operation.WRITEV, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
+        return entry.prepRW(Operation.WRITEV, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
     }
-    else entry.prepRW(Operation.WRITEV, fd, cast(void*)&buffer, 1, offset);
+    else return entry.prepRW(Operation.WRITEV, fd, cast(void*)&buffer, 1, offset);
 }
 
 /**
@@ -585,12 +625,13 @@ void prepWritev(V)(ref SubmissionEntry entry, int fd, ref const V buffer, long o
  *      buffer = slice to preregistered buffer
  *      bufferIndex = index to the preregistered buffers array buffer belongs to
  */
-void prepReadFixed(ref SubmissionEntry entry, int fd, long offset, ubyte[] buffer, ushort bufferIndex)
+ref SubmissionEntry prepReadFixed(return ref SubmissionEntry entry, int fd, long offset, ubyte[] buffer, ushort bufferIndex) @safe
 {
     assert(buffer.length, "Empty buffer");
     assert(buffer.length < uint.max, "Buffer too large");
     entry.prepRW(Operation.READ_FIXED, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
     entry.buf_index = bufferIndex;
+    return entry;
 }
 
 /**
@@ -603,12 +644,13 @@ void prepReadFixed(ref SubmissionEntry entry, int fd, long offset, ubyte[] buffe
  *      buffer = slice to preregistered buffer
  *      bufferIndex = index to the preregistered buffers array buffer belongs to
  */
-void prepWriteFixed(ref SubmissionEntry entry, int fd, long offset, ubyte[] buffer, ushort bufferIndex)
+ref SubmissionEntry prepWriteFixed(return ref SubmissionEntry entry, int fd, long offset, ubyte[] buffer, ushort bufferIndex) @safe
 {
     assert(buffer.length, "Empty buffer");
     assert(buffer.length < uint.max, "Buffer too large");
     entry.prepRW(Operation.WRITE_FIXED, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
     entry.buf_index = bufferIndex;
+    return entry;
 }
 
 /**
@@ -624,10 +666,11 @@ void prepWriteFixed(ref SubmissionEntry entry, int fd, long offset, ubyte[] buff
  *
  * See_Also: `recvmsg(2)` man page for details.
  */
-void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
+ref SubmissionEntry prepRecvMsg(return ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE) @trusted
 {
     entry.prepRW(Operation.RECVMSG, fd, cast(void*)&msg, 1, 0);
     entry.msg_flags = flags;
+    return entry;
 }
 
 /**
@@ -643,10 +686,11 @@ void prepRecvMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags fla
  *
  * See_Also: `sendmsg(2)` man page for details.
  */
-void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE)
+ref SubmissionEntry prepSendMsg(return ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags flags = MsgFlags.NONE) @trusted
 {
     entry.prepRW(Operation.SENDMSG, fd, cast(void*)&msg, 1, 0);
     entry.msg_flags = flags;
+    return entry;
 }
 
 /**
@@ -657,10 +701,11 @@ void prepSendMsg(ref SubmissionEntry entry, int fd, ref msghdr msg, MsgFlags fla
  *      fd = file descriptor of a file to call `fsync` on
  *      flags = `fsync` operation flags
  */
-void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.NORMAL) @safe
+ref SubmissionEntry prepFsync(return ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.NORMAL) @safe
 {
     entry.prepRW(Operation.FSYNC, fd);
     entry.fsync_flags = flags;
+    return entry;
 }
 
 /**
@@ -673,7 +718,7 @@ void prepFsync(ref SubmissionEntry entry, int fd, FsyncFlags flags = FsyncFlags.
  *      fd = file descriptor to poll
  *      events = events to poll on the FD
  */
-void prepPollAdd(ref SubmissionEntry entry, int fd, PollEvents events) @safe
+ref SubmissionEntry prepPollAdd(return ref SubmissionEntry entry, int fd, PollEvents events) @safe
 {
     import std.system : endian, Endian;
 
@@ -682,6 +727,7 @@ void prepPollAdd(ref SubmissionEntry entry, int fd, PollEvents events) @safe
         entry.poll_events32 = (events & 0x0000ffffUL) << 16 | (events & 0xffff0000) >> 16;
     else
         entry.poll_events32 = events;
+    return entry;
 }
 
 /**
@@ -692,9 +738,9 @@ void prepPollAdd(ref SubmissionEntry entry, int fd, PollEvents events) @safe
  *      entry = `SubmissionEntry` to prepare
  *      userData = data with the previously issued poll operation
  */
-void prepPollRemove(D)(ref SubmissionEntry entry, ref D userData)
+ref SubmissionEntry prepPollRemove(D)(return ref SubmissionEntry entry, ref D userData) @trusted
 {
-    entry.prepRW(Operation.POLL_REMOVE, -1, cast(void*)&userData);
+    return entry.prepRW(Operation.POLL_REMOVE, -1, cast(void*)&userData);
 }
 
 /**
@@ -716,7 +762,7 @@ void prepPollRemove(D)(ref SubmissionEntry entry, ref D userData)
  *
  * Note: available from Linux 5.2
  */
-void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len,
+ref SubmissionEntry prepSyncFileRange(return ref SubmissionEntry entry, int fd, ulong offset, uint len,
     SyncFileRangeFlags flags = SyncFileRangeFlags.WRITE_AND_WAIT) @safe
 {
     entry.opcode = Operation.SYNC_FILE_RANGE;
@@ -724,6 +770,7 @@ void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len
     entry.off = offset;
     entry.len = len;
     entry.sync_range_flags = flags;
+    return entry;
 }
 
 /**
@@ -746,11 +793,12 @@ void prepSyncFileRange(ref SubmissionEntry entry, int fd, ulong offset, uint len
  *
  * Note: Available from Linux 5.4
  */
-void prepTimeout(ref SubmissionEntry entry, ref KernelTimespec time,
-    ulong count = 0, TimeoutFlags flags = TimeoutFlags.REL)
+ref SubmissionEntry prepTimeout(return ref SubmissionEntry entry, ref KernelTimespec time,
+    ulong count = 0, TimeoutFlags flags = TimeoutFlags.REL) @trusted
 {
     entry.prepRW(Operation.TIMEOUT, -1, cast(void*)&time, 1, count);
     entry.timeout_flags = flags;
+    return entry;
 }
 
 /**
@@ -768,9 +816,9 @@ void prepTimeout(ref SubmissionEntry entry, ref KernelTimespec time,
  *
  * Note: Available from Linux 5.5
  */
-void prepTimeoutRemove(D)(ref SubmissionEntry entry, ref D userData)
+ref SubmissionEntry prepTimeoutRemove(D)(return ref SubmissionEntry entry, ref D userData) @trusted
 {
-    entry.prepRW(Operation.TIMEOUT_REMOVE, -1, cast(void*)&userData);
+    return entry.prepRW(Operation.TIMEOUT_REMOVE, -1, cast(void*)&userData);
 }
 
 /**
@@ -786,11 +834,12 @@ void prepTimeoutRemove(D)(ref SubmissionEntry entry, ref D userData)
  *
  * Note: Available from Linux 5.5
  */
-void prepAccept(ADDR)(ref SubmissionEntry entry, int fd, ref ADDR addr, ref socklen_t addrlen,
-    AcceptFlags flags = AcceptFlags.NONE)
+ref SubmissionEntry prepAccept(ADDR)(return ref SubmissionEntry entry, int fd, ref ADDR addr, ref socklen_t addrlen,
+    AcceptFlags flags = AcceptFlags.NONE) @trusted
 {
     entry.prepRW(Operation.ACCEPT, fd, cast(void*)&addr, 0, cast(ulong)(cast(void*)&addrlen));
     entry.accept_flags = flags;
+    return entry;
 }
 
 /**
@@ -815,10 +864,11 @@ void prepAccept(ADDR)(ref SubmissionEntry entry, int fd, ref ADDR addr, ref sock
  *
  * Note: Available from Linux 5.5
  */
-void prepCancel(D)(ref SubmissionEntry entry, ref D userData, uint flags = 0)
+ref SubmissionEntry prepCancel(D)(return ref SubmissionEntry entry, ref D userData, uint flags = 0) @trusted
 {
     entry.prepRW(Operation.ASYNC_CANCEL, -1, cast(void*)&userData);
     entry.cancel_flags = flags;
+    return entry;
 }
 
 /**
@@ -840,177 +890,241 @@ void prepCancel(D)(ref SubmissionEntry entry, ref D userData, uint flags = 0)
  *      time = time specification
  *      flags = define if it's a relative or absolute time
  */
-void prepLinkTimeout(ref SubmissionEntry entry, ref KernelTimespec time, TimeoutFlags flags = TimeoutFlags.REL)
+ref SubmissionEntry prepLinkTimeout(return ref SubmissionEntry entry, ref KernelTimespec time, TimeoutFlags flags = TimeoutFlags.REL) @trusted
 {
     entry.prepRW(Operation.LINK_TIMEOUT, -1, cast(void*)&time, 1, 0);
     entry.timeout_flags = flags;
+    return entry;
 }
 
 /**
  * Note: Available from Linux 5.5
  */
-void prepConnect(ADDR)(ref SubmissionEntry entry, int fd, ref const(ADDR) addr)
+ref SubmissionEntry prepConnect(ADDR)(return ref SubmissionEntry entry, int fd, ref const(ADDR) addr) @trusted
 {
-    entry.prepRW(Operation.CONNECT, fd, cast(void*)&addr, 0, ADDR.sizeof);
+    return entry.prepRW(Operation.CONNECT, fd, cast(void*)&addr, 0, ADDR.sizeof);
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepFilesUpdate(ref SubmissionEntry entry, int[] fds, int offset)
+ref SubmissionEntry prepFilesUpdate(return ref SubmissionEntry entry, int[] fds, int offset) @safe
 {
-    entry.prepRW(Operation.FILES_UPDATE, -1, cast(void*)&fds[0], cast(uint)fds.length, offset);
+    return entry.prepRW(Operation.FILES_UPDATE, -1, cast(void*)&fds[0], cast(uint)fds.length, offset);
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepFallocate(ref SubmissionEntry entry, int fd, int mode, long offset, long len)
+ref SubmissionEntry prepFallocate(return ref SubmissionEntry entry, int fd, int mode, long offset, long len) @trusted
 {
-    entry.prepRW(Operation.FALLOCATE, fd, cast(void*)len, mode, offset);
+    return entry.prepRW(Operation.FALLOCATE, fd, cast(void*)len, mode, offset);
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepOpenat(ref SubmissionEntry entry, int fd, const char* path, int flags, uint mode)
+ref SubmissionEntry prepOpenat(return ref SubmissionEntry entry, int fd, const char* path, int flags, uint mode) @trusted
 {
     entry.prepRW(Operation.OPENAT, fd, cast(void*)path, mode, 0);
     entry.open_flags = flags;
+    return entry;
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepClose(ref SubmissionEntry entry, int fd)
+ref SubmissionEntry prepClose(return ref SubmissionEntry entry, int fd) @safe
 {
-    entry.prepRW(Operation.CLOSE, fd);
+    return entry.prepRW(Operation.CLOSE, fd);
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepRead(ref SubmissionEntry entry, int fd, ubyte[] buffer, long offset)
+ref SubmissionEntry prepRead(return ref SubmissionEntry entry, int fd, ubyte[] buffer, long offset) @safe
 {
-    entry.prepRW(Operation.READ, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
+    return entry.prepRW(Operation.READ, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepWrite(ref SubmissionEntry entry, int fd, const(ubyte)[] buffer, long offset)
+ref SubmissionEntry prepWrite(return ref SubmissionEntry entry, int fd, const(ubyte)[] buffer, long offset) @trusted
 {
-    entry.prepRW(Operation.WRITE, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
+    return entry.prepRW(Operation.WRITE, fd, cast(void*)&buffer[0], cast(uint)buffer.length, offset);
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepStatx(Statx)(ref SubmissionEntry entry, int fd, const char* path, int flags, uint mask, ref Statx statxbuf)
+ref SubmissionEntry prepStatx(Statx)(return ref SubmissionEntry entry, int fd, const char* path, int flags, uint mask, ref Statx statxbuf) @trusted
 {
     entry.prepRW(Operation.STATX, fd, cast(void*)path, mask, cast(ulong)(cast(void*)&statxbuf));
     entry.statx_flags = flags;
+    return entry;
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepFadvise(ref SubmissionEntry entry, int fd, long offset, uint len, int advice)
+ref SubmissionEntry prepFadvise(return ref SubmissionEntry entry, int fd, long offset, uint len, int advice) @safe
 {
     entry.prepRW(Operation.FADVISE, fd, null, len, offset);
     entry.fadvise_advice = advice;
+    return entry;
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepMadvise(ref SubmissionEntry entry, const(ubyte)[] block, int advice)
+ref SubmissionEntry prepMadvise(return ref SubmissionEntry entry, const(ubyte)[] block, int advice) @trusted
 {
     entry.prepRW(Operation.MADVISE, -1, cast(void*)&block[0], cast(uint)block.length, 0);
     entry.fadvise_advice = advice;
+    return entry;
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepSend(ref SubmissionEntry entry, int sockfd, const(ubyte)[] buf, MsgFlags flags = MsgFlags.NONE)
+ref SubmissionEntry prepSend(return ref SubmissionEntry entry,
+    int sockfd, const(ubyte)[] buf, MsgFlags flags = MsgFlags.NONE) @trusted
 {
     entry.prepRW(Operation.SEND, sockfd, cast(void*)&buf[0], cast(uint)buf.length, 0);
     entry.msg_flags = flags;
+    return entry;
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepRecv(ref SubmissionEntry entry, int sockfd, ubyte[] buf, MsgFlags flags = MsgFlags.NONE)
+ref SubmissionEntry prepRecv(return ref SubmissionEntry entry,
+    int sockfd, ubyte[] buf, MsgFlags flags = MsgFlags.NONE) @trusted
 {
     entry.prepRW(Operation.RECV, sockfd, cast(void*)&buf[0], cast(uint)buf.length, 0);
     entry.msg_flags = flags;
+    return entry;
+}
+
+/**
+ * Variant that uses registered buffers group.
+ *
+ * Note: Available from Linux 5.6
+ */
+ref SubmissionEntry prepRecv(return ref SubmissionEntry entry,
+    int sockfd, ushort gid, uint len, MsgFlags flags = MsgFlags.NONE) @safe
+{
+    entry.prepRW(Operation.RECV, sockfd, null, len, 0);
+    entry.msg_flags = flags;
+    entry.buf_group = gid;
+    entry.flags |= SubmissionEntryFlags.BUFFER_SELECT;
+    return entry;
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepOpenat2(ref SubmissionEntry entry, int fd, const char *path, ref OpenHow how)
+ref SubmissionEntry prepOpenat2(return ref SubmissionEntry entry, int fd, const char *path, ref OpenHow how) @trusted
 {
-    entry.prepRW(Operation.OPENAT2, fd, cast(void*)path, cast(uint)OpenHow.sizeof, cast(ulong)(cast(void*)&how));
+    return entry.prepRW(Operation.OPENAT2, fd, cast(void*)path, cast(uint)OpenHow.sizeof, cast(ulong)(cast(void*)&how));
 }
 
 /**
  * Note: Available from Linux 5.6
  */
-void prepEpollCtl(ref SubmissionEntry entry, int epfd, int fd, int op, ref epoll_event ev)
+ref SubmissionEntry prepEpollCtl(return ref SubmissionEntry entry, int epfd, int fd, int op, ref epoll_event ev) @trusted
 {
-    entry.prepRW(Operation.EPOLL_CTL, epfd, cast(void*)&ev, op, fd);
+    return entry.prepRW(Operation.EPOLL_CTL, epfd, cast(void*)&ev, op, fd);
 }
 
 /**
  * Note: Available from Linux 5.7
  */
-void prepSplice(ref SubmissionEntry entry,
+ref SubmissionEntry prepSplice(return ref SubmissionEntry entry,
     int fd_in, ulong off_in,
     int fd_out, ulong off_out,
-    uint nbytes, uint splice_flags)
+    uint nbytes, uint splice_flags) @safe
 {
     entry.prepRW(Operation.SPLICE, fd_out, null, nbytes, off_out);
     entry.splice_off_in = off_in;
     entry.splice_fd_in = fd_in;
     entry.splice_flags = splice_flags;
+    return entry;
 }
 
 /**
  * Note: Available from Linux 5.7
+ *
+ * Params:
+ *    entry = `SubmissionEntry` to prepare
+ *    buf   = buffers to provide
+ *    len   = length of each buffer to add
+ *    bgid  = buffers group id
+ *    bid   = starting buffer id
  */
-void prepProvideBuffers(ref SubmissionEntry entry, ubyte[] buf, int nr, ushort bgid, int bid)
+ref SubmissionEntry prepProvideBuffers(return ref SubmissionEntry entry, ubyte[][] buf, uint len, ushort bgid, int bid) @safe
 {
-    entry.prepRW(Operation.PROVIDE_BUFFERS, nr, cast(void*)&buf[0], cast(uint)buf.length, bid);
+    assert(buf.length < int.max, "Too many buffers");
+    entry.prepRW(Operation.PROVIDE_BUFFERS, cast(int)buf.length, cast(void*)&buf[0][0], len, bid);
     entry.buf_group = bgid;
+    return entry;
+}
+
+/// ditto
+ref SubmissionEntry prepProvideBuffers(size_t M, size_t N)(return ref SubmissionEntry entry, ref ubyte[M][N] buf, ushort bgid, int bid) @safe
+{
+    static assert(N < int.max, "Too many buffers");
+    static assert(M < uint.max, "Buffer too large");
+    entry.prepRW(Operation.PROVIDE_BUFFERS, cast(int)N, cast(void*)&buf[0][0], cast(uint)M, bid);
+    entry.buf_group = bgid;
+    return entry;
+}
+
+/// ditto
+ref SubmissionEntry prepProvideBuffer(size_t N)(return ref SubmissionEntry entry, ref ubyte[N] buf, ushort bgid, int bid) @safe
+{
+    static assert(N < uint.max, "Buffer too large");
+    entry.prepRW(Operation.PROVIDE_BUFFERS, 1, cast(void*)&buf[0], cast(uint)N, bid);
+    entry.buf_group = bgid;
+    return entry;
+}
+
+/// ditto
+ref SubmissionEntry prepProvideBuffer(return ref SubmissionEntry entry, ref ubyte[] buf, ushort bgid, int bid) @safe
+{
+    assert(buf.length < uint.max, "Buffer too large");
+    entry.prepRW(Operation.PROVIDE_BUFFERS, 1, cast(void*)&buf[0], cast(uint)buf.length, bid);
+    entry.buf_group = bgid;
+    return entry;
 }
 
 /**
  * Note: Available from Linux 5.7
  */
-void prepRemoveBuffers(ref SubmissionEntry entry, int nr, ushort bgid)
+ref SubmissionEntry prepRemoveBuffers(return ref SubmissionEntry entry, int nr, ushort bgid) @safe
 {
     entry.prepRW(Operation.REMOVE_BUFFERS, nr);
     entry.buf_group = bgid;
+    return entry;
 }
 
 /**
  * Note: Available from Linux 5.8
  */
-void prepTee(ref SubmissionEntry entry, int fd_in, int fd_out, uint nbytes, uint flags)
+ref SubmissionEntry prepTee(return ref SubmissionEntry entry, int fd_in, int fd_out, uint nbytes, uint flags) @safe
 {
     entry.prepRW(Operation.TEE, fd_out, null, nbytes, 0);
     entry.splice_off_in = 0;
     entry.splice_fd_in = fd_in;
     entry.splice_flags = flags;
+    return entry;
 }
 
 private:
 
 // uring cleanup
-void dispose(ref Uring uring)
+void dispose(ref Uring uring) @trusted
 {
     if (uring.payload is null) return;
     // debug printf("uring(%d): dispose(%d)\n", uring.payload.fd, uring.payload.refs);
@@ -1038,7 +1152,7 @@ struct UringDesc
 
     iovec[] regBuffers;
 
-    ~this()
+    ~this() @trusted
     {
         if (regBuffers) free(cast(void*)&regBuffers[0]);
         if (sq.ring) munmap(sq.ring, sq.ringSize);
@@ -1047,7 +1161,7 @@ struct UringDesc
         close(fd);
     }
 
-    private auto mapRings()
+    private auto mapRings() @trusted
     {
         sq.ringSize = params.sq_off.array + params.sq_entries * uint.sizeof;
         cq.ringSize = params.cq_off.cqes + params.cq_entries * CompletionEntry.sizeof;
@@ -1085,7 +1199,7 @@ struct UringDesc
             }
         }
 
-        uint entries = *cast(uint*)(sq.ring + params.sq_off.ring_entries);
+        uint entries    = *cast(uint*)(sq.ring + params.sq_off.ring_entries);
         sq.khead        = cast(uint*)(sq.ring + params.sq_off.head);
         sq.ktail        = cast(uint*)(sq.ring + params.sq_off.tail);
         sq.localTail    = *sq.ktail;
@@ -1143,41 +1257,43 @@ struct SubmissionQueue
 
     uint localTail; // used for batch submission
 
-    uint head() const { return atomicLoad!(MemoryOrder.acq)(*khead); }
-    uint tail() const { return localTail; }
+    uint head() const @safe pure { return atomicLoad!(MemoryOrder.acq)(*khead); }
+    uint tail() const @safe pure { return localTail; }
 
-    void flushTail()
+    void flushTail() @safe pure
     {
-        pragma(inline);
+        pragma(inline, true);
         // debug printf("SQ updating tail: %d\n", localTail);
         atomicStore!(MemoryOrder.rel)(*ktail, localTail);
     }
 
-    SubmissionQueueFlags flags() const
+    SubmissionQueueFlags flags() const @safe pure
     {
         return cast(SubmissionQueueFlags)atomicLoad!(MemoryOrder.raw)(*kflags);
     }
 
-    bool full() const { return sqes.length == length; }
+    bool full() const @safe pure { return sqes.length == length; }
 
-    size_t length() const { return tail - head; }
+    size_t length() const @safe pure { return tail - head; }
 
-    size_t capacity() const { return sqes.length - length; }
+    size_t capacity() const @safe pure { return sqes.length - length; }
 
-    void put()(auto ref SubmissionEntry entry)
+    ref SubmissionEntry next()() @safe pure return
+    {
+        return sqes[localTail++ & ringMask];
+    }
+
+    void put()(auto ref SubmissionEntry entry) @safe pure
     {
         assert(!full, "SumbissionQueue is full");
-        sqes[tail & ringMask] = entry;
-        localTail++;
+        sqes[localTail++ & ringMask] = entry;
     }
 
     void put(OP)(auto ref OP op)
         if (!is(OP == SubmissionEntry))
     {
         assert(!full, "SumbissionQueue is full");
-        sqes[tail & ringMask].clear();
-        sqes[tail & ringMask].fill(op);
-        localTail++;
+        sqes[localTail++ & ringMask].fill(op);
     }
 
     private void putWith(alias FN, ARGS...)(auto ref ARGS args)
@@ -1191,16 +1307,14 @@ struct SubmissionQueue
             "Alias function must accept at least `ref SubmissionEntry`");
 
         static assert(
-            is(typeof(FN(sqes[tail & ringMask], args))),
+            is(typeof(FN(sqes[localTail & ringMask], args))),
             "Provided function is not callable with " ~ (Parameters!((ref SubmissionEntry e, ARGS args) {})).stringof);
 
         assert(!full, "SumbissionQueue is full");
-        sqes[tail & ringMask].clear();
-        FN(sqes[tail & ringMask], args);
-        localTail++;
+        FN(sqes[localTail++ & ringMask], args);
     }
 
-    uint dropped() const { return atomicLoad!(MemoryOrder.raw)(*kdropped); }
+    uint dropped() const @safe pure { return atomicLoad!(MemoryOrder.raw)(*kdropped); }
 }
 
 struct CompletionQueue
@@ -1222,25 +1336,25 @@ struct CompletionQueue
 
     uint localHead; // used for bulk reading
 
-    uint head() const { return localHead; }
-    uint tail() const { return atomicLoad!(MemoryOrder.acq)(*ktail); }
+    uint head() const @safe pure { return localHead; }
+    uint tail() const @safe pure { return atomicLoad!(MemoryOrder.acq)(*ktail); }
 
-    void flushHead()
+    void flushHead() @safe pure
     {
-        pragma(inline);
+        pragma(inline, true);
         // debug printf("CQ updating head: %d\n", localHead);
         atomicStore!(MemoryOrder.rel)(*khead, localHead);
     }
 
-    bool empty() const { return head == tail; }
+    bool empty() const @safe pure { return head == tail; }
 
-    ref CompletionEntry front() return
+    ref CompletionEntry front() @safe pure return
     {
         assert(!empty, "CompletionQueue is empty");
         return cqes[localHead & ringMask];
     }
 
-    void popFront()
+    void popFront() @safe pure
     {
         pragma(inline);
         assert(!empty, "CompletionQueue is empty");
@@ -1248,12 +1362,12 @@ struct CompletionQueue
         flushHead();
     }
 
-    size_t length() const { return tail - localHead; }
+    size_t length() const @safe pure { return tail - localHead; }
 
-    uint overflow() const { return atomicLoad!(MemoryOrder.raw)(*koverflow); }
+    uint overflow() const @safe pure { return atomicLoad!(MemoryOrder.raw)(*koverflow); }
 
     /// Runtime CQ flags - written by the application, shouldn't be modified by the kernel.
-    void flags(CQRingFlags flags) { atomicStore!(MemoryOrder.raw)(*kflags, flags); }
+    void flags(CQRingFlags flags) @safe pure { atomicStore!(MemoryOrder.raw)(*kflags, flags); }
 }
 
 // just a helper to use atomicStore more easily with older compilers
