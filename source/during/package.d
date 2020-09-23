@@ -933,7 +933,7 @@ void prepMadvise(ref SubmissionEntry entry, const(ubyte)[] block, int advice)
 /**
  * Note: Available from Linux 5.6
  */
-void prepSend(ref SubmissionEntry entry, int sockfd, const(ubyte)[] buf, MsgFlags flags)
+void prepSend(ref SubmissionEntry entry, int sockfd, const(ubyte)[] buf, MsgFlags flags = MsgFlags.NONE)
 {
     entry.prepRW(Operation.SEND, sockfd, cast(void*)&buf[0], cast(uint)buf.length, 0);
     entry.msg_flags = flags;
@@ -942,7 +942,7 @@ void prepSend(ref SubmissionEntry entry, int sockfd, const(ubyte)[] buf, MsgFlag
 /**
  * Note: Available from Linux 5.6
  */
-void prepRecv(ref SubmissionEntry entry, int sockfd, ubyte[] buf, MsgFlags flags)
+void prepRecv(ref SubmissionEntry entry, int sockfd, ubyte[] buf, MsgFlags flags = MsgFlags.NONE)
 {
     entry.prepRW(Operation.RECV, sockfd, cast(void*)&buf[0], cast(uint)buf.length, 0);
     entry.msg_flags = flags;
