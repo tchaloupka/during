@@ -3,6 +3,6 @@
 	"versions": {
 		"during": {"path":"../.."},
 		"mempooled": "0.1.2",
-		"silly": "1.0.0"
+		"silly": "1.0.2"
 	}
 }
