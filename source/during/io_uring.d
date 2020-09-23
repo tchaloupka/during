@@ -501,7 +501,7 @@ enum SubmissionEntryFlags : ubyte
      *
      * Note: available from Linux 5.7
      */
-    IOSQE_BUFFER_SELECT = 1U << 5, /* select buffer from sqe->buf_group */
+    BUFFER_SELECT = 1U << 5, /* select buffer from sqe->buf_group */
 }
 
 /**
