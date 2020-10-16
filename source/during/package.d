@@ -97,7 +97,7 @@ struct Uring
     }
 
     /// Native io_uring file descriptor
-    auto fd() const @safe pure
+    int fd() const @safe pure
     {
         checkInitialized();
         return payload.fd;
@@ -242,11 +242,11 @@ struct Uring
      *
      * Returns: Number of submitted entries on success, `-errno` on error
      */
-    auto submit(uint want = 0, const sigset_t* sig = null) @trusted
+    int submit(uint want = 0, const sigset_t* sig = null) @trusted
     {
         checkInitialized();
 
-        auto len = cast(uint)payload.sq.length;
+        auto len = cast(int)payload.sq.length;
         if (len > 0) // anything to submit?
         {
             EnterFlags flags;
@@ -274,7 +274,7 @@ struct Uring
      *
      * Returns: `0` on success, `-errno` on error
      */
-    auto wait(uint want = 1, const sigset_t* sig = null) @trusted
+    int wait(uint want = 1, const sigset_t* sig = null) @trusted
     {
         pragma(inline);
         checkInitialized();
@@ -303,7 +303,7 @@ struct Uring
      *
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
-    auto registerBuffers(T)(T buffers)
+    int registerBuffers(T)(T buffers)
         if (is(T == ubyte[]) || is(T == ubyte[][])) // TODO: something else?
     {
         checkInitialized();
@@ -351,7 +351,7 @@ struct Uring
      *
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
-    auto unregisterBuffers() @trusted
+    int unregisterBuffers() @trusted
     {
         checkInitialized();
 
@@ -381,7 +381,7 @@ struct Uring
      *
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
-    auto registerFiles(const(int)[] fds)
+    int registerFiles(const(int)[] fds)
     {
         checkInitialized();
         assert(fds.length, "No file descriptors provided");
@@ -405,7 +405,7 @@ struct Uring
      *
      * Returns: number of files updated on success, -errno on failure.
      */
-    auto registerFilesUpdate(uint off, const(int)[] fds) @trusted
+    int registerFilesUpdate(uint off, const(int)[] fds) @trusted
     {
         struct Update
         {
@@ -437,7 +437,7 @@ struct Uring
      *
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
-    auto unregisterFiles() @trusted
+    int unregisterFiles() @trusted
     {
         checkInitialized();
         auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_FILES, null, 0);
@@ -453,7 +453,7 @@ struct Uring
      *
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
-    auto registerEventFD(int eventFD) @trusted
+    int registerEventFD(int eventFD) @trusted
     {
         checkInitialized();
         auto r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_EVENTFD, &eventFD, 1);
@@ -466,7 +466,7 @@ struct Uring
      *
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
-    auto unregisterEventFD() @trusted
+    int unregisterEventFD() @trusted
     {
         checkInitialized();
         auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_EVENTFD, null, 0);
