@@ -125,7 +125,7 @@
 <a class="br" href="#L97" id="L97">97 </a>    }
 <a class="br" href="#L98" id="L98">98 </a>
 <a class="br" href="#L99" id="L99">99 </a>    <span class="com">/// Native io_uring file descriptor</span>
-<a class="br" href="#L100" id="L100">100 </a>    <span class="kwrd">auto</span> <span class="hid">fd</span>() <span class="kwrd">const</span> @<span class="hid">safe</span> <span class="kwrd">pure</span>
+<a class="br" href="#L100" id="L100">100 </a>    <span class="type">int</span> <span class="hid">fd</span>() <span class="kwrd">const</span> @<span class="hid">safe</span> <span class="kwrd">pure</span>
 <a class="br" href="#L101" id="L101">101 </a>    {
 <a class="br" href="#L102" id="L102">102 </a>        <span class="hid">checkInitialized</span>();
 <a class="br" href="#L103" id="L103">103 </a>        <span class="kwrd">return</span> <span class="hid">payload.fd</span>;
@@ -270,11 +270,11 @@
 <a class="br" href="#L242" id="L242">242 </a>     *
 <a class="br" href="#L243" id="L243">243 </a>     * Returns: Number of submitted entries on success, `-errno` on error
 <a class="br" href="#L244" id="L244">244 </a>     */</span>
-<a class="br" href="#L245" id="L245">245 </a>    <span class="kwrd">auto</span> <span class="hid">submit</span>(<span class="type">uint</span> <span class="hid">want</span> = <span class="num">0</span>, <span class="kwrd">const</span> <span class="hid">sigset_t</span>* <span class="hid">sig</span> = <span class="kwrd">null</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L245" id="L245">245 </a>    <span class="type">int</span> <span class="hid">submit</span>(<span class="type">uint</span> <span class="hid">want</span> = <span class="num">0</span>, <span class="kwrd">const</span> <span class="hid">sigset_t</span>* <span class="hid">sig</span> = <span class="kwrd">null</span>) @<span class="hid">trusted</span>
 <a class="br" href="#L246" id="L246">246 </a>    {
 <a class="br" href="#L247" id="L247">247 </a>        <span class="hid">checkInitialized</span>();
 <a class="br" href="#L248" id="L248">248 </a>
-<a class="br" href="#L249" id="L249">249 </a>        <span class="kwrd">auto</span> <span class="hid">len</span> = <span class="kwrd">cast</span>(<span class="type">uint</span>)<span class="hid">payload.sq.length</span>;
+<a class="br" href="#L249" id="L249">249 </a>        <span class="kwrd">auto</span> <span class="hid">len</span> = <span class="kwrd">cast</span>(<span class="type">int</span>)<span class="hid">payload.sq.length</span>;
 <a class="br" href="#L250" id="L250">250 </a>        <span class="kwrd">if</span> (<span class="hid">len</span> &gt; <span class="num">0</span>) <span class="com">// anything to submit?</span>
 <a class="br" href="#L251" id="L251">251 </a>        {
 <a class="br" href="#L252" id="L252">252 </a>            <span class="hid">EnterFlags</span> <span class="hid">flags</span>;
@@ -302,7 +302,7 @@
 <a class="br" href="#L274" id="L274">274 </a>     *
 <a class="br" href="#L275" id="L275">275 </a>     * Returns: `0` on success, `-errno` on error
 <a class="br" href="#L276" id="L276">276 </a>     */</span>
-<a class="br" href="#L277" id="L277">277 </a>    <span class="kwrd">auto</span> <span class="hid">wait</span>(<span class="type">uint</span> <span class="hid">want</span> = <span class="num">1</span>, <span class="kwrd">const</span> <span class="hid">sigset_t</span>* <span class="hid">sig</span> = <span class="kwrd">null</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L277" id="L277">277 </a>    <span class="type">int</span> <span class="hid">wait</span>(<span class="type">uint</span> <span class="hid">want</span> = <span class="num">1</span>, <span class="kwrd">const</span> <span class="hid">sigset_t</span>* <span class="hid">sig</span> = <span class="kwrd">null</span>) @<span class="hid">trusted</span>
 <a class="br" href="#L278" id="L278">278 </a>    {
 <a class="br" href="#L279" id="L279">279 </a>        <span class="kwrd">pragma</span>(<span class="hid">inline</span>);
 <a class="br" href="#L280" id="L280">280 </a>        <span class="hid">checkInitialized</span>();
@@ -331,7 +331,7 @@
 <a class="br" href="#L303" id="L303">303 </a>     *
 <a class="br" href="#L304" id="L304">304 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
 <a class="br" href="#L305" id="L305">305 </a>     */</span>
-<a class="br" href="#L306" id="L306">306 </a>    <span class="kwrd">auto</span> <span class="hid">registerBuffers</span>(<span class="hid">T</span>)(<span class="hid">T</span> <span class="hid">buffers</span>)
+<a class="br" href="#L306" id="L306">306 </a>    <span class="type">int</span> <span class="hid">registerBuffers</span>(<span class="hid">T</span>)(<span class="hid">T</span> <span class="hid">buffers</span>)
 <a class="br" href="#L307" id="L307">307 </a>        <span class="kwrd">if</span> (<span class="kwrd">is</span>(<span class="hid">T</span> == <span class="type">ubyte</span>[]) || <span class="kwrd">is</span>(<span class="hid">T</span> == <span class="type">ubyte</span>[][])) <span class="com">// TODO: something else?</span>
 <a class="br" href="#L308" id="L308">308 </a>    {
 <a class="br" href="#L309" id="L309">309 </a>        <span class="hid">checkInitialized</span>();
@@ -379,7 +379,7 @@
 <a class="br" href="#L351" id="L351">351 </a>     *
 <a class="br" href="#L352" id="L352">352 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
 <a class="br" href="#L353" id="L353">353 </a>     */</span>
-<a class="br" href="#L354" id="L354">354 </a>    <span class="kwrd">auto</span> <span class="hid">unregisterBuffers</span>() @<span class="hid">trusted</span>
+<a class="br" href="#L354" id="L354">354 </a>    <span class="type">int</span> <span class="hid">unregisterBuffers</span>() @<span class="hid">trusted</span>
 <a class="br" href="#L355" id="L355">355 </a>    {
 <a class="br" href="#L356" id="L356">356 </a>        <span class="hid">checkInitialized</span>();
 <a class="br" href="#L357" id="L357">357 </a>
@@ -409,7 +409,7 @@
 <a class="br" href="#L381" id="L381">381 </a>     *
 <a class="br" href="#L382" id="L382">382 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
 <a class="br" href="#L383" id="L383">383 </a>     */</span>
-<a class="br" href="#L384" id="L384">384 </a>    <span class="kwrd">auto</span> <span class="hid">registerFiles</span>(<span class="kwrd">const</span>(<span class="type">int</span>)[] <span class="hid">fds</span>)
+<a class="br" href="#L384" id="L384">384 </a>    <span class="type">int</span> <span class="hid">registerFiles</span>(<span class="kwrd">const</span>(<span class="type">int</span>)[] <span class="hid">fds</span>)
 <a class="br" href="#L385" id="L385">385 </a>    {
 <a class="br" href="#L386" id="L386">386 </a>        <span class="hid">checkInitialized</span>();
 <a class="br" href="#L387" id="L387">387 </a>        <span class="kwrd">assert</span>(<span class="hid">fds.length</span>, <span class="str">&quot;No file descriptors provided&quot;</span>);
@@ -433,7 +433,7 @@
 <a class="br" href="#L405" id="L405">405 </a>     *
 <a class="br" href="#L406" id="L406">406 </a>     * Returns: number of files updated on success, -errno on failure.
 <a class="br" href="#L407" id="L407">407 </a>     */</span>
-<a class="br" href="#L408" id="L408">408 </a>    <span class="kwrd">auto</span> <span class="hid">registerFilesUpdate</span>(<span class="type">uint</span> <span class="hid">off</span>, <span class="kwrd">const</span>(<span class="type">int</span>)[] <span class="hid">fds</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L408" id="L408">408 </a>    <span class="type">int</span> <span class="hid">registerFilesUpdate</span>(<span class="type">uint</span> <span class="hid">off</span>, <span class="kwrd">const</span>(<span class="type">int</span>)[] <span class="hid">fds</span>) @<span class="hid">trusted</span>
 <a class="br" href="#L409" id="L409">409 </a>    {
 <a class="br" href="#L410" id="L410">410 </a>        <span class="kwrd">struct</span> <span class="hid">Update</span>
 <a class="br" href="#L411" id="L411">411 </a>        {
@@ -465,7 +465,7 @@
 <a class="br" href="#L437" id="L437">437 </a>     *
 <a class="br" href="#L438" id="L438">438 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
 <a class="br" href="#L439" id="L439">439 </a>     */</span>
-<a class="br" href="#L440" id="L440">440 </a>    <span class="kwrd">auto</span> <span class="hid">unregisterFiles</span>() @<span class="hid">trusted</span>
+<a class="br" href="#L440" id="L440">440 </a>    <span class="type">int</span> <span class="hid">unregisterFiles</span>() @<span class="hid">trusted</span>
 <a class="br" href="#L441" id="L441">441 </a>    {
 <a class="br" href="#L442" id="L442">442 </a>        <span class="hid">checkInitialized</span>();
 <a class="br" href="#L443" id="L443">443 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.UNREGISTER_FILES</span>, <span class="kwrd">null</span>, <span class="num">0</span>);
@@ -481,7 +481,7 @@
 <a class="br" href="#L453" id="L453">453 </a>     *
 <a class="br" href="#L454" id="L454">454 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
 <a class="br" href="#L455" id="L455">455 </a>     */</span>
-<a class="br" href="#L456" id="L456">456 </a>    <span class="kwrd">auto</span> <span class="hid">registerEventFD</span>(<span class="type">int</span> <span class="hid">eventFD</span>) @<span class="hid">trusted</span>
+<a class="br" href="#L456" id="L456">456 </a>    <span class="type">int</span> <span class="hid">registerEventFD</span>(<span class="type">int</span> <span class="hid">eventFD</span>) @<span class="hid">trusted</span>
 <a class="br" href="#L457" id="L457">457 </a>    {
 <a class="br" href="#L458" id="L458">458 </a>        <span class="hid">checkInitialized</span>();
 <a class="br" href="#L459" id="L459">459 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.REGISTER_EVENTFD</span>, &amp;<span class="hid">eventFD</span>, <span class="num">1</span>);
@@ -494,7 +494,7 @@
 <a class="br" href="#L466" id="L466">466 </a>     *
 <a class="br" href="#L467" id="L467">467 </a>     * Returns: On success, returns 0. On error, `-errno` is returned.
 <a class="br" href="#L468" id="L468">468 </a>     */</span>
-<a class="br" href="#L469" id="L469">469 </a>    <span class="kwrd">auto</span> <span class="hid">unregisterEventFD</span>() @<span class="hid">trusted</span>
+<a class="br" href="#L469" id="L469">469 </a>    <span class="type">int</span> <span class="hid">unregisterEventFD</span>() @<span class="hid">trusted</span>
 <a class="br" href="#L470" id="L470">470 </a>    {
 <a class="br" href="#L471" id="L471">471 </a>        <span class="hid">checkInitialized</span>();
 <a class="br" href="#L472" id="L472">472 </a>        <span class="kwrd">auto</span> <span class="hid">r</span> = <span class="hid">io_uring_register</span>(<span class="hid">payload.fd</span>, <span class="hid">RegisterOpCode.UNREGISTER_EVENTFD</span>, <span class="kwrd">null</span>, <span class="num">0</span>);
