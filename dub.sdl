@@ -20,3 +20,11 @@ configuration "unittest" {
     sourcePaths "tests"
     excludedSourceFiles "tests/fake_dub_root.d"
 }
+
+configuration "during-test-betterC" {
+    targetType "executable"
+    targetName "during-test-betterC"
+    buildOptions "betterC"
+    importPaths "tests" "source"
+    sourcePaths "tests" "source"
+}
