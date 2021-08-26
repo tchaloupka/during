@@ -37,3 +37,38 @@ auto openFile(T)(T fname, int flags)
     assert(f >= 0, "Failed to open file");
     return f;
 }
+
+// Check if the kernel release of our system is at least at the major.minor version
+bool checkKernelVersion(uint emajor, uint eminor)
+{
+    import core.stdc.stdio : sscanf, printf;
+    utsname buf;
+    if (syscall(SYS_uname, &buf) < 0) {
+        assert(0, "call to uname failed");
+    }
+
+    int major, minor;
+    sscanf(buf.release.ptr, "%d.%d", &major, &minor); // we only care about the first two numbers
+    if (major < emajor) return false; // is our retrieved major below the expected major?
+    if (minor < eminor) return false; // is our retrieved minor below the expected minor?
+    return true;
+}
+
+
+private:
+
+struct utsname
+{
+    char[65] sysname;    /* Operating system name (e.g., "Linux") */
+    char[65] nodename;   /* Name within "some implementation-defined network" */
+    char[65] release;    /* Operating system release (e.g., "2.6.28") */
+    char[65] version_;   /* Operating system version */
+    char[65] machine;    /* Hardware identifier */
+    char[65] domainname; /* Domain name (not guaranteed to be filled) */
+}
+
+version (X86) enum SYS_uname = 122;
+else version (X86_64) enum SYS_uname = 63;
+else static assert(0, "Unsupported platform");
+
+extern (C) int syscall(int sysno, ...);

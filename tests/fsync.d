@@ -31,9 +31,11 @@ unittest
     close(fd);
 }
 
-@("barier")
+@("barrier")
 unittest
 {
+    if (!checkKernelVersion(5, 3)) return;
+
     enum NUM_WRITES = 4;
     Uring io;
     auto res = io.setup();
@@ -77,10 +79,10 @@ unittest
         {
             version (D_BetterC)
             {
-                errmsg = "kernel may not support barrier fsync yet";
+                errmsg = "Expected kernel to support barrier fsync";
                 return;
             }
-            else throw new Exception("kernel may not support barrier fsync yet");
+            else throw new Exception("Expected kernel to support barrier fsync");
         }
         assert(0, "submit failed");
     }
@@ -93,10 +95,10 @@ unittest
         {
             version (D_BetterC)
             {
-                errmsg = "kernel doesn't support IOSQE_IO_DRAIN";
+                errmsg = "Expected kernel to support IOSQE_IO_DRAIN";
                 break;
             }
-            else throw new Exception("kernel doesn't support IOSQE_IO_DRAIN");
+            else throw new Exception("Expected kernel to support IOSQE_IO_DRAIN");
         }
         assert(io.front.res >= 0);
         if (i < NUM_WRITES) assert(io.front.user_data == 1, "unexpected op completion");
@@ -111,6 +113,8 @@ unittest
 @("range")
 unittest
 {
+    if (!checkKernelVersion(5, 2)) return;
+
     enum NUM_WRITES = 4;
     Uring io;
     auto res = io.setup();
@@ -153,10 +157,10 @@ unittest
         {
             version (D_BetterC)
             {
-                errmsg = "kernel may not support range file sync yet";
+                errmsg = "Expected kernel to support range file sync";
                 return;
             }
-            else throw new Exception("kernel may not support range file sync yet");
+            else throw new Exception("Expected kernel to support range file sync");
         }
         assert(0, "submit failed");
     }

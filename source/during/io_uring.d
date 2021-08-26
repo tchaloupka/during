@@ -42,8 +42,8 @@ struct SubmissionEntry
     {
         ReadWriteFlags      rw_flags;
         FsyncFlags          fsync_flags;
-        PollEvents          poll_events;        // changed in https://github.com/torvalds/linux/commit/5769a351b89cd4d82016f18fa5f6c4077403564d
-        uint                poll_events32;      /// from Linux 5.9 - word-reversed for BE
+        ushort              poll_events;        /// Unused from 5.9, kept for compatibility reasons - see https://github.com/torvalds/linux/commit/5769a351b89cd4d82016f18fa5f6c4077403564d
+        PollEvents          poll_events32;      /// from Linux 5.9 - word-reversed for BE
         SyncFileRangeFlags  sync_range_flags;   /// from Linux 5.2
         MsgFlags            msg_flags;          /// from Linux 5.3
         TimeoutFlags        timeout_flags;      /// from Linux 5.4
@@ -591,6 +591,10 @@ enum CQEFlags : uint
     MORE = 1U << 1,
 }
 
+enum {
+    CQE_BUFFER_SHIFT = 16, /// Note: available from Linux 5.7
+}
+
 /**
  * Passed in for io_uring_setup(2). Copied back with updated info on success.
  *
@@ -743,7 +747,7 @@ enum SetupFlags : uint
      *
      * Note: Available from Linux 5.10
      */
-    SETUP_R_DISABLED = 1U << 6, /* start with ring disabled */
+    R_DISABLED = 1U << 6, /* start with ring disabled */
 }
 
 /// `io_uring_params->features` flags
@@ -1167,8 +1171,8 @@ enum RegisterOpCode : uint
 enum EnterFlags: uint
 {
     NONE        = 0,
-    GETEVENTS   = (1U << 0), /// `IORING_ENTER_GETEVENTS`
-    SQ_WAKEUP   = (1U << 1), /// `IORING_ENTER_SQ_WAKEUP`
+    GETEVENTS   = 1U << 0, /// `IORING_ENTER_GETEVENTS`
+    SQ_WAKEUP   = 1U << 1, /// `IORING_ENTER_SQ_WAKEUP`
 
     /**
      * `IORING_ENTER_SQ_WAIT` (from Linux 5.10)
@@ -1177,14 +1181,14 @@ enum EnterFlags: uint
      * because the thread hasn't consumed them yet. The only option for dealing with that is
      * checking later, or busy checking for the condition.
      */
-    SQ_WAIT     = (1U << 2),
+    SQ_WAIT     = 1U << 2,
 
     /**
      * `IORING_ENTER_EXT_ARG` (from Linux 5.11)
      *
      * Adds support for timeout to existing io_uring_enter() function.
      */
-    EXT_ARG     = (1U << 3),
+    EXT_ARG     = 1U << 3,
 }
 
 /// Time specification as defined in kernel headers (used by TIMEOUT operations)

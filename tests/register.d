@@ -109,17 +109,21 @@ unittest
     // close and update reg files (5.5)
     close(file);
     files[0] = -1;
-    ret = io.registerFilesUpdate(0, files);
-    if (ret == -EINVAL)
+
+    if (checkKernelVersion(5, 5))
     {
-        version (D_BetterC)
+        ret = io.registerFilesUpdate(0, files);
+        if (ret == -EINVAL)
         {
-            errmsg = "kernel may not support IORING_REGISTER_FILES_UPDATE";
-            return;
+            version (D_BetterC)
+            {
+                errmsg = "kernel may not support IORING_REGISTER_FILES_UPDATE";
+                return;
+            }
+            else throw new Exception("kernel may not support IORING_REGISTER_FILES_UPDATE");
         }
-        else throw new Exception("kernel may not support IORING_REGISTER_FILES_UPDATE");
+        else assert(ret == 0);
     }
-    else assert(ret == 0);
 
     // unregister files
     ret = io.unregisterFiles();

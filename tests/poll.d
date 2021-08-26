@@ -12,6 +12,8 @@ import std.algorithm : among;
 @("poll add/remove")
 unittest
 {
+    if (!checkKernelVersion(5, 1)) return;
+
     Uring io;
     long res = io.setup();
     assert(res >= 0, "Error initializing IO");

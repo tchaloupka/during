@@ -15,6 +15,8 @@ import std.range;
 @("send/recv")
 unittest
 {
+    if (!checkKernelVersion(5, 3)) return;
+
     int[2] fd;
     int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, fd);
     assert(ret == 0, "socketpair()");

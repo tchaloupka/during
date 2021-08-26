@@ -4,8 +4,11 @@
  */
 module during;
 
-version (linux) {}
-else static assert(0, "io_uring is available on linux only");
+version(linux) {}
+else {
+    pragma(msg, "!!!!!!! during/io_uring is available ONLY on Linux systems (5.1+). This package is useless on your system. !!!!!!!!!");
+    static assert(0, "during is not available on your system");
+}
 
 public import during.io_uring;
 import during.openat2;
@@ -578,7 +581,7 @@ struct Uring
      *
      * Returns: On success, returns 0. On error, `-errno` is returned.
      *
-     * Note: Available from Linux
+     * Note: Available from Linux 5.10
      */
     int enableRings() @trusted
     {
