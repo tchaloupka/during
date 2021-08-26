@@ -30,3 +30,5 @@ coverage:
     changes: off
 
 comment: false
+ignore:
+  - 'tests/*'
