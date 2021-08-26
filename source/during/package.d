@@ -47,10 +47,11 @@ int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NON
 
     uring.payload.fd = r;
 
-    if (uring.payload.mapRings() < 0)
+    r = uring.payload.mapRings();
+    if (r < 0)
     {
         dispose(uring);
-        return -errno;
+        return r;
     }
 
     // debug printf("uring(%d): setup\n", uring.payload.fd);
@@ -242,7 +243,8 @@ struct Uring
      *
      * Returns: Number of submitted entries on success, `-errno` on error
      */
-    int submit(uint want = 0, const sigset_t* sig = null) @trusted
+    int submit(S)(uint want, const S* args) @trusted
+        if (is(S == sigset_t) || is(S == io_uring_getevents_arg))
     {
         checkInitialized();
 
@@ -256,16 +258,23 @@ struct Uring
 
             if (payload.params.flags & SetupFlags.SQPOLL)
             {
-                if (payload.sq.flags & SubmissionQueueFlags.NEED_WAKEUP)
+                if (_expect(payload.sq.flags & SubmissionQueueFlags.NEED_WAKEUP, false))
                     flags |= EnterFlags.SQ_WAKEUP;
                 else if (want == 0) return len; // fast poll
             }
-            auto r = io_uring_enter(payload.fd, len, want, flags, sig);
+            auto r = io_uring_enter(payload.fd, len, want, flags, args);
             if (r < 0) return -errno;
             return r;
         }
         else if (want > 0) return wait(want); // just simple wait
         return 0;
+    }
+
+    /// ditto
+    int submit(uint want = 0) @safe
+    {
+        pragma(inline, true)
+        return submit(want, cast(sigset_t*)null);
     }
 
     /**
@@ -626,6 +635,9 @@ ref SubmissionEntry prepRW(return ref SubmissionEntry entry, Operation op,
     entry.len = len;
     entry.rw_flags = ReadWriteFlags.NONE;
 	entry.user_data = 0;
+    entry.buf_index = 0;
+    entry.personality = 0;
+    entry.splice_fd_in = 0;
     entry.__pad2[0] = entry.__pad2[1] = 0;
     return entry;
 }
@@ -819,17 +831,21 @@ ref SubmissionEntry prepPollRemove(D)(return ref SubmissionEntry entry, ref D us
  *
  * Note: available from Linux 5.13
  */
-ref SubmissionEntry prepPollUpdate(return ref SubmissionEntry entry,
-    void* oldUserData, void* newUserData, PollEvents events, PollFlags flags) @trusted
+ref SubmissionEntry prepPollUpdate(U, V)(return ref SubmissionEntry entry,
+    ref U oldUserData, ref V newUserData, PollEvents events = PollEvents.NONE) @trusted
 {
     import std.system : endian, Endian;
-    assert((flags & PollFlags.UPDATE_EVENTS) || (flags & PollFlags.UPDATE_USER_DATA), "Invalid flags");
+
+    PollFlags flags;
+    if (events != PollEvents.NONE) flags |= PollFlags.UPDATE_EVENTS;
+    if (cast(void*)&oldUserData !is cast(void*)&newUserData) flags |= PollFlags.UPDATE_USER_DATA;
+
     entry.prepRW(
         Operation.POLL_REMOVE,
         -1,
-        oldUserData,
+        cast(void*)&oldUserData,
         flags,
-        cast(ulong)newUserData
+        cast(ulong)cast(void*)&newUserData
     );
     static if (endian == Endian.bigEndian)
         entry.poll_events32 = (events & 0x0000ffffUL) << 16 | (events & 0xffff0000) >> 16;
@@ -860,10 +876,7 @@ ref SubmissionEntry prepPollUpdate(return ref SubmissionEntry entry,
 ref SubmissionEntry prepSyncFileRange(return ref SubmissionEntry entry, int fd, ulong offset, uint len,
     SyncFileRangeFlags flags = SyncFileRangeFlags.WRITE_AND_WAIT) @safe
 {
-    entry.opcode = Operation.SYNC_FILE_RANGE;
-    entry.fd = fd;
-    entry.off = offset;
-    entry.len = len;
+    entry.prepRW(Operation.SYNC_FILE_RANGE, fd, null, len, offset);
     entry.sync_range_flags = flags;
     return entry;
 }
@@ -914,6 +927,25 @@ ref SubmissionEntry prepTimeout(return ref SubmissionEntry entry, ref KernelTime
 ref SubmissionEntry prepTimeoutRemove(D)(return ref SubmissionEntry entry, ref D userData) @trusted
 {
     return entry.prepRW(Operation.TIMEOUT_REMOVE, -1, cast(void*)&userData);
+}
+
+/**
+ * Prepares operations to update existing timeout registered using `TIMEOUT`operation.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      userData = user data provided with the previously issued timeout operation
+ *      time = reference to `time64` data structure with a new time spec
+ *      flags = define if it's a relative or absolute time
+ *
+ * Note: Available from Linux 5.11
+ */
+ref SubmissionEntry prepTimeoutUpdate(D)(return ref SubmissionEntry entry,
+    ref KernelTimespec time, ref D userData, TimeoutFlags flags) @trusted
+{
+    entry.prepRW(Operation.TIMEOUT_REMOVE, -1, cast(void*)&userData, 0, cast(ulong)(cast(void*)&time));
+    entry.timeout_flags = flags | TimeoutFlags.UPDATE;
+    return entry;
 }
 
 /**
@@ -1135,13 +1167,35 @@ ref SubmissionEntry prepEpollCtl(return ref SubmissionEntry entry, int epfd, int
 
 /**
  * Note: Available from Linux 5.7
+ *
+ * This splice operation can be used to implement sendfile by splicing to an intermediate pipe
+ * first, then splice to the final destination. In fact, the implementation of sendfile in kernel
+ * uses splice internally.
+ *
+ * NOTE that even if fd_in or fd_out refers to a pipe, the splice operation can still fail with
+ * EINVAL if one of the fd doesn't explicitly support splice operation, e.g. reading from terminal
+ * is unsupported from kernel 5.7 to 5.11. Check issue #291 for more information.
+ *
+ * Either fd_in or fd_out must be a pipe.
+ *
+ * Params
+ *   fd_in = input file descriptor
+ *   off_in = If fd_in refers to a pipe, off_in must be -1.
+ *            If fd_in does not refer to a pipe and off_in is -1, then bytes are read from
+ *            fd_in starting from the file offset and it is adjust appropriately;
+ *            If fd_in does not refer to a pipe and off_in is not -1, then the starting
+ *            offset of fd_in will be off_in.
+ *   fd_out = output filedescriptor
+ *   off_out = The description of off_in also applied to off_out.
+ *   len = Up to len bytes would be transfered between file descriptors.
+ *   splice_flags = see man splice(2) for description of flags.
  */
 ref SubmissionEntry prepSplice(return ref SubmissionEntry entry,
     int fd_in, ulong off_in,
     int fd_out, ulong off_out,
-    uint nbytes, uint splice_flags) @safe
+    uint len, uint splice_flags) @safe
 {
-    entry.prepRW(Operation.SPLICE, fd_out, null, nbytes, off_out);
+    entry.prepRW(Operation.SPLICE, fd_out, null, len, off_out);
     entry.splice_off_in = off_in;
     entry.splice_fd_in = fd_in;
     entry.splice_flags = splice_flags;
@@ -1213,6 +1267,35 @@ ref SubmissionEntry prepTee(return ref SubmissionEntry entry, int fd_in, int fd_
     entry.splice_off_in = 0;
     entry.splice_fd_in = fd_in;
     entry.splice_flags = flags;
+    return entry;
+}
+
+/**
+ * Note: Available from Linux 5.11
+ */
+ref SubmissionEntry prepShutdown(return ref SubmissionEntry entry, int fd, int how) @safe
+{
+    return entry.prepRW(Operation.SHUTDOWN, fd, null, how, 0);
+}
+
+/**
+ * Note: Available from Linux 5.11
+ */
+ref SubmissionEntry prepRenameAt(return ref SubmissionEntry entry,
+    int olddfd, const char* oldpath, int newfd, const char* newpath, int flags) @trusted
+{
+    entry.prepRW(Operation.RENAMEAT, olddfd, cast(void*)oldpath, newfd, cast(ulong)cast(void*)newpath);
+    entry.rename_flags = flags;
+    return entry;
+}
+
+/**
+ * Note: Available from Linux 5.11
+ */
+ref SubmissionEntry prepUnlinkAt(return ref SubmissionEntry entry, int dirfd, const char* path, int flags) @trusted
+{
+    entry.prepRW(Operation.UNLINKAT, dirfd, cast(void*)path, 0, 0);
+    entry.unlink_flags = flags;
     return entry;
 }
 
@@ -1488,4 +1571,18 @@ version (assert)
     import std.range.primitives : ElementType, isInputRange, isOutputRange;
     static assert(isInputRange!Uring && is(ElementType!Uring == CompletionEntry));
     static assert(isOutputRange!(Uring, SubmissionEntry));
+}
+
+version (LDC)
+{
+    import ldc.intrinsics : llvm_expect;
+    alias _expect = llvm_expect;
+}
+else
+{
+    T _expect(T)(T val, T expected_val) if (__traits(isIntegral, T))
+    {
+        pragma(inline, true);
+        return val;
+    }
 }
