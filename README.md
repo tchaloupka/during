@@ -18,13 +18,11 @@ Main features:
   * range interface to submit and receive operations
   * helper functions to prepare operations
   * chainable function calls
-* up to date with not yet released Linux 5.8
+* up to date with Linux 5.14
 
 **Note:**
 
 * not all operations are properly tested yet (from Kernel 5.4, 5.5, 5.6, 5.7, 5.8)
-* Travis CI doesn't run on required linux kernels so it tests only builds (at least Linux 5.1 is needed)
-* same with the code coverage - as all tests fails when run
 * PR's are always welcome
 
 ## Docs
