@@ -195,26 +195,26 @@ unittest
     assert(io.map!(c => c.user_data).equal(iota(0, 16)));
 }
 
-@("single mmap")
-unittest
-{
-    // 5.4
-    version (D_BetterC) errmsg = "Not implemented";
-    else throw new Exception("Not implemented");
-}
+// @("single mmap")
+// unittest
+// {
+//     // 5.4
+//     version (D_BetterC) errmsg = "Not implemented";
+//     else throw new Exception("Not implemented");
+// }
 
-@("nodrop")
-unittest
-{
-    // 5.5
-    version (D_BetterC) errmsg = "Not implemented";
-    else throw new Exception("Not implemented");
-}
+// @("nodrop")
+// unittest
+// {
+//     // 5.5
+//     version (D_BetterC) errmsg = "Not implemented";
+//     else throw new Exception("Not implemented");
+// }
 
-@("cqsize")
-unittest
-{
-    // 5.5
-    version (D_BetterC) errmsg = "Not implemented";
-    else throw new Exception("Not implemented");
-}
+// @("cqsize")
+// unittest
+// {
+//     // 5.5
+//     version (D_BetterC) errmsg = "Not implemented";
+//     else throw new Exception("Not implemented");
+// }

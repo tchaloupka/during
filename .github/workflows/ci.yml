@@ -24,6 +24,8 @@ jobs:
       uses: dlang-community/setup-dlang@v1
       with:
           compiler: ${{ matrix.dc }}
+    - name: "Tested on"
+      run: uname -a
     - id: build
       name: "Test build"
       run: dub build
