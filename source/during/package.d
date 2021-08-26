@@ -407,11 +407,11 @@ struct Uring
      */
     int registerFilesUpdate(uint off, const(int)[] fds) @trusted
     {
-        struct Update
+        struct Update // represents io_uring_files_update (obsolete) or io_uring_rsrc_update
         {
             uint offset;
             uint _resv;
-            ulong pfds;
+            ulong data;
         }
 
         static assert (Update.sizeof == 16);
@@ -420,7 +420,7 @@ struct Uring
         assert(fds.length, "No file descriptors provided to update");
         assert(fds.length < uint.max, "Too many file descriptors");
 
-        Update u = { offset: off, pfds: cast(ulong)&fds[0] };
+        Update u = { offset: off, data: cast(ulong)&fds[0] };
         auto r = io_uring_register(
             payload.fd,
             RegisterOpCode.REGISTER_FILES_UPDATE,
@@ -470,6 +470,75 @@ struct Uring
     {
         checkInitialized();
         auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_EVENTFD, null, 0);
+        if (r < 0) return -errno;
+        return 0;
+    }
+
+    /**
+     * Generic means to register resources.
+     *
+     * Note: Available from Linux 5.13
+     */
+    int registerRsrc(R)(RegisterOpCode type, const(R)[] data, const(ulong)[] tags)
+    {
+        struct Register // represents io_uring_rsrc_register
+        {
+            uint nr;
+            uint _resv;
+            ulong _resv2;
+            ulong data;
+            ulong tags;
+        }
+
+        static assert (Register.sizeof == 32);
+
+        checkInitialized();
+        assert(data.length == tags.length, "Different array lengths");
+        assert(data.length < uint.max, "Too many resources");
+
+        Register r = {
+            nr: cast(uint)data.length,
+            data: cast(ulong)&data[0],
+            tags: cast(ulong)&tags[0]
+        };
+        immutable ret = io_uring_register(
+            payload.fd,
+            type,
+            &r, sizeof(r));
+        if (ret < 0) return -errno;
+        return 0;
+    }
+
+    /**
+     * Generic means to update registered resources.
+     *
+     * Note: Available from Linux 5.13
+     */
+    int registerRsrcUpdate(R)(RegisterOpCode type, uint off, const(R)[] data, const(ulong)[] tags) @trusted
+    {
+        struct Update // represents io_uring_rsrc_update2
+        {
+            uint offset;
+            uint _resv;
+            ulong data;
+            ulong tags;
+            uint nr;
+            uint _resv2;
+        }
+
+        static assert (Update.sizeof == 32);
+
+        checkInitialized();
+        assert(data.length == tags.length, "Different array lengths");
+        assert(data.length < uint.max, "Too many file descriptors");
+
+        Update u = {
+            offset: off,
+            data: cast(ulong)&data[0],
+            tags: cast(ulong)&tags[0],
+            nr: cast(uint)data.length,
+        };
+        immutable r = io_uring_register(payload.fd, type, &u, sizeof(u));
         if (r < 0) return -errno;
         return 0;
     }
@@ -557,7 +626,7 @@ ref SubmissionEntry prepRW(return ref SubmissionEntry entry, Operation op,
     entry.len = len;
     entry.rw_flags = ReadWriteFlags.NONE;
 	entry.user_data = 0;
-    entry.__pad2[0] = entry.__pad2[1] = entry.__pad2[2] = 0;
+    entry.__pad2[0] = entry.__pad2[1] = 0;
     return entry;
 }
 
@@ -717,12 +786,14 @@ ref SubmissionEntry prepFsync(return ref SubmissionEntry entry, int fd, FsyncFla
  *      entry = `SubmissionEntry` to prepare
  *      fd = file descriptor to poll
  *      events = events to poll on the FD
+ *      flags = poll operation flags
  */
-ref SubmissionEntry prepPollAdd(return ref SubmissionEntry entry, int fd, PollEvents events) @safe
+ref SubmissionEntry prepPollAdd(return ref SubmissionEntry entry,
+    int fd, PollEvents events, PollFlags flags = PollFlags.NONE) @safe
 {
     import std.system : endian, Endian;
 
-    entry.prepRW(Operation.POLL_ADD, fd);
+    entry.prepRW(Operation.POLL_ADD, fd, null, flags);
     static if (endian == Endian.bigEndian)
         entry.poll_events32 = (events & 0x0000ffffUL) << 16 | (events & 0xffff0000) >> 16;
     else
@@ -741,6 +812,30 @@ ref SubmissionEntry prepPollAdd(return ref SubmissionEntry entry, int fd, PollEv
 ref SubmissionEntry prepPollRemove(D)(return ref SubmissionEntry entry, ref D userData) @trusted
 {
     return entry.prepRW(Operation.POLL_REMOVE, -1, cast(void*)&userData);
+}
+
+/**
+ * Allow events and user_data update of running poll requests.
+ *
+ * Note: available from Linux 5.13
+ */
+ref SubmissionEntry prepPollUpdate(return ref SubmissionEntry entry,
+    void* oldUserData, void* newUserData, PollEvents events, PollFlags flags) @trusted
+{
+    import std.system : endian, Endian;
+    assert((flags & PollFlags.UPDATE_EVENTS) || (flags & PollFlags.UPDATE_USER_DATA), "Invalid flags");
+    entry.prepRW(
+        Operation.POLL_REMOVE,
+        -1,
+        oldUserData,
+        flags,
+        cast(ulong)newUserData
+    );
+    static if (endian == Endian.bigEndian)
+        entry.poll_events32 = (events & 0x0000ffffUL) << 16 | (events & 0xffff0000) >> 16;
+    else
+        entry.poll_events32 = events;
+    return entry;
 }
 
 /**

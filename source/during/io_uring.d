@@ -3,7 +3,7 @@
  *
  * See: https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring.h
  *
- * Last changes from: 760618f7a8e3b63aa06266efb301719c374e29d4 (20200724)
+ * Last changes from: 9ba6a1c06279ce499fcf755d8134d679a1f3b4ed (20210630)
  */
 module during.io_uring;
 
@@ -53,25 +53,22 @@ struct SubmissionEntry
         uint                statx_flags;        /// from Linux 5.6
         uint                fadvise_advice;     /// from Linux 5.6
         uint                splice_flags;       /// from Linux 5.7
+        uint                rename_flags;       /// from Linux 5.11
+        uint                unlink_flags;       /// from Linux 5.11
     }
 
     ulong user_data;                        /// data to be passed back at completion time
 
     union
     {
-        struct
-        {
-            union
-            {
-                ushort buf_index;   /// index into fixed buffers, if used
-                ushort buf_group;   /// for grouped buffer selection
-            }
-            ushort personality;     /// personality to use, if used
-            int splice_fd_in;
-        }
-
-        ulong[3] __pad2;
+        align (1):
+        ushort buf_index;   /// index into fixed buffers, if used
+        ushort buf_group;   /// for grouped buffer selection
     }
+
+    ushort personality;     /// personality to use, if used
+    int splice_fd_in;
+    ulong[2] __pad2;
 
     /// Resets entry fields
     void clear() @safe nothrow @nogc
@@ -149,6 +146,8 @@ enum FsyncFlags : uint
  */
 enum PollEvents : uint
 {
+    NONE    = 0,
+
     /// There is data to read.
     IN      = POLLIN,
 
@@ -320,8 +319,15 @@ enum MsgFlags : uint
  */
 enum TimeoutFlags : uint
 {
-    REL = 0,        /// Relative time is the default
-    ABS = 1U << 0   /// Absolute time - `IORING_TIMEOUT_ABS` (from Linux 5.5)
+    REL = 0,            /// Relative time is the default
+    ABS = 1U << 0,      /// Absolute time - `IORING_TIMEOUT_ABS` (from Linux 5.5)
+
+    /**
+     * `IORING_TIMEOUT_UPDATE` (from Linux 5.11)
+     *
+     * Support timeout updates through `IORING_OP_TIMEOUT_REMOVE` with passed in `IORING_TIMEOUT_UPDATE`.
+     */
+    UPDATE = 1U << 1,
 }
 
 /**
@@ -329,6 +335,56 @@ enum TimeoutFlags : uint
  * extends splice(2) flags
  */
 enum SPLICE_F_FD_IN_FIXED = 1U << 31; /* the last bit of __u32 */
+
+/**
+ * POLL_ADD flags
+ *
+ * Note that since sqe->poll_events is the flag space, the command flags for POLL_ADD are stored in
+ * sqe->len.
+ */
+enum PollFlags : uint
+{
+    NONE = 0,
+
+    /**
+     * `IORING_POLL_ADD_MULTI` - Multishot poll. Sets `IORING_CQE_F_MORE` if the poll handler will
+     * continue to report CQEs on behalf of the same SQE.
+     *
+     * The default io_uring poll mode is one-shot, where once the event triggers, the poll command
+     * is completed and won't trigger any further events. If we're doing repeated polling on the
+     * same file or socket, then it can be more efficient to do multishot, where we keep triggering
+     * whenever the event becomes true.
+     *
+     * This deviates from the usual norm of having one CQE per SQE submitted. Add a CQE flag,
+     * IORING_CQE_F_MORE, which tells the application to expect further completion events from the
+     * submitted SQE. Right now the only user of this is POLL_ADD in multishot mode.
+     *
+     * An application should expect more CQEs for the specificed SQE if the CQE is flagged with
+     * IORING_CQE_F_MORE. In multishot mode, only cancelation or an error will terminate the poll
+     * request, in which case the flag will be cleared.
+     *
+     * Note: available from Linux 5.13
+     */
+    ADD_MULTI = 1U << 0,
+
+    /**
+     * `IORING_POLL_UPDATE_EVENTS`
+     *
+     * Update existing poll request, matching sqe->addr as the old user_data field.
+     *
+     * Note: available from Linux 5.13
+     */
+    UPDATE_EVENTS = 1U << 1,
+
+    /**
+     * `IORING_POLL_UPDATE_USER_DATA`
+     *
+     * Update existing poll request, matching sqe->addr as the old user_data field.
+     *
+     * Note: available from Linux 5.13
+     */
+    UPDATE_USER_DATA = 1U << 2,
+}
 
 /**
  * Flags that can be used with the `accept4(2)` operation.
@@ -403,6 +459,11 @@ enum Operation : ubyte
 
     // available from Linux 5.8
     TEE = 33,               /// IORING_OP_TEE
+
+    // available from Linux 5.11
+    SHUTDOWN = 34,          /// IORING_OP_SHUTDOWN
+    RENAMEAT = 35,          /// IORING_OP_RENAMEAT - see renameat2()
+    UNLINKAT = 36,          /// IORING_OP_UNLINKAT - see unlinkat(2)
 }
 
 /// sqe->flags
@@ -521,9 +582,13 @@ enum CQEFlags : uint
 {
     NONE = 0, /// No flags set
 
-    /// `IORING_CQE_F_BUFFER` If set, the upper 16 bits are the buffer ID
-    /// Note: available from Linux 5.7
-    BUFFER = 1U << 0
+    /// `IORING_CQE_F_BUFFER` (from Linux 5.7)
+    /// If set, the upper 16 bits are the buffer ID
+    BUFFER = 1U << 0,
+
+    /// `IORING_CQE_F_MORE` (from Linux 5.13)
+    /// If set, parent SQE will generate more CQE entries
+    MORE = 1U << 1,
 }
 
 /**
@@ -664,6 +729,21 @@ enum SetupFlags : uint
      * Note: Available from Linux 5.6
      */
     ATTACH_WQ = 1U << 5, /* attach to existing wq */
+
+    /**
+     * `IORING_SETUP_R_DISABLED` flag to start the rings disabled, allowing the user to register
+     * restrictions, buffers, files, before to start processing SQEs.
+     *
+     * When `IORING_SETUP_R_DISABLED` is set, SQE are not processed and SQPOLL kthread is not started.
+     *
+     * The restrictions registration are allowed only when the rings are disable to prevent
+     * concurrency issue while processing SQEs.
+     *
+     * The rings can be enabled using `IORING_REGISTER_ENABLE_RINGS` opcode with io_uring_register(2).
+     *
+     * Note: Available from Linux 5.10
+     */
+    SETUP_R_DISABLED = 1U << 6, /* start with ring disabled */
 }
 
 /// `io_uring_params->features` flags
@@ -722,6 +802,7 @@ enum SetupFeatures : uint
 
     /**
      * `IORING_FEAT_CUR_PERSONALITY` (from Linux 5.6)
+     *
      * We currently setup the io_wq with a static set of mm and creds. Even for a single-use io-wq
      * per io_uring, this is suboptimal as we have may have multiple enters of the ring. For
      * sharing the io-wq backend, it doesn't work at all.
@@ -737,6 +818,7 @@ enum SetupFeatures : uint
 
     /**
      * `IORING_FEAT_FAST_POLL` (from Linux 5.7)
+     *
      * Currently io_uring tries any request in a non-blocking manner, if it can, and then retries
      * from a worker thread if we get -EAGAIN. Now that we have a new and fancy poll based retry
      * backend, use that to retry requests if the file supports it.
@@ -756,12 +838,40 @@ enum SetupFeatures : uint
 
     /**
      * `IORING_FEAT_POLL_32BITS` (from Linux 5.9)
+     *
      * Poll events should be 32-bits to cover EPOLLEXCLUSIVE.
      * Explicit word-swap the poll32_events for big endian to make sure the ABI is not changed.  We
      * call this feature IORING_FEAT_POLL_32BITS, applications who want to use EPOLLEXCLUSIVE should
      * check the feature bit first.
      */
-    POLL_32BITS = 1U << 6
+    POLL_32BITS = 1U << 6,
+
+    /**
+     * `IORING_FEAT_SQPOLL_NONFIXED` (from Linux 5.11)
+     *
+     * The restriction of needing fixed files for SQPOLL is problematic, and prevents/inhibits
+     * several valid uses cases. With the referenced files_struct that we have now, it's trivially
+     * supportable.
+     *
+     * Treat ->files like we do the mm for the SQPOLL thread - grab a reference to it (and assign
+     * it), and drop it when we're done.
+     *
+     * This feature is exposed as IORING_FEAT_SQPOLL_NONFIXED.
+     */
+    SQPOLL_NONFIXED = 1U << 7,
+
+    /**
+     * `IORING_FEAT_EXT_ARG` (from Linux 5.11)
+     *
+     * Supports adding timeout to `existing io_uring_enter()`
+     */
+    EXT_ARG = 1U << 8,
+
+    /// `IORING_FEAT_NATIVE_WORKERS	(1U << 9)` (from Linux 5.12)
+    NATIVE_WORKERS = 1U << 9,
+
+    /// `IORING_FEAT_RSRC_TAGS	(1U << 9)` (from Linux 5.13)
+    RSRC_TAGS = 1U << 10,
 }
 
 /**
@@ -1000,14 +1110,81 @@ enum RegisterOpCode : uint
 
     /// `IORING_UNREGISTER_PERSONALITY` (from Linux 5.6)
     UNREGISTER_PERSONALITY = 10,
+
+    /**
+     * `IORING_REGISTER_RESTRICTIONS` (from Linux 5.10)
+     *
+     * Permanently installs a feature allowlist on an io_ring_ctx. The io_ring_ctx can then be
+     * passed to untrusted code with the knowledge that only operations present in the allowlist can
+     * be executed.
+     *
+     * The allowlist approach ensures that new features added to io_uring do not accidentally become
+     * available when an existing application is launched on a newer kernel version.
+     *
+     * Currently it's possible to restrict sqe opcodes, sqe flags, and register opcodes.
+     *
+     * `IOURING_REGISTER_RESTRICTIONS` can only be made once. Afterwards it is not possible to
+     * change restrictions anymore. This prevents untrusted code from removing restrictions.
+     */
+    REGISTER_RESTRICTIONS = 11,
+
+    /**
+     *`IORING_REGISTER_ENABLE_RINGS` (from Linux 5.10)
+     *
+     * This operation is to be used when rings are disabled on start with `IORING_SETUP_R_DISABLED`.
+     */
+    REGISTER_ENABLE_RINGS = 12,
+
+    /**
+     * `IORING_REGISTER_FILES2` (from Linux 5.13)
+     */
+    REGISTER_FILES2 = 13,
+
+    /**
+     * `IORING_REGISTER_FILES_UPDATE2` (from Linux 5.13)
+     */
+    REGISTER_FILES_UPDATE2 = 14,
+
+    /**
+     * `IORING_REGISTER_BUFFERS2` (from Linux 5.13)
+     */
+    REGISTER_BUFFERS2 = 15,
+
+    /**
+     * `IORING_REGISTER_BUFFERS_UPDATE` (from Linux 5.13)
+     */
+    REGISTER_BUFFERS_UPDATE = 16,
+
+    /* set/clear io-wq thread affinities */
+    /// `IORING_REGISTER_IOWQ_AFF` (from Linux 5.14)
+    REGISTER_IOWQ_AFF        = 17,
+
+    /// `IORING_UNREGISTER_IOWQ_AFF` (from Linux 5.14)
+    UNREGISTER_IOWQ_AFF      = 18,
 }
 
 /// io_uring_enter(2) flags
 enum EnterFlags: uint
 {
     NONE        = 0,
-    GETEVENTS   = (1 << 0), /// `IORING_ENTER_GETEVENTS`
-    SQ_WAKEUP   = (1 << 1), /// `IORING_ENTER_SQ_WAKEUP`
+    GETEVENTS   = (1U << 0), /// `IORING_ENTER_GETEVENTS`
+    SQ_WAKEUP   = (1U << 1), /// `IORING_ENTER_SQ_WAKEUP`
+
+    /**
+     * `IORING_ENTER_SQ_WAIT` (from Linux 5.10)
+     *
+     * When using SQPOLL, applications can run into the issue of running out of SQ ring entries
+     * because the thread hasn't consumed them yet. The only option for dealing with that is
+     * checking later, or busy checking for the condition.
+     */
+    SQ_WAIT     = (1U << 2),
+
+    /**
+     * `IORING_ENTER_EXT_ARG` (from Linux 5.11)
+     *
+     * Adds support for timeout to existing io_uring_enter() function.
+     */
+    EXT_ARG     = (1U << 3),
 }
 
 /// Time specification as defined in kernel headers (used by TIMEOUT operations)
@@ -1026,6 +1203,16 @@ static assert(SubmissionQueueRingOffsets.sizeof == 40);
 /// Indicating that OP is supported by the kernel
 enum IO_URING_OP_SUPPORTED = 1U << 0;
 
+/**
+ * Skip updating fd indexes set to this value in the fd table
+ *
+ * Support for skipping a file descriptor when using `IORING_REGISTER_FILES_UPDATE`.
+ * `__io_sqe_files_update` will skip fds set to `IORING_REGISTER_FILES_SKIP`
+ *
+ * Note: Available from Linux 5.12
+ */
+enum IORING_REGISTER_FILES_SKIP = -2;
+
 struct io_uring_probe_op
 {
     ubyte op;
@@ -1041,6 +1228,45 @@ struct io_uring_probe
     ushort resv;
     uint[3] resv2;
     io_uring_probe_op[0] ops;
+}
+
+struct io_uring_restriction
+{
+    RestrictionOp opcode;
+    union
+    {
+        ubyte register_op; /// IORING_RESTRICTION_REGISTER_OP
+        ubyte sqe_op;      /// IORING_RESTRICTION_SQE_OP
+        ubyte sqe_flags;   /// IORING_RESTRICTION_SQE_FLAGS_*
+    }
+    ubyte resv;
+    uint[3] resv2;
+}
+
+/**
+ * io_uring_restriction->opcode values
+ */
+enum RestrictionOp : ushort
+{
+    /// Allow an io_uring_register(2) opcode
+    IORING_RESTRICTION_REGISTER_OP          = 0,
+
+    /// Allow an sqe opcode
+    IORING_RESTRICTION_SQE_OP               = 1,
+
+    /// Allow sqe flags
+    IORING_RESTRICTION_SQE_FLAGS_ALLOWED    = 2,
+
+    /// Require sqe flags (these flags must be set on each submission)
+    IORING_RESTRICTION_SQE_FLAGS_REQUIRED   = 3,
+}
+
+struct io_uring_getevents_arg
+{
+    ulong   sigmask;
+    uint    sigmask_sz;
+    uint    pad;
+    ulong   ts;
 }
 
 /**
@@ -1126,6 +1352,13 @@ int io_uring_enter(int fd, uint to_submit, uint min_complete, EnterFlags flags, 
 {
     pragma(inline);
     return syscall(SYS_io_uring_enter, fd, to_submit, min_complete, flags, sig, sigset_t.sizeof);
+}
+
+/// ditto
+int io_uring_enter(int fd, uint to_submit, uint min_complete, EnterFlags flags, const io_uring_getevents_arg* args)
+{
+    pragma(inline);
+    return syscall(SYS_io_uring_enter, fd, to_submit, min_complete, flags, args, io_uring_getevents_arg.sizeof);
 }
 
 /**
