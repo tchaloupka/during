@@ -248,7 +248,7 @@ struct Uring
     {
         checkInitialized();
 
-        auto len = cast(int)payload.sq.length;
+        immutable len = cast(int)payload.sq.length;
         if (len > 0) // anything to submit?
         {
             EnterFlags flags;
@@ -262,7 +262,7 @@ struct Uring
                     flags |= EnterFlags.SQ_WAKEUP;
                 else if (want == 0) return len; // fast poll
             }
-            auto r = io_uring_enter(payload.fd, len, want, flags, args);
+            immutable r = io_uring_enter(payload.fd, len, want, flags, args);
             if (r < 0) return -errno;
             return r;
         }
@@ -291,7 +291,7 @@ struct Uring
 
         if (payload.cq.length >= want) return 0; // we don't need to syscall
 
-        auto r = io_uring_enter(payload.fd, 0, want, EnterFlags.GETEVENTS, sig);
+        immutable r = io_uring_enter(payload.fd, 0, want, EnterFlags.GETEVENTS, sig);
         if (r < 0) return -errno;
         return 0;
     }
@@ -343,7 +343,7 @@ struct Uring
             }
         }
 
-        auto r = io_uring_register(
+        immutable r = io_uring_register(
                 payload.fd,
                 RegisterOpCode.REGISTER_BUFFERS,
                 cast(const(void)*)&payload.regBuffers[0], 1
@@ -370,7 +370,7 @@ struct Uring
         free(cast(void*)&payload.regBuffers[0]);
         payload.regBuffers = null;
 
-        auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_BUFFERS, null, 0);
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_BUFFERS, null, 0);
         if (r < 0) return -errno;
         return 0;
     }
@@ -397,7 +397,7 @@ struct Uring
         assert(fds.length < uint.max, "Too many file descriptors");
 
         // arg contains a pointer to an array of nr_args file descriptors (signed 32 bit integers).
-        auto r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_FILES, &fds[0], cast(uint)fds.length);
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_FILES, &fds[0], cast(uint)fds.length);
         if (r < 0) return -errno;
         return 0;
     }
@@ -430,7 +430,7 @@ struct Uring
         assert(fds.length < uint.max, "Too many file descriptors");
 
         Update u = { offset: off, data: cast(ulong)&fds[0] };
-        auto r = io_uring_register(
+        immutable r = io_uring_register(
             payload.fd,
             RegisterOpCode.REGISTER_FILES_UPDATE,
             &u, cast(uint)fds.length);
@@ -449,7 +449,7 @@ struct Uring
     int unregisterFiles() @trusted
     {
         checkInitialized();
-        auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_FILES, null, 0);
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_FILES, null, 0);
         if (r < 0) return -errno;
         return 0;
     }
@@ -465,7 +465,7 @@ struct Uring
     int registerEventFD(int eventFD) @trusted
     {
         checkInitialized();
-        auto r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_EVENTFD, &eventFD, 1);
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_EVENTFD, &eventFD, 1);
         if (r < 0) return -errno;
         return 0;
     }
@@ -478,7 +478,7 @@ struct Uring
     int unregisterEventFD() @trusted
     {
         checkInitialized();
-        auto r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_EVENTFD, null, 0);
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_EVENTFD, null, 0);
         if (r < 0) return -errno;
         return 0;
     }
@@ -548,6 +548,42 @@ struct Uring
             nr: cast(uint)data.length,
         };
         immutable r = io_uring_register(payload.fd, type, &u, sizeof(u));
+        if (r < 0) return -errno;
+        return 0;
+    }
+
+    /**
+     * Register a feature whitelist. Attempting to call any operations which are not whitelisted
+     * will result in an error.
+     *
+     * Note: Can only be called once to prevent other code from bypassing the whitelist.
+     *
+     * Params: res = the struct containing the restriction info.
+     *
+     * Returns: On success, returns 0. On error, `-errno` is returned.
+     *
+     * Note: Available from Linux 5.10
+     */
+    int registerRestrictions(scope ref io_uring_restriction res) @trusted
+    {
+        checkInitialized();
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_RESTRICTIONS, &res, 1);
+        if (r < 0) return -errno;
+        return 0;
+    }
+
+    /**
+     * Enable the "rings" of this Uring if they were previously disabled with
+     * `IORING_SETUP_R_DISABLED`.
+     *
+     * Returns: On success, returns 0. On error, `-errno` is returned.
+     *
+     * Note: Available from Linux
+     */
+    int enableRings() @trusted
+    {
+        checkInitialized();
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.ENABLE_RINGS, null, 0);
         if (r < 0) return -errno;
         return 0;
     }

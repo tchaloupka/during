@@ -34,7 +34,7 @@ jobs:
       run: dub build -c=betterC
     - name: "Run unittests"
       if: steps.build.outcome == 'success'
-      run: dub test
+      run: dub test -- -t 1 -v
     - name: "Run unittests with betterC"
       if: steps.buildBC.outcome == 'success'
       run: dub test -c=betterC
@@ -43,5 +43,5 @@ jobs:
       env:
         COVERAGE: true
       run: |
-        dub test -b=unittest-cov || true
+        dub test -b=unittest-cov -- -t 1 -v || true
         bash <(curl -s https://codecov.io/bash)

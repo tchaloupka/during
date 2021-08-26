@@ -1133,7 +1133,7 @@ enum RegisterOpCode : uint
      *
      * This operation is to be used when rings are disabled on start with `IORING_SETUP_R_DISABLED`.
      */
-    REGISTER_ENABLE_RINGS = 12,
+    ENABLE_RINGS = 12,
 
     /**
      * `IORING_REGISTER_FILES2` (from Linux 5.13)
