@@ -80,10 +80,6 @@ struct Uring
     nothrow @nogc:
 
     private UringDesc* payload;
-    private void checkInitialized() const @safe pure
-    {
-        assert(payload !is null, "Uring hasn't been initialized yet");
-    }
 
     /// Copy constructor
     this(ref return scope Uring rhs) @safe pure
@@ -102,57 +98,57 @@ struct Uring
 
     /// Native io_uring file descriptor
     int fd() const @safe pure
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.fd;
     }
 
     /// io_uring parameters
     SetupParameters params() const @safe pure return
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.params;
     }
 
     /// Check if there is some `CompletionEntry` to process.
     bool empty() const @safe pure
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.cq.empty;
     }
 
     /// Check if there is space for another `SubmissionEntry` to submit.
     bool full() const @safe pure
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.sq.full;
     }
 
     /// Available space in submission queue before it becomes full
     size_t capacity() const @safe pure
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.sq.capacity;
     }
 
     /// Number of entries in completion queue
     size_t length() const @safe pure
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.cq.length;
     }
 
     /// Get first `CompletionEntry` from cq ring
     ref CompletionEntry front() @safe pure return
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.cq.front;
     }
 
     /// Move to next `CompletionEntry`
     void popFront() @safe pure
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.cq.popFront;
     }
 
@@ -176,17 +172,17 @@ struct Uring
      * Returns: reference to `Uring` structure so it's possible to chain multiple commands.
      */
     ref Uring put()(auto ref SubmissionEntry entry) @safe pure return
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         payload.sq.put(entry);
         return this;
     }
 
     /// ditto
     ref Uring putWith(alias FN, ARGS...)(auto ref ARGS args) return
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
         import std.functional : forward;
-        checkInitialized();
         payload.sq.putWith!FN(forward!args);
         return this;
     }
@@ -203,8 +199,8 @@ struct Uring
      */
     ref Uring put(OP)(auto ref OP op) return
         if (!is(OP == SubmissionEntry))
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         payload.sq.put(op);
         return this;
     }
@@ -213,8 +209,8 @@ struct Uring
      * Advances the userspace submision queue and returns last `SubmissionEntry`.
      */
     ref SubmissionEntry next()() @safe pure
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.sq.next();
     }
 
@@ -223,15 +219,15 @@ struct Uring
      * This value records number of dropped events.
      */
     uint overflow() const @safe pure
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.cq.overflow;
     }
 
     /// Counter of invalid submissions (out-of-bound index in submission array)
     uint dropped() const @safe pure
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         return payload.sq.dropped;
     }
 
@@ -246,38 +242,51 @@ struct Uring
      *
      * Returns: Number of submitted entries on success, `-errno` on error
      */
-    int submit(S)(uint want, const S* args) @trusted
+    int submit(S)(uint want, const S* args)
         if (is(S == sigset_t) || is(S == io_uring_getevents_arg))
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
+        if (_expect(want > 0, false)) return submitAndWait(want, args);
+        return submit(args);
+    }
 
+    /// ditto
+    int submit(uint want) @safe
+    {
+        pragma(inline, true)
+        if (_expect(want > 0, true)) return submitAndWait(want, cast(sigset_t*)null);
+        return submit(cast(sigset_t*)null);
+    }
+
+    /// ditto
+    int submit(S)(const S* args) @trusted
+        if (is(S == sigset_t) || is(S == io_uring_getevents_arg))
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
         immutable len = cast(int)payload.sq.length;
-        if (len > 0) // anything to submit?
+        if (_expect(len > 0, true)) // anything to submit?
         {
-            EnterFlags flags;
-            if (want > 0) flags |= EnterFlags.GETEVENTS;
-
             payload.sq.flushTail(); // advance queue index
 
+            EnterFlags flags;
             if (payload.params.flags & SetupFlags.SQPOLL)
             {
                 if (_expect(payload.sq.flags & SubmissionQueueFlags.NEED_WAKEUP, false))
                     flags |= EnterFlags.SQ_WAKEUP;
-                else if (want == 0) return len; // fast poll
+                else return len; // fast poll
             }
-            immutable r = io_uring_enter(payload.fd, len, want, flags, args);
-            if (r < 0) return -errno;
+            immutable r = io_uring_enter(payload.fd, len, 0, flags, args);
+            if (_expect(r < 0, false)) return -errno;
             return r;
         }
-        else if (want > 0) return wait(want); // just simple wait
         return 0;
     }
 
     /// ditto
-    int submit(uint want = 0) @safe
+    int submit() @safe
     {
         pragma(inline, true)
-        return submit(want, cast(sigset_t*)null);
+        return submit(cast(sigset_t*)null);
     }
 
     /**
@@ -287,16 +296,48 @@ struct Uring
      * Returns: `0` on success, `-errno` on error
      */
     int wait(uint want = 1, const sigset_t* sig = null) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (want > 0, "Invalid want value")
     {
         pragma(inline);
-        checkInitialized();
-        assert(want > 0, "Invalid want value");
-
         if (payload.cq.length >= want) return 0; // we don't need to syscall
-
         immutable r = io_uring_enter(payload.fd, 0, want, EnterFlags.GETEVENTS, sig);
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
+    }
+
+    /**
+     * Special case of a `submit` that can be used when we know beforehead that we want to wait for
+     * some amount of CQEs.
+     */
+    int submitAndWait(S)(uint want, const S* args) @trusted
+        if (is(S == sigset_t) || is(S == io_uring_getevents_arg))
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (want > 0, "Invalid want value")
+    {
+        immutable len = cast(int)payload.sq.length;
+        if (_expect(len > 0, true)) // anything to submit?
+        {
+            payload.sq.flushTail(); // advance queue index
+
+            EnterFlags flags = EnterFlags.GETEVENTS;
+            if (payload.params.flags & SetupFlags.SQPOLL)
+            {
+                if (_expect(payload.sq.flags & SubmissionQueueFlags.NEED_WAKEUP, false))
+                    flags |= EnterFlags.SQ_WAKEUP;
+            }
+            immutable r = io_uring_enter(payload.fd, len, want, flags, args);
+            if (_expect(r < 0, false)) return -errno;
+            return r;
+        }
+        return wait(want); // just simple wait
+    }
+
+    /// ditto
+    int submitAndWait(uint want) @safe
+    {
+        pragma(inline, true)
+        return submitAndWait(want, cast(sigset_t*)null);
     }
 
     /**
@@ -317,17 +358,16 @@ struct Uring
      */
     int registerBuffers(T)(T buffers)
         if (is(T == ubyte[]) || is(T == ubyte[][])) // TODO: something else?
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (buffers.length, "Empty buffer")
     {
-        checkInitialized();
-        assert(buffers.length, "Empty buffer");
-
         if (payload.regBuffers !is null)
             return -EBUSY; // buffers were already registered
 
         static if (is(T == ubyte[]))
         {
             auto p = malloc(iovec.sizeof);
-            if (p is null) return -errno;
+            if (_expect(p is null, false)) return -errno;
             payload.regBuffers = (cast(iovec*)p)[0..1];
             payload.regBuffers[0].iov_base = cast(void*)&buffers[0];
             payload.regBuffers[0].iov_len = buffers.length;
@@ -335,7 +375,7 @@ struct Uring
         else static if (is(T == ubyte[][]))
         {
             auto p = malloc(buffers.length * iovec.sizeof);
-            if (p is null) return -errno;
+            if (_expect(p is null, false)) return -errno;
             payload.regBuffers = (cast(iovec*)p)[0..buffers.length];
 
             foreach (i, b; buffers)
@@ -352,7 +392,7 @@ struct Uring
                 cast(const(void)*)&payload.regBuffers[0], 1
             );
 
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
     }
 
@@ -364,9 +404,8 @@ struct Uring
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
     int unregisterBuffers() @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
-
         if (payload.regBuffers is null)
             return -ENXIO; // no buffers were registered
 
@@ -374,7 +413,7 @@ struct Uring
         payload.regBuffers = null;
 
         immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_BUFFERS, null, 0);
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
     }
 
@@ -394,14 +433,13 @@ struct Uring
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
     int registerFiles(const(int)[] fds)
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (fds.length, "No file descriptors provided")
+    in (fds.length < uint.max, "Too many file descriptors")
     {
-        checkInitialized();
-        assert(fds.length, "No file descriptors provided");
-        assert(fds.length < uint.max, "Too many file descriptors");
-
         // arg contains a pointer to an array of nr_args file descriptors (signed 32 bit integers).
         immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_FILES, &fds[0], cast(uint)fds.length);
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
     }
 
@@ -418,6 +456,9 @@ struct Uring
      * Returns: number of files updated on success, -errno on failure.
      */
     int registerFilesUpdate(uint off, const(int)[] fds) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (fds.length, "No file descriptors provided to update")
+    in (fds.length < uint.max, "Too many file descriptors")
     {
         struct Update // represents io_uring_files_update (obsolete) or io_uring_rsrc_update
         {
@@ -428,16 +469,12 @@ struct Uring
 
         static assert (Update.sizeof == 16);
 
-        checkInitialized();
-        assert(fds.length, "No file descriptors provided to update");
-        assert(fds.length < uint.max, "Too many file descriptors");
-
         Update u = { offset: off, data: cast(ulong)&fds[0] };
         immutable r = io_uring_register(
             payload.fd,
             RegisterOpCode.REGISTER_FILES_UPDATE,
             &u, cast(uint)fds.length);
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
     }
 
@@ -450,10 +487,10 @@ struct Uring
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
     int unregisterFiles() @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_FILES, null, 0);
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
     }
 
@@ -466,10 +503,10 @@ struct Uring
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
     int registerEventFD(int eventFD) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_EVENTFD, &eventFD, 1);
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
     }
 
@@ -479,10 +516,10 @@ struct Uring
      * Returns: On success, returns 0. On error, `-errno` is returned.
      */
     int unregisterEventFD() @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_EVENTFD, null, 0);
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
     }
 
@@ -492,6 +529,9 @@ struct Uring
      * Note: Available from Linux 5.13
      */
     int registerRsrc(R)(RegisterOpCode type, const(R)[] data, const(ulong)[] tags)
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (data.length == tags.length, "Different array lengths")
+    in (data.length < uint.max, "Too many resources")
     {
         struct Register // represents io_uring_rsrc_register
         {
@@ -504,10 +544,6 @@ struct Uring
 
         static assert (Register.sizeof == 32);
 
-        checkInitialized();
-        assert(data.length == tags.length, "Different array lengths");
-        assert(data.length < uint.max, "Too many resources");
-
         Register r = {
             nr: cast(uint)data.length,
             data: cast(ulong)&data[0],
@@ -517,7 +553,7 @@ struct Uring
             payload.fd,
             type,
             &r, sizeof(r));
-        if (ret < 0) return -errno;
+        if (_expect(ret < 0, false)) return -errno;
         return 0;
     }
 
@@ -527,6 +563,9 @@ struct Uring
      * Note: Available from Linux 5.13
      */
     int registerRsrcUpdate(R)(RegisterOpCode type, uint off, const(R)[] data, const(ulong)[] tags) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (data.length == tags.length, "Different array lengths")
+    in (data.length < uint.max, "Too many file descriptors")
     {
         struct Update // represents io_uring_rsrc_update2
         {
@@ -540,10 +579,6 @@ struct Uring
 
         static assert (Update.sizeof == 32);
 
-        checkInitialized();
-        assert(data.length == tags.length, "Different array lengths");
-        assert(data.length < uint.max, "Too many file descriptors");
-
         Update u = {
             offset: off,
             data: cast(ulong)&data[0],
@@ -551,7 +586,7 @@ struct Uring
             nr: cast(uint)data.length,
         };
         immutable r = io_uring_register(payload.fd, type, &u, sizeof(u));
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
     }
 
@@ -568,10 +603,10 @@ struct Uring
      * Note: Available from Linux 5.10
      */
     int registerRestrictions(scope ref io_uring_restriction res) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_RESTRICTIONS, &res, 1);
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
     }
 
@@ -584,10 +619,10 @@ struct Uring
      * Note: Available from Linux 5.10
      */
     int enableRings() @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
     {
-        checkInitialized();
         immutable r = io_uring_register(payload.fd, RegisterOpCode.ENABLE_RINGS, null, 0);
-        if (r < 0) return -errno;
+        if (_expect(r < 0, false)) return -errno;
         return 0;
     }
 }
