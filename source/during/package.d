@@ -290,6 +290,16 @@ struct Uring
     }
 
     /**
+     * Flushes submission queue index to the kernel.
+     * Doesn't call any syscall, it just advances the SQE queue for kernel.
+     * This can be used with `IORING_SETUP_SQPOLL` when kernel polls the submission queue.
+     */
+    void flush() @safe
+    {
+        payload.sq.flushTail(); // advance queue index
+    }
+
+    /**
      * Simmilar to `submit` but with this method we just wait for required number
      * of `CompletionEntries`.
      *
