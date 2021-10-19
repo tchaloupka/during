@@ -1298,7 +1298,11 @@ ref SubmissionEntry prepSplice(return ref SubmissionEntry entry,
  */
 ref SubmissionEntry prepProvideBuffers(return ref SubmissionEntry entry, ubyte[][] buf, uint len, ushort bgid, int bid) @safe
 {
-    assert(buf.length < int.max, "Too many buffers");
+    assert(buf.length <= int.max, "Too many buffers");
+    assert(len <= uint.max, "Buffer too large");
+    version (assert) {
+        foreach (b; buf) assert(b.length <= len, "Invalid buffer length");
+    }
     entry.prepRW(Operation.PROVIDE_BUFFERS, cast(int)buf.length, cast(void*)&buf[0][0], len, bid);
     entry.buf_group = bgid;
     return entry;
@@ -1307,8 +1311,8 @@ ref SubmissionEntry prepProvideBuffers(return ref SubmissionEntry entry, ubyte[]
 /// ditto
 ref SubmissionEntry prepProvideBuffers(size_t M, size_t N)(return ref SubmissionEntry entry, ref ubyte[M][N] buf, ushort bgid, int bid) @safe
 {
-    static assert(N < int.max, "Too many buffers");
-    static assert(M < uint.max, "Buffer too large");
+    static assert(N <= int.max, "Too many buffers");
+    static assert(M <= uint.max, "Buffer too large");
     entry.prepRW(Operation.PROVIDE_BUFFERS, cast(int)N, cast(void*)&buf[0][0], cast(uint)M, bid);
     entry.buf_group = bgid;
     return entry;
@@ -1317,7 +1321,7 @@ ref SubmissionEntry prepProvideBuffers(size_t M, size_t N)(return ref Submission
 /// ditto
 ref SubmissionEntry prepProvideBuffer(size_t N)(return ref SubmissionEntry entry, ref ubyte[N] buf, ushort bgid, int bid) @safe
 {
-    static assert(N < uint.max, "Buffer too large");
+    static assert(N <= uint.max, "Buffer too large");
     entry.prepRW(Operation.PROVIDE_BUFFERS, 1, cast(void*)&buf[0], cast(uint)N, bid);
     entry.buf_group = bgid;
     return entry;
@@ -1326,7 +1330,7 @@ ref SubmissionEntry prepProvideBuffer(size_t N)(return ref SubmissionEntry entry
 /// ditto
 ref SubmissionEntry prepProvideBuffer(return ref SubmissionEntry entry, ref ubyte[] buf, ushort bgid, int bid) @safe
 {
-    assert(buf.length < uint.max, "Buffer too large");
+    assert(buf.length <= uint.max, "Buffer too large");
     entry.prepRW(Operation.PROVIDE_BUFFERS, 1, cast(void*)&buf[0], cast(uint)buf.length, bid);
     entry.buf_group = bgid;
     return entry;
