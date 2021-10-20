@@ -305,15 +305,23 @@ struct Uring
      *
      * Returns: `0` on success, `-errno` on error
      */
-    int wait(uint want = 1, const sigset_t* sig = null) @trusted
+    int wait(S)(uint want = 1, const S* args = null) @trusted
+        if (is(S == sigset_t) || is(S == io_uring_getevents_arg))
     in (payload !is null, "Uring hasn't been initialized yet")
     in (want > 0, "Invalid want value")
     {
         pragma(inline);
         if (payload.cq.length >= want) return 0; // we don't need to syscall
-        immutable r = io_uring_enter(payload.fd, 0, want, EnterFlags.GETEVENTS, sig);
+        immutable r = io_uring_enter(payload.fd, 0, want, EnterFlags.GETEVENTS, args);
         if (_expect(r < 0, false)) return -errno;
         return 0;
+    }
+
+    /// ditto
+    int wait(uint want = 1)
+    {
+        pragma(inline, true)
+        return wait(want, cast(sigset_t*)null);
     }
 
     /**
@@ -1546,6 +1554,7 @@ struct SubmissionQueue
 
     ref SubmissionEntry next()() @safe pure return
     {
+        assert(!full, "SumbissionQueue is full");
         return sqes[localTail++ & ringMask];
     }
 
