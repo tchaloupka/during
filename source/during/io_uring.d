@@ -3,7 +3,7 @@
  *
  * See: https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring.h
  *
- * Last changes from: 9ba6a1c06279ce499fcf755d8134d679a1f3b4ed (20210630)
+ * Last changes from: dd47c104533dedb90434a3f142e94a671ac623a6 (20210913)
  */
 module during.io_uring;
 
@@ -55,6 +55,7 @@ struct SubmissionEntry
         uint                splice_flags;       /// from Linux 5.7
         uint                rename_flags;       /// from Linux 5.11
         uint                unlink_flags;       /// from Linux 5.11
+        uint                hardlink_flags;     /// from Linux 5.15
     }
 
     ulong user_data;                        /// data to be passed back at completion time
@@ -67,7 +68,11 @@ struct SubmissionEntry
     }
 
     ushort personality;     /// personality to use, if used
-    int splice_fd_in;
+    union
+    {
+        int splice_fd_in;
+        uint file_index;
+    }
     ulong[2] __pad2;
 
     /// Resets entry fields
@@ -328,6 +333,31 @@ enum TimeoutFlags : uint
      * Support timeout updates through `IORING_OP_TIMEOUT_REMOVE` with passed in `IORING_TIMEOUT_UPDATE`.
      */
     UPDATE = 1U << 1,
+
+    /**
+     * `IORING_TIMEOUT_BOOTTIME` (from Linux 5.15)
+     */
+    BOOTTIME = 1U << 2,
+
+    /**
+     * `IORING_TIMEOUT_REALTIME` (from Linux 5.15)
+     */
+    REALTIME = 1U << 3,
+
+    /**
+     * `IORING_LINK_TIMEOUT_UPDATE` (from Linux 5.15)
+     */
+    LINK_TIMEOUT_UPDATE = 1U << 4,
+
+    /**
+     * `IORING_TIMEOUT_CLOCK_MASK` (from Linux 5.15)
+     */
+    CLOCK_MASK = BOOTTIME | REALTIME,
+
+    /**
+     * `IORING_TIMEOUT_UPDATE_MASK` (from Linux 5.15)
+     */
+    UPDATE_MASK = UPDATE | LINK_TIMEOUT_UPDATE,
 }
 
 /**
@@ -464,6 +494,11 @@ enum Operation : ubyte
     SHUTDOWN = 34,          /// IORING_OP_SHUTDOWN
     RENAMEAT = 35,          /// IORING_OP_RENAMEAT - see renameat2()
     UNLINKAT = 36,          /// IORING_OP_UNLINKAT - see unlinkat(2)
+
+    // available from Linux 5.15
+    MKDIRAT = 37,           /// IORING_OP_MKDIRAT - see mkdirat(2)
+    SYMLINKAT = 38,         /// IORING_OP_SYMLINKAT - see symlinkat(2)
+    LINKAT = 39,            /// IORING_OP_LINKAT - see linkat(2)
 }
 
 /// sqe->flags
@@ -1165,6 +1200,17 @@ enum RegisterOpCode : uint
 
     /// `IORING_UNREGISTER_IOWQ_AFF` (from Linux 5.14)
     UNREGISTER_IOWQ_AFF      = 18,
+
+    /// `IORING_REGISTER_IOWQ_MAX_WORKERS` (from Linux 5.15)
+    /// set/get max number of io-wq workers
+    REGISTER_IOWQ_MAX_WORKERS = 19,
+}
+
+/* io-wq worker categories */
+enum IOWQCategory
+{
+    BOUND, /// `IO_WQ_BOUND`
+    UNBOUND, /// `IO_WQ_UNBOUND`
 }
 
 /// io_uring_enter(2) flags

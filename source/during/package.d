@@ -18,10 +18,12 @@ debug import core.stdc.stdio;
 import core.stdc.stdlib;
 import core.sys.linux.epoll;
 import core.sys.linux.errno;
+import core.sys.linux.sched;
 import core.sys.linux.sys.mman;
 import core.sys.linux.unistd;
 import core.sys.posix.signal;
 import core.sys.posix.sys.socket;
+import core.sys.posix.sys.types;
 import core.sys.posix.sys.uio;
 import std.algorithm.comparison : among;
 
@@ -643,6 +645,56 @@ struct Uring
         if (_expect(r < 0, false)) return -errno;
         return 0;
     }
+
+    /**
+     * By default, async workers created by io_uring will inherit the CPU mask of its parent. This
+     * is usually all the CPUs in the system, unless the parent is being run with a limited set. If
+     * this isn't the desired outcome, the application may explicitly tell io_uring what CPUs the
+     * async workers may run on.
+     *
+     * Note: Available since 5.14.
+     */
+    int registerIOWQAffinity(cpu_set_t[] cpus) @trusted
+    in (cpus.length)
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_IOWQ_AFF, cpus.ptr, cast(uint)cpus.length);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Undoes a CPU mask previously set with `registerIOWQAffinity`.
+     *
+     * Note: Available since 5.14
+     */
+    int unregisterIOWQAffinity() @trusted
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_IOWQ_AFF, null, 0);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * By default, io_uring limits the unbounded workers created to the maximum processor count set
+     * by `RLIMIT_NPROC` and the bounded workers is a function of the SQ ring size and the number of
+     * CPUs in the system. Sometimes this can be excessive (or too little, for bounded), and this
+     * command provides a way to change the count per ring (per NUMA node) instead.
+     *
+     * `val` must be set to an `uint` pointer to an array of two values, with the values in the
+     * array being set to the maximum count of workers per NUMA node. Index 0 holds the bounded
+     * worker count, and index 1 holds the unbounded worker count. On successful return, the passed
+     * in array will contain the previous maximum values for each type. If the count being passed in
+     * is 0, then this command returns the current maximum values and doesn't modify the current
+     * setting.
+     *
+     * Note: Available since 5.15
+     */
+    int registerIOWQMaxWorkers(ref uint[2] workers) @trusted
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_IOWQ_MAX_WORKERS, &workers, 2);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
 }
 
 /**
@@ -729,7 +781,7 @@ ref SubmissionEntry prepRW(return ref SubmissionEntry entry, Operation op,
 	entry.user_data = 0;
     entry.buf_index = 0;
     entry.personality = 0;
-    entry.splice_fd_in = 0;
+    entry.file_index = 0;
     entry.__pad2[0] = entry.__pad2[1] = 0;
     return entry;
 }
@@ -1062,6 +1114,19 @@ ref SubmissionEntry prepAccept(ADDR)(return ref SubmissionEntry entry, int fd, r
 }
 
 /**
+ * Same as `prepAccept`, but fd is put directly into fixed file table on `fileIndex`.
+ * Note: available from Linux 5.15
+ */
+ref SubmissionEntry prepAcceptDirect(ADDR)(return ref SubmissionEntry entry, int fd, ref ADDR addr, ref socklen_t addrlen,
+    uint fileIndex, AcceptFlags flags = AcceptFlags.NONE) @trusted
+{
+    entry.prepRW(Operation.ACCEPT, fd, cast(void*)&addr, 0, cast(ulong)(cast(void*)&addrlen));
+    entry.accept_flags = flags;
+    entry.file_index = fileIndex+1;
+    return entry;
+}
+
+/**
  * Prepares operation that cancels existing async work.
  *
  * This works with any read/write request, accept,send/recvmsg, etc. There’s an important
@@ -1143,10 +1208,22 @@ ref SubmissionEntry prepFallocate(return ref SubmissionEntry entry, int fd, int 
 /**
  * Note: Available from Linux 5.6
  */
-ref SubmissionEntry prepOpenat(return ref SubmissionEntry entry, int fd, const char* path, int flags, uint mode) @trusted
+ref SubmissionEntry prepOpenat(return ref SubmissionEntry entry, int fd, const(char)* path, int flags, uint mode) @trusted
 {
     entry.prepRW(Operation.OPENAT, fd, cast(void*)path, mode, 0);
     entry.open_flags = flags;
+    return entry;
+}
+
+/**
+ * Same as `prepOpenat`, but fd is put directly into fixed file table on `fileIndex`.
+ * Note: available from Linux 5.15
+ */
+ref SubmissionEntry prepOpenatDirect(return ref SubmissionEntry entry, int fd, const(char)* path, int flags, uint mode, uint fileIndex) @trusted
+{
+    entry.prepRW(Operation.OPENAT, fd, cast(void*)path, mode, 0);
+    entry.open_flags = flags;
+    entry.file_index = fileIndex+1;
     return entry;
 }
 
@@ -1156,6 +1233,17 @@ ref SubmissionEntry prepOpenat(return ref SubmissionEntry entry, int fd, const c
 ref SubmissionEntry prepClose(return ref SubmissionEntry entry, int fd) @safe
 {
     return entry.prepRW(Operation.CLOSE, fd);
+}
+
+/**
+ * Same as `prepClose` but operation works directly with fd registered in fixed file table on index `fileIndex`.
+ * Note: Available from Linux 5.15
+ */
+ref SubmissionEntry prepCloseDirect(return ref SubmissionEntry entry, int fd, uint fileIndex) @safe
+{
+    entry.prepRW(Operation.CLOSE, fd);
+    entry.file_index = fileIndex+1;
+    return entry;
 }
 
 /**
@@ -1177,7 +1265,7 @@ ref SubmissionEntry prepWrite(return ref SubmissionEntry entry, int fd, const(ub
 /**
  * Note: Available from Linux 5.6
  */
-ref SubmissionEntry prepStatx(Statx)(return ref SubmissionEntry entry, int fd, const char* path, int flags, uint mask, ref Statx statxbuf) @trusted
+ref SubmissionEntry prepStatx(Statx)(return ref SubmissionEntry entry, int fd, const(char)* path, int flags, uint mask, ref Statx statxbuf) @trusted
 {
     entry.prepRW(Operation.STATX, fd, cast(void*)path, mask, cast(ulong)(cast(void*)&statxbuf));
     entry.statx_flags = flags;
@@ -1247,6 +1335,17 @@ ref SubmissionEntry prepRecv(return ref SubmissionEntry entry,
 ref SubmissionEntry prepOpenat2(return ref SubmissionEntry entry, int fd, const char *path, ref OpenHow how) @trusted
 {
     return entry.prepRW(Operation.OPENAT2, fd, cast(void*)path, cast(uint)OpenHow.sizeof, cast(ulong)(cast(void*)&how));
+}
+
+/**
+ * Same as `prepOpenat2`, but fd is put directly into fixed file table on `fileIndex`.
+ * Note: available from Linux 5.15
+ */
+ ref SubmissionEntry prepOpenat2Direct(return ref SubmissionEntry entry, int fd, const char *path, ref OpenHow how, uint fileIndex) @trusted
+{
+    entry.prepRW(Operation.OPENAT2, fd, cast(void*)path, cast(uint)OpenHow.sizeof, cast(ulong)(cast(void*)&how));
+    entry.file_index = fileIndex+1;
+    return entry;
 }
 
 /**
@@ -1377,8 +1476,8 @@ ref SubmissionEntry prepShutdown(return ref SubmissionEntry entry, int fd, int h
 /**
  * Note: Available from Linux 5.11
  */
-ref SubmissionEntry prepRenameAt(return ref SubmissionEntry entry,
-    int olddfd, const char* oldpath, int newfd, const char* newpath, int flags) @trusted
+ref SubmissionEntry prepRenameat(return ref SubmissionEntry entry,
+    int olddfd, const(char)* oldpath, int newfd, const(char)* newpath, int flags) @trusted
 {
     entry.prepRW(Operation.RENAMEAT, olddfd, cast(void*)oldpath, newfd, cast(ulong)cast(void*)newpath);
     entry.rename_flags = flags;
@@ -1388,10 +1487,40 @@ ref SubmissionEntry prepRenameAt(return ref SubmissionEntry entry,
 /**
  * Note: Available from Linux 5.11
  */
-ref SubmissionEntry prepUnlinkAt(return ref SubmissionEntry entry, int dirfd, const char* path, int flags) @trusted
+ref SubmissionEntry prepUnlinkat(return ref SubmissionEntry entry, int dirfd, const(char)* path, int flags) @trusted
 {
     entry.prepRW(Operation.UNLINKAT, dirfd, cast(void*)path, 0, 0);
     entry.unlink_flags = flags;
+    return entry;
+}
+
+/**
+ * Note: Available from Linux 5.15
+ */
+ref SubmissionEntry prepMkdirat(return ref SubmissionEntry entry, int dirfd, const(char)* path, mode_t mode) @trusted
+{
+    entry.prepRW(Operation.MKDIRAT, dirfd, cast(void*)path, mode, 0);
+    return entry;
+}
+
+/**
+ * Note: Available from Linux 5.15
+ */
+ref SubmissionEntry prepSymlinkat(return ref SubmissionEntry entry, const(char)* target, int newdirfd, const(char)* linkpath) @trusted
+{
+    entry.prepRW(Operation.SYMLINKAT, newdirfd, cast(void*)target, 0, cast(ulong)cast(void*)linkpath);
+    return entry;
+}
+
+/**
+ * Note: Available from Linux 5.15
+ */
+ref SubmissionEntry prepLinkat(return ref SubmissionEntry entry,
+    int olddirfd, const(char)* oldpath,
+    int newdirfd, const(char)* newpath, int flags) @trusted
+{
+    entry.prepRW(Operation.LINKAT, olddirfd, cast(void*)oldpath, newdirfd, cast(ulong)cast(void*)newpath);
+    entry.hardlink_flags = flags;
     return entry;
 }
 
