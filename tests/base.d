@@ -39,16 +39,16 @@ auto openFile(T)(T fname, int flags)
 }
 
 // Check if the kernel release of our system is at least at the major.minor version
-bool checkKernelVersion(uint emajor, uint eminor)
+bool checkKernelVersion(uint emajor, uint eminor) @safe
 {
     import core.stdc.stdio : sscanf, printf;
     utsname buf;
-    if (syscall(SYS_uname, &buf) < 0) {
+    if (() @trusted { return syscall(SYS_uname, &buf); }() < 0) {
         assert(0, "call to uname failed");
     }
 
     int major, minor;
-    sscanf(buf.release.ptr, "%d.%d", &major, &minor); // we only care about the first two numbers
+    () @trusted { sscanf(buf.release.ptr, "%d.%d", &major, &minor); }(); // we only care about the first two numbers
     if (major < emajor) return false; // is our retrieved major below the expected major?
     if (minor < eminor) return false; // is our retrieved minor below the expected minor?
     return true;

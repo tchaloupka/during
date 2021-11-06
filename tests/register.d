@@ -165,3 +165,28 @@ unittest
     ret = io.unregisterEventFD();
     assert(ret == 0);
 }
+
+@("probe")
+@safe unittest
+{
+    if (!checkKernelVersion(5, 6)) return;
+
+    {
+        auto prob = probe();
+        assert(prob);
+        assert(prob.error == 0);
+        assert(prob.isSupported(Operation.RECV));
+    }
+
+    {
+        // prepare uring
+        Uring io;
+        auto res = io.setup(4);
+        assert(res >= 0, "Error initializing IO");
+
+        auto prob = io.probe();
+        assert(prob);
+        assert(prob.error == 0);
+        assert(prob.isSupported(Operation.RECV));
+    }
+}

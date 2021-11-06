@@ -35,10 +35,10 @@ nothrow @nogc:
  *
  * Returns: On succes it returns 0, `-errno` otherwise.
  */
-int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NONE)
+int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NONE) @safe
 {
     assert(uring.payload is null, "Uring is already initialized");
-    uring.payload = cast(UringDesc*)calloc(1, UringDesc.sizeof);
+    uring.payload = () @trusted { return cast(UringDesc*)calloc(1, UringDesc.sizeof); }();
     if (uring.payload is null) return -errno;
 
     uring.payload.params.flags = flags;
@@ -58,6 +58,52 @@ int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NON
     // debug printf("uring(%d): setup\n", uring.payload.fd);
 
     return 0;
+}
+
+/**
+ * Simplified wrapper around `io_uring_probe` that is used to check what io_uring operations current
+ * kernel is actually supporting.
+ */
+struct Probe
+{
+    static assert (Operation.max < 64, "Needs to be adjusted");
+    private
+    {
+        io_uring_probe probe;
+        io_uring_probe_op[64] ops;
+        int err;
+    }
+
+    const @safe pure nothrow @nogc:
+
+    /// Is operation supported?
+    bool isSupported(Operation op)
+    in (op <= Operation.max, "Invalid operation")
+    {
+        if (op > probe.last_op) return false;
+        assert(ops[op].op == op, "Operations differs");
+        return (ops[op].flags & IO_URING_OP_SUPPORTED) != 0;
+    }
+
+    /// Error code when we fail to get `Probe`.
+    @property int error() { return err; }
+
+    /// `true` if probe was sucesfully retrieved.
+    T opCast(T)() if (is(T == bool)) { return err == 0; }
+}
+
+/// Probes supported operations on a temporary created uring instance
+Probe probe() @safe nothrow @nogc
+{
+    Uring io;
+    immutable ret = io.setup(2);
+    if (ret < 0) {
+        Probe res;
+        res.err = ret;
+        return res;
+    }
+
+    return io.probe();
 }
 
 /**
@@ -92,6 +138,20 @@ struct Uring
     ~this() @safe
     {
         dispose(this);
+    }
+
+    /// Probes supported operations
+    Probe probe() @safe
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        Probe res;
+        immutable ret = () @trusted { return io_uring_register(
+            payload.fd,
+            RegisterOpCode.REGISTER_PROBE,
+            cast(void*)&res.probe, res.ops.length
+        ); }();
+        if (ret < 0) res.err = ret;
+        return res;
     }
 
     /// Native io_uring file descriptor
@@ -405,7 +465,7 @@ struct Uring
         immutable r = io_uring_register(
                 payload.fd,
                 RegisterOpCode.REGISTER_BUFFERS,
-                cast(const(void)*)&payload.regBuffers[0], 1
+                cast(const(void)*)payload.regBuffers.ptr, 1
             );
 
         if (_expect(r < 0, false)) return -errno;

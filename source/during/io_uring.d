@@ -1268,17 +1268,21 @@ struct io_uring_probe_op
     ubyte op;
     ubyte resv;
     ushort flags; /* IO_URING_OP_* flags */
-    uint resv2;
+    private uint resv2;
 }
+
+static assert(io_uring_probe_op.sizeof == 8);
 
 struct io_uring_probe
 {
     ubyte last_op; /* last opcode supported */
     ubyte ops_len; /* length of ops[] array below */
-    ushort resv;
-    uint[3] resv2;
+    private ushort resv;
+    private uint[3] resv2;
     io_uring_probe_op[0] ops;
 }
+
+static assert(io_uring_probe.sizeof == 16);
 
 struct io_uring_restriction
 {
