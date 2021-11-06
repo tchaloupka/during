@@ -4,11 +4,7 @@
  */
 module during;
 
-version(linux) {}
-else {
-    pragma(msg, "!!!!!!! during/io_uring is available ONLY on Linux systems (5.1+). This package is useless on your system. !!!!!!!!!");
-    static assert(0, "during is not available on your system");
-}
+version(linux):
 
 public import during.io_uring;
 import during.openat2;
