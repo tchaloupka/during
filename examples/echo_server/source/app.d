@@ -118,7 +118,7 @@ int initServer(ref Uring ring, ushort port)
     }
 
     int flags = 1;
-    setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, cast(void*)&flags, int.sizeof);
+    setsockopt(listenFd, SOL_SOCKET, SO_REUSEPORT, cast(void*)&flags, int.sizeof);
     setsockopt(listenFd, IPPROTO_TCP, TCP_NODELAY, cast(void*)&flags, int.sizeof);
 
     if (bind(listenFd, cast(sockaddr*)&serverAddr, sockaddr.sizeof) == -1)
