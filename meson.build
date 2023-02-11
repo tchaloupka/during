@@ -37,12 +37,17 @@ during_dep = declare_dependency(
     link_with: during_lib
 )
 
+bc_link_args = []
+if meson.get_compiler('d').get_id() == 'llvm'
+    bc_link_args += '-link-defaultlib-shared=false'
+endif
+
 test_exe = executable(
     'during-test',
     during_test_src + during_src,
     include_directories: [include_directories('source'), include_directories('tests')],
     d_module_versions: during_build_versions,
     d_args: ['-betterC', '-unittest'],
-    link_args: ['-link-defaultlib-shared=false']
+    link_args: bc_link_args
 )
 test('bctest', test_exe)
