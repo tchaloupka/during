@@ -1,7 +1,7 @@
 /**
  * Internal functions used in unittests.
  */
-module during.tests.base;
+module tests.base;
 
 import core.sys.linux.fcntl;
 

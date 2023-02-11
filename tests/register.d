@@ -1,7 +1,7 @@
-module during.tests.register;
+module tests.register;
 
 import during;
-import during.tests.base;
+import tests.base;
 
 import core.stdc.stdlib;
 import core.sys.linux.errno;

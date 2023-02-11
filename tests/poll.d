@@ -1,7 +1,7 @@
-module during.tests.poll;
+module tests.poll;
 
 import during;
-import during.tests.base;
+import tests.base;
 
 import core.sys.linux.errno;
 import core.sys.linux.sys.eventfd;

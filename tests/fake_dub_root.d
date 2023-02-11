@@ -7,31 +7,31 @@ version (test_root)
     import std.typetuple;
 
     static import during.io_uring;
-    static import during.tests.api;
-    static import during.tests.base;
-    static import during.tests.cancel;
-    static import during.tests.fsync;
-    static import during.tests.msg;
-    static import during.tests.poll;
-    static import during.tests.register;
-    static import during.tests.rw;
-    static import during.tests.socket;
-    static import during.tests.thread;
-    static import during.tests.timeout;
+    static import tests.api;
+    static import tests.base;
+    static import tests.cancel;
+    static import tests.fsync;
+    static import tests.msg;
+    static import tests.poll;
+    static import tests.register;
+    static import tests.rw;
+    static import tests.socket;
+    static import tests.thread;
+    static import tests.timeout;
 
     alias allModules = TypeTuple!(
         during.io_uring,
-        during.tests.api,
-        during.tests.base,
-        during.tests.cancel,
-        during.tests.fsync,
-        during.tests.msg,
-        during.tests.poll,
-        during.tests.register,
-        during.tests.rw,
-        during.tests.socket,
-        during.tests.thread,
-        during.tests.timeout
+        tests.api,
+        tests.base,
+        tests.cancel,
+        tests.fsync,
+        tests.msg,
+        tests.poll,
+        tests.register,
+        tests.rw,
+        tests.socket,
+        tests.thread,
+        tests.timeout
     );
 
     void main() { writeln("All unit tests have been run successfully."); }

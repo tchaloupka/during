@@ -1,7 +1,7 @@
-module during.tests.fsync;
+module tests.fsync;
 
 import during;
-import during.tests.base;
+import tests.base;
 
 import core.stdc.stdlib;
 import core.sys.linux.errno;

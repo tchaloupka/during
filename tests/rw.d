@@ -1,7 +1,7 @@
-module during.tests.rw;
+module tests.rw;
 
 import during;
-import during.tests.base;
+import tests.base;
 
 import core.stdc.stdio;
 import core.stdc.stdlib;

@@ -1,6 +1,6 @@
-module during.tests.cancel;
+module tests.cancel;
 
-import during.tests.base;
+import tests.base;
 
 // @("async cancel")
 // unittest

@@ -1,6 +1,6 @@
-module during.tests.socket;
+module tests.socket;
 
-import during.tests.base;
+import tests.base;
 
 // @("accept/connect")
 // unittest

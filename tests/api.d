@@ -1,7 +1,7 @@
-module during.tests.api;
+module tests.api;
 
 import during;
-import during.tests.base;
+import tests.base;
 
 version (D_Exceptions) import std.exception : assertThrown;
 import std.range;

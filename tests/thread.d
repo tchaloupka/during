@@ -1,7 +1,7 @@
-module during.tests.thread;
+module tests.thread;
 
 import during;
-import during.tests.base;
+import tests.base;
 
 import core.stdc.stdio;
 import core.sys.posix.pthread;

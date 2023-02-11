@@ -1,6 +1,6 @@
-module during.tests.timeout;
+module tests.timeout;
 
-import during.tests.base;
+import tests.base;
 
 // @("timeout set/remove")
 // unittest
