@@ -65,6 +65,8 @@ unittest
 
     foreach (i; 0..2)
     {
+        scope (exit) io.popFront();
+
         if (io.front.res == -EINVAL)
         {
             version (D_BetterC)
