@@ -783,6 +783,18 @@ enum SetupFlags : uint
      * Note: Available from Linux 5.10
      */
     R_DISABLED = 1U << 6, /* start with ring disabled */
+
+    /**
+     * `IORUNG_SETUP_SUBMIT_ALL`
+     *
+     * Normally io_uring stops submitting a batch of request, if one of these
+     * requests results in an error. This can cause submission of less than
+     * what is expected, if a request ends in error while being submitted. If
+     * the ring is created withthis flag,
+     *
+     * Note: Available from Linux 5.18
+     */
+    SUBMIT_ALL = 1U << 7, /* continue submit on error */
 }
 
 /// `io_uring_params->features` flags
