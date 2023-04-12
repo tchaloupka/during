@@ -32,16 +32,19 @@ nothrow @nogc:
  *     uring = `Uring` structure to be initialized (must not be already initialized)
  *     entries = Number of entries to initialize uring with
  *     flags = `SetupFlags` to use to initialize uring.
+ *     setupParams = Callback taking `ref SetupParameters` and filling it.
  *
  * Returns: On succes it returns 0, `-errno` otherwise.
  */
-int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NONE) @safe
+int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NONE, void function(ref SetupParameters) @nogc @safe nothrow setupParams = (ref SetupParameters) {}) @safe
 {
     assert(uring.payload is null, "Uring is already initialized");
     uring.payload = () @trusted { return cast(UringDesc*)calloc(1, UringDesc.sizeof); }();
     if (uring.payload is null) return -errno;
 
     uring.payload.params.flags = flags;
+    setupParams(uring.payload.params);
+
     uring.payload.refs = 1;
     auto r = io_uring_setup(entries, uring.payload.params);
     if (r < 0) return -errno;
