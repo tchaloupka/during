@@ -50,6 +50,7 @@ bool checkKernelVersion(uint emajor, uint eminor) @safe
     int major, minor;
     () @trusted { sscanf(buf.release.ptr, "%d.%d", &major, &minor); }(); // we only care about the first two numbers
     if (major < emajor) return false; // is our retrieved major below the expected major?
+    if (major > emajor) return true;  // The major is higher, this is sufficient
     if (minor < eminor) return false; // is our retrieved minor below the expected minor?
     return true;
 }
