@@ -783,6 +783,37 @@ enum SetupFlags : uint
      * Note: Available from Linux 5.10
      */
     R_DISABLED = 1U << 6, /* start with ring disabled */
+
+    /**
+     * `IORUNG_SETUP_SUBMIT_ALL`
+     *
+     * Normally io_uring stops submitting a batch of request, if one of these
+     * requests results in an error. This can cause submission of less than
+     * what is expected, if a request ends in error while being submitted. If
+     * the ring is created withthis flag,
+     *
+     * Note: Available from Linux 5.18
+     */
+    SUBMIT_ALL = 1U << 7, /* continue submit on error */
+
+    /**
+     * `IORING_SETUP_COOP_TASKRUN`
+     *
+     * By default, io_uring will interrupt a task running in userspace when a
+     * completion event comes in. This is to ensure that completions run in a timely
+     * manner. For a lot of use cases, this is overkill and can cause reduced
+     * performance from both the inter-processor interrupt used to do this, the
+     * kernel/user transition, the needless interruption of the tasks userspace
+     * activities, and reduced batching if completions come in at a rapid rate. Most
+     * applications don't need the forceful interruption, as the events are processed
+     * at any kernel/user transition. The exception are setups where the application
+     * uses multiple threads operating on the same ring, where the application
+     * waiting on completions isn't the one that submitted them. For most other
+     * use cases, setting this flag will improve performance.
+     *
+     * Note: Available since 5.19.
+     */
+    COOP_TASKRUN = 1U << 8,
 }
 
 /// `io_uring_params->features` flags
