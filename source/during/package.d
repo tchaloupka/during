@@ -52,7 +52,7 @@ int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NON
  *
  * Returns: On succes it returns 0, `-errno` otherwise.
  */
-int setup(ref Uring uring, uint entries, ref SetupParameters params) @safe
+int setup(ref Uring uring, uint entries, ref const SetupParameters params) @safe
 {
     assert(uring.payload is null, "Uring is already initialized");
     uring.payload = () @trusted { return cast(UringDesc*)calloc(1, UringDesc.sizeof); }();
