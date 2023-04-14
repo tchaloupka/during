@@ -195,6 +195,32 @@ unittest
     assert(io.map!(c => c.user_data).equal(iota(0, 16)));
 }
 
+@("setup parameters")
+unittest
+{
+    import during;
+
+    Uring io;
+    SetupParameters params;
+    params.sq_thread_cpu = 0;
+    params.flags = SetupFlags.SQPOLL | SetupFlags.SQ_AFF;
+
+    auto res = io.setup(16, params);
+    assert(res >= 0, "Error initializing IO");
+
+    res = io.putWith!((ref SubmissionEntry e)
+        {
+            e.prepNop();
+            e.user_data = 43;
+        })
+    .submit(1); // submit and wait for 1 completion
+
+    assert(res == 1); // One operation submitted
+    assert(!io.empty); // one operation returned
+    assert(io.front.user_data == 43);
+    io.popFront();
+}
+
 // @("single mmap")
 // unittest
 // {
