@@ -790,7 +790,7 @@ enum SetupFlags : uint
      * Normally io_uring stops submitting a batch of request, if one of these
      * requests results in an error. This can cause submission of less than
      * what is expected, if a request ends in error while being submitted. If
-     * the ring is created withthis flag,
+     * the ring is created with this flag,
      *
      * Note: Available from Linux 5.18
      */
