@@ -3,7 +3,7 @@
  *
  * See: https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring.h
  *
- * Last changes from: dd47c104533dedb90434a3f142e94a671ac623a6 (20210913)
+ * Last changes from: c4212f3eb89fd5654f0a6ed2ee1d13fcb86cb664 (20220411)
  */
 module during.io_uring;
 
@@ -350,6 +350,11 @@ enum TimeoutFlags : uint
     LINK_TIMEOUT_UPDATE = 1U << 4,
 
     /**
+     * `IORING_TIMEOUT_ETIME_SUCCESS` (from Linux 5.16)
+     */
+    TIMEOUT_ETIME_SUCCESS = 1U << 5,
+
+    /**
      * `IORING_TIMEOUT_CLOCK_MASK` (from Linux 5.15)
      */
     CLOCK_MASK = BOOTTIME | REALTIME,
@@ -441,64 +446,67 @@ enum AcceptFlags : uint
 enum Operation : ubyte
 {
     // available from Linux 5.1
-    NOP = 0,                /// IORING_OP_NOP
-    READV = 1,              /// IORING_OP_READV
-    WRITEV = 2,             /// IORING_OP_WRITEV
-    FSYNC = 3,              /// IORING_OP_FSYNC
-    READ_FIXED = 4,         /// IORING_OP_READ_FIXED
-    WRITE_FIXED = 5,        /// IORING_OP_WRITE_FIXED
-    POLL_ADD = 6,           /// IORING_OP_POLL_ADD
-    POLL_REMOVE = 7,        /// IORING_OP_POLL_REMOVE
+    NOP = 0,                /// `IORING_OP_NOP`
+    READV = 1,              /// `IORING_OP_READV`
+    WRITEV = 2,             /// `IORING_OP_WRITEV`
+    FSYNC = 3,              /// `IORING_OP_FSYNC`
+    READ_FIXED = 4,         /// `IORING_OP_READ_FIXED`
+    WRITE_FIXED = 5,        /// `IORING_OP_WRITE_FIXED`
+    POLL_ADD = 6,           /// `IORING_OP_POLL_ADD`
+    POLL_REMOVE = 7,        /// `IORING_OP_POLL_REMOVE`
 
     // available from Linux 5.2
-    SYNC_FILE_RANGE = 8,    /// IORING_OP_SYNC_FILE_RANGE
+    SYNC_FILE_RANGE = 8,    /// `IORING_OP_SYNC_FILE_RANGE`
 
     // available from Linux 5.3
-    SENDMSG = 9,            /// IORING_OP_SENDMSG
-    RECVMSG = 10,           /// IORING_OP_RECVMSG
+    SENDMSG = 9,            /// `IORING_OP_SENDMSG`
+    RECVMSG = 10,           /// `IORING_OP_RECVMSG`
 
     // available from Linux 5.4
-    TIMEOUT = 11,           /// IORING_OP_TIMEOUT
+    TIMEOUT = 11,           /// `IORING_OP_TIMEOUT`
 
     // available from Linux 5.5
-    TIMEOUT_REMOVE = 12,    /// IORING_OP_TIMEOUT_REMOVE
-    ACCEPT = 13,            /// IORING_OP_ACCEPT
-    ASYNC_CANCEL = 14,      /// IORING_OP_ASYNC_CANCEL
-    LINK_TIMEOUT = 15,      /// IORING_OP_LINK_TIMEOUT
-    CONNECT = 16,           /// IORING_OP_CONNECT
+    TIMEOUT_REMOVE = 12,    /// `IORING_OP_TIMEOUT_REMOVE`
+    ACCEPT = 13,            /// `IORING_OP_ACCEPT`
+    ASYNC_CANCEL = 14,      /// `IORING_OP_ASYNC_CANCEL`
+    LINK_TIMEOUT = 15,      /// `IORING_OP_LINK_TIMEOUT`
+    CONNECT = 16,           /// `IORING_OP_CONNECT`
 
     // available from Linux 5.6
-    FALLOCATE = 17,         /// IORING_OP_FALLOCATE
-    OPENAT = 18,            /// IORING_OP_OPENAT
-    CLOSE = 19,             /// IORING_OP_CLOSE
-    FILES_UPDATE = 20,      /// IORING_OP_FILES_UPDATE
-    STATX = 21,             /// IORING_OP_STATX
-    READ = 22,              /// IORING_OP_READ
-    WRITE = 23,             /// IORING_OP_WRITE
-    FADVISE = 24,           /// IORING_OP_FADVISE
-    MADVISE = 25,           /// IORING_OP_MADVISE
-    SEND = 26,              /// IORING_OP_SEND
-    RECV = 27,              /// IORING_OP_RECV
-    OPENAT2 = 28,           /// IORING_OP_OPENAT2
-    EPOLL_CTL = 29,         /// IORING_OP_EPOLL_CTL
+    FALLOCATE = 17,         /// `IORING_OP_FALLOCATE`
+    OPENAT = 18,            /// `IORING_OP_OPENAT`
+    CLOSE = 19,             /// `IORING_OP_CLOSE`
+    FILES_UPDATE = 20,      /// `IORING_OP_FILES_UPDATE`
+    STATX = 21,             /// `IORING_OP_STATX`
+    READ = 22,              /// `IORING_OP_READ`
+    WRITE = 23,             /// `IORING_OP_WRITE`
+    FADVISE = 24,           /// `IORING_OP_FADVISE`
+    MADVISE = 25,           /// `IORING_OP_MADVISE`
+    SEND = 26,              /// `IORING_OP_SEND`
+    RECV = 27,              /// `IORING_OP_RECV`
+    OPENAT2 = 28,           /// `IORING_OP_OPENAT2`
+    EPOLL_CTL = 29,         /// `IORING_OP_EPOLL_CTL`
 
     // available from Linux 5.7
-    SPLICE = 30,            /// IORING_OP_SPLICE
-    PROVIDE_BUFFERS = 31,   /// IORING_OP_PROVIDE_BUFFERS
-    REMOVE_BUFFERS = 32,    /// IORING_OP_REMOVE_BUFFERS
+    SPLICE = 30,            /// `IORING_OP_SPLICE`
+    PROVIDE_BUFFERS = 31,   /// `IORING_OP_PROVIDE_BUFFERS`
+    REMOVE_BUFFERS = 32,    /// `IORING_OP_REMOVE_BUFFERS`
 
     // available from Linux 5.8
-    TEE = 33,               /// IORING_OP_TEE
+    TEE = 33,               /// `IORING_OP_TEE`
 
     // available from Linux 5.11
-    SHUTDOWN = 34,          /// IORING_OP_SHUTDOWN
-    RENAMEAT = 35,          /// IORING_OP_RENAMEAT - see renameat2()
-    UNLINKAT = 36,          /// IORING_OP_UNLINKAT - see unlinkat(2)
+    SHUTDOWN = 34,          /// `IORING_OP_SHUTDOWN`
+    RENAMEAT = 35,          /// `IORING_OP_RENAMEAT` - see renameat2()
+    UNLINKAT = 36,          /// `IORING_OP_UNLINKAT` - see unlinkat(2)
 
     // available from Linux 5.15
-    MKDIRAT = 37,           /// IORING_OP_MKDIRAT - see mkdirat(2)
-    SYMLINKAT = 38,         /// IORING_OP_SYMLINKAT - see symlinkat(2)
-    LINKAT = 39,            /// IORING_OP_LINKAT - see linkat(2)
+    MKDIRAT = 37,           /// `IORING_OP_MKDIRAT` - see mkdirat(2)
+    SYMLINKAT = 38,         /// `IORING_OP_SYMLINKAT` - see symlinkat(2)
+    LINKAT = 39,            /// `IORING_OP_LINKAT` - see linkat(2)
+
+    // available from Linux 5.18
+    SG_RING = 40,           /// `IORING_OP_MSG_RING` - allows an SQE to signal another ring
 }
 
 /// sqe->flags
@@ -598,6 +606,39 @@ enum SubmissionEntryFlags : ubyte
      * Note: available from Linux 5.7
      */
     BUFFER_SELECT = 1U << 5, /* select buffer from sqe->buf_group */
+
+    /**
+     * `IOSQE_CQE_SKIP_SUCCESS` - don't post CQE if request succeeded.
+     *
+     * Emitting a CQE is expensive from the kernel perspective. Often, it's also not convenient for
+     * the userspace, spends some cycles on processing and just complicates the logic. A similar
+     * problems goes for linked requests, where we post an CQE for each request in the link.
+     *
+     * Introduce a new flags, IOSQE_CQE_SKIP_SUCCESS, trying to help with it. When set and a request
+     * completed successfully, it won't generate a CQE. When fails, it produces an CQE, but all
+     * following linked requests will be CQE-less, regardless whether they have
+     * IOSQE_CQE_SKIP_SUCCESS or not. The notion of "fail" is the same as for link
+     * failing-cancellation, where it's opcode dependent, and _usually_ result >= 0 is a success,
+     * but not always.
+     *
+     * Linked timeouts are a bit special. When the requests it's linked to was not attempted to be
+     * executed, e.g. failing linked requests, it follows the description above. Otherwise, whether
+     * a linked timeout will post a completion or not solely depends on IOSQE_CQE_SKIP_SUCCESS of
+     * that linked timeout request. Linked timeout never "fail" during execution, so for them it's
+     * unconditional. It's expected for users to not really care about the result of it but rely
+     * solely on the result of the master request. Another reason for such a treatment is that it's
+     * racy, and the timeout callback may be running awhile the master request posts its completion.
+     *
+     * use case 1: If one doesn't care about results of some requests, e.g. normal timeouts, just
+     * set IOSQE_CQE_SKIP_SUCCESS. Error result will still be posted and need to be handled.
+     *
+     * use case 2: Set IOSQE_CQE_SKIP_SUCCESS for all requests of a link but the last, and it'll
+     * post a completion only for the last one if everything goes right, otherwise there will be one
+     * only one CQE for the first failed request.
+     *
+     * Note: available from Linux 5.17
+     */
+    CQE_SKIP_SUCCESS = 1U << 6,
 }
 
 /**
@@ -937,11 +978,17 @@ enum SetupFeatures : uint
      */
     EXT_ARG = 1U << 8,
 
-    /// `IORING_FEAT_NATIVE_WORKERS	(1U << 9)` (from Linux 5.12)
+    /// `IORING_FEAT_NATIVE_WORKERS` (from Linux 5.12)
     NATIVE_WORKERS = 1U << 9,
 
-    /// `IORING_FEAT_RSRC_TAGS	(1U << 9)` (from Linux 5.13)
+    /// `IORING_FEAT_RSRC_TAGS` (from Linux 5.13)
     RSRC_TAGS = 1U << 10,
+
+    /// `IORING_FEAT_CQE_SKIP` (from Linux 5.17)
+    CQE_SKIP = 1U << 11,
+
+    /// `IORING_FEAT_LINKED_FILE` (from Linux 5.18)
+    LINKED_FILE = 1U << 12,
 }
 
 /**
@@ -1235,6 +1282,13 @@ enum RegisterOpCode : uint
     /// `IORING_REGISTER_IOWQ_MAX_WORKERS` (from Linux 5.15)
     /// set/get max number of io-wq workers
     REGISTER_IOWQ_MAX_WORKERS = 19,
+
+    /* register/unregister io_uring fd with the ring */
+    /// `IORING_REGISTER_RING_FDS` (from Linux 5.18)
+    REGISTER_RING_FDS = 20,
+
+    /// `IORING_UNREGISTER_RING_FDS` (from Linux 5.18)
+    UNREGISTER_RING_FDS = 21,
 }
 
 /* io-wq worker categories */
@@ -1266,6 +1320,18 @@ enum EnterFlags: uint
      * Adds support for timeout to existing io_uring_enter() function.
      */
     EXT_ARG     = 1U << 3,
+
+    /**
+     * `IORING_ENTER_REGISTERED_RING` (from Linux 5.18)
+     *
+     * Lots of workloads use multiple threads, in which case the file table is shared between them.
+     * This makes getting and putting the ring file descriptor for each io_uring_enter(2) system
+     * call more expensive, as it involves an atomic get and put for each call.
+     *
+     * Similarly to how we allow registering normal file descriptors to avoid this overhead, add
+     * support for an io_uring_register(2) API that allows to register the ring fds themselves.
+     */
+    ENTER_REGISTERED_RING   = 1U << 4,
 }
 
 /// Time specification as defined in kernel headers (used by TIMEOUT operations)
