@@ -17,6 +17,7 @@ import core.sys.linux.errno;
 import core.sys.linux.sched;
 import core.sys.linux.sys.mman;
 import core.sys.linux.unistd;
+import core.sys.posix.fcntl;
 import core.sys.posix.signal;
 import core.sys.posix.sys.socket;
 import core.sys.posix.sys.types;
@@ -629,7 +630,7 @@ struct Uring
         struct Register // represents io_uring_rsrc_register
         {
             uint nr;
-            uint _resv;
+            uint flags;
             ulong _resv2;
             ulong data;
             ulong tags;
@@ -855,7 +856,8 @@ ref SubmissionEntry prepRW(return ref SubmissionEntry entry, Operation op,
     entry.buf_index = 0;
     entry.personality = 0;
     entry.file_index = 0;
-    entry.__pad2[0] = entry.__pad2[1] = 0;
+    entry.addr3 = 0;
+    entry.__pad2[0] = 0;
     return entry;
 }
 
@@ -1281,7 +1283,7 @@ ref SubmissionEntry prepFallocate(return ref SubmissionEntry entry, int fd, int 
 /**
  * Note: Available from Linux 5.6
  */
-ref SubmissionEntry prepOpenat(return ref SubmissionEntry entry, int fd, const(char)* path, int flags, uint mode) @trusted
+ref SubmissionEntry prepOpenat(return ref SubmissionEntry entry, int fd, const(char)* path, int flags, uint mode)
 {
     entry.prepRW(Operation.OPENAT, fd, cast(void*)path, mode, 0);
     entry.open_flags = flags;
@@ -1292,7 +1294,7 @@ ref SubmissionEntry prepOpenat(return ref SubmissionEntry entry, int fd, const(c
  * Same as `prepOpenat`, but fd is put directly into fixed file table on `fileIndex`.
  * Note: available from Linux 5.15
  */
-ref SubmissionEntry prepOpenatDirect(return ref SubmissionEntry entry, int fd, const(char)* path, int flags, uint mode, uint fileIndex) @trusted
+ref SubmissionEntry prepOpenatDirect(return ref SubmissionEntry entry, int fd, const(char)* path, int flags, uint mode, uint fileIndex)
 {
     entry.prepRW(Operation.OPENAT, fd, cast(void*)path, mode, 0);
     entry.open_flags = flags;
@@ -1338,7 +1340,8 @@ ref SubmissionEntry prepWrite(return ref SubmissionEntry entry, int fd, const(ub
 /**
  * Note: Available from Linux 5.6
  */
-ref SubmissionEntry prepStatx(Statx)(return ref SubmissionEntry entry, int fd, const(char)* path, int flags, uint mask, ref Statx statxbuf) @trusted
+ref SubmissionEntry prepStatx(Statx)(return ref SubmissionEntry entry, int fd, const(char)* path,
+    int flags, uint mask, ref Statx statxbuf)
 {
     entry.prepRW(Operation.STATX, fd, cast(void*)path, mask, cast(ulong)(cast(void*)&statxbuf));
     entry.statx_flags = flags;
@@ -1550,7 +1553,7 @@ ref SubmissionEntry prepShutdown(return ref SubmissionEntry entry, int fd, int h
  * Note: Available from Linux 5.11
  */
 ref SubmissionEntry prepRenameat(return ref SubmissionEntry entry,
-    int olddfd, const(char)* oldpath, int newfd, const(char)* newpath, int flags) @trusted
+    int olddfd, const(char)* oldpath, int newfd, const(char)* newpath, int flags)
 {
     entry.prepRW(Operation.RENAMEAT, olddfd, cast(void*)oldpath, newfd, cast(ulong)cast(void*)newpath);
     entry.rename_flags = flags;
@@ -1560,7 +1563,7 @@ ref SubmissionEntry prepRenameat(return ref SubmissionEntry entry,
 /**
  * Note: Available from Linux 5.11
  */
-ref SubmissionEntry prepUnlinkat(return ref SubmissionEntry entry, int dirfd, const(char)* path, int flags) @trusted
+ref SubmissionEntry prepUnlinkat(return ref SubmissionEntry entry, int dirfd, const(char)* path, int flags)
 {
     entry.prepRW(Operation.UNLINKAT, dirfd, cast(void*)path, 0, 0);
     entry.unlink_flags = flags;
@@ -1570,7 +1573,7 @@ ref SubmissionEntry prepUnlinkat(return ref SubmissionEntry entry, int dirfd, co
 /**
  * Note: Available from Linux 5.15
  */
-ref SubmissionEntry prepMkdirat(return ref SubmissionEntry entry, int dirfd, const(char)* path, mode_t mode) @trusted
+ref SubmissionEntry prepMkdirat(return ref SubmissionEntry entry, int dirfd, const(char)* path, mode_t mode)
 {
     entry.prepRW(Operation.MKDIRAT, dirfd, cast(void*)path, mode, 0);
     return entry;
@@ -1579,7 +1582,7 @@ ref SubmissionEntry prepMkdirat(return ref SubmissionEntry entry, int dirfd, con
 /**
  * Note: Available from Linux 5.15
  */
-ref SubmissionEntry prepSymlinkat(return ref SubmissionEntry entry, const(char)* target, int newdirfd, const(char)* linkpath) @trusted
+ref SubmissionEntry prepSymlinkat(return ref SubmissionEntry entry, const(char)* target, int newdirfd, const(char)* linkpath)
 {
     entry.prepRW(Operation.SYMLINKAT, newdirfd, cast(void*)target, 0, cast(ulong)cast(void*)linkpath);
     return entry;
@@ -1590,10 +1593,92 @@ ref SubmissionEntry prepSymlinkat(return ref SubmissionEntry entry, const(char)*
  */
 ref SubmissionEntry prepLinkat(return ref SubmissionEntry entry,
     int olddirfd, const(char)* oldpath,
-    int newdirfd, const(char)* newpath, int flags) @trusted
+    int newdirfd, const(char)* newpath, int flags)
 {
     entry.prepRW(Operation.LINKAT, olddirfd, cast(void*)oldpath, newdirfd, cast(ulong)cast(void*)newpath);
     entry.hardlink_flags = flags;
+    return entry;
+}
+
+/**
+ * Note: Available from Linux 5.15
+ */
+ref SubmissionEntry prepLink(return ref SubmissionEntry entry,
+    const(char)* oldpath, const(char)* newpath, int flags)
+{
+    return prepLinkat(entry, AT_FDCWD, oldpath, AT_FDCWD, newpath, flags);
+}
+
+// ref SubmissionEntry prepMsgRingCqeFlags(return ref SubmissionEntry entry,
+//     int fd, uint len, ulong data, uint flags, uint cqe_flags) @trusted
+// {
+        // io_uring_prep_rw(IORING_OP_MSG_RING, sqe, fd, NULL, len, data);
+        // sqe->msg_ring_flags = IORING_MSG_RING_FLAGS_PASS | flags;
+        // sqe->file_index = cqe_flags;
+// }
+
+/**
+ * Note: Available from Linux 5.18
+ */
+ref SubmissionEntry prepMsgRing(return ref SubmissionEntry entry,
+    int fd, uint len, ulong data, uint flags)
+{
+    entry.prepRW(Operation.MSG_RING, fd, null, len, data);
+    entry.msg_ring_flags = flags;
+    return entry;
+}
+
+/**
+ * Note: Available from Linux 5.19
+ */
+ref SubmissionEntry prepGetxattr(return ref SubmissionEntry entry,
+    const(char)* name, char* value, const(char)* path, uint len)
+{
+    entry.prepRW(Operation.GETXATTR, 0, name, len, cast(ulong)cast(void*)value);
+    entry.addr3 = cast(ulong)cast(void*)path;
+    entry.xattr_flags = 0;
+    return entry;
+}
+
+/**
+ * Note: Available from Linux 5.19
+ */
+ref SubmissionEntry prepSetxattr(return ref SubmissionEntry entry,
+    const(char)* name, const(char)* value, const(char)* path, uint len, int flags)
+{
+    entry.prepRW(Operation.SETXATTR, 0, name, len, cast(ulong)cast(void*)value);
+    entry.addr3 = cast(ulong)cast(void*)path;
+    entry.xattr_flags = flags;
+    return entry;
+}
+
+/**
+ * Note: Available from Linux 5.19
+ */
+ref SubmissionEntry prepFgetxattr(return ref SubmissionEntry entry,
+    int fd, const(char)* name, char* value, uint len)
+{
+    entry.prepRW(Operation.FGETXATTR, fd, name, len, cast(ulong)cast(void*)value);
+    entry.xattr_flags = 0;
+    return entry;
+}
+
+/**
+ * Note: Available from Linux 5.19
+ */
+ref SubmissionEntry prepFsetxattr(return ref SubmissionEntry entry,
+    int fd, const(char)* name, const(char)* value, uint len, int flags)
+{
+    entry.prepRW(Operation.FSETXATTR, fd, name, len, cast(ulong)cast(void*)value);
+    entry.xattr_flags = flags;
+    return entry;
+}
+
+ref SubmissionEntry prepSocket(return ref SubmissionEntry entry,
+    int domain, int type, int protocol, uint flags)
+{
+    entry.prepRW(Operation.SOCKET, domain, null, protocol, type);
+    entry.rw_flags = cast(ReadWriteFlags)flags;
     return entry;
 }
 

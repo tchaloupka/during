@@ -3,7 +3,7 @@
  *
  * See: https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring.h
  *
- * Last changes from: c4212f3eb89fd5654f0a6ed2ee1d13fcb86cb664 (20220411)
+ * Last changes from: bdb2c48e4b38e6dbe82533b437468999ba3ae498 (20220708)
  */
 module during.io_uring;
 
@@ -29,6 +29,12 @@ struct SubmissionEntry
     {
         ulong off;                          /// offset into file
         ulong addr2;                        /// from Linux 5.5
+
+        struct
+        {
+            uint    cmd_op;                 /// from Linux 5.19
+            uint    __pad1;
+        }
     }
 
     union
@@ -48,7 +54,7 @@ struct SubmissionEntry
         MsgFlags            msg_flags;          /// from Linux 5.3
         TimeoutFlags        timeout_flags;      /// from Linux 5.4
         AcceptFlags         accept_flags;       /// from Linux 5.5
-        uint                cancel_flags;       /// from Linux 5.5
+        CancelFlags         cancel_flags;       /// from Linux 5.5
         uint                open_flags;         /// from Linux 5.6
         uint                statx_flags;        /// from Linux 5.6
         uint                fadvise_advice;     /// from Linux 5.6
@@ -56,6 +62,8 @@ struct SubmissionEntry
         uint                rename_flags;       /// from Linux 5.11
         uint                unlink_flags;       /// from Linux 5.11
         uint                hardlink_flags;     /// from Linux 5.15
+        uint                xattr_flags;        /// from Linux 5.19
+        uint                msg_ring_flags;     /// from Linux 6.0
     }
 
     ulong user_data;                        /// data to be passed back at completion time
@@ -73,7 +81,20 @@ struct SubmissionEntry
         int splice_fd_in;
         uint file_index;
     }
-    ulong[2] __pad2;
+
+    union
+    {
+        struct
+        {
+            ulong addr3;
+            ulong[1] __pad2;
+        }
+        /*
+         * If the ring is initialized with `IORING_SETUP_SQE128`, then
+         * this field is used for 80 bytes of arbitrary command data
+         */
+        ubyte[0] cmd;
+    }
 
     /// Resets entry fields
     void clear() @safe nothrow @nogc
@@ -81,6 +102,16 @@ struct SubmissionEntry
         this = SubmissionEntry.init;
     }
 }
+
+/*
+ * If sqe->file_index is set to this for opcodes that instantiate a new direct descriptor (like
+ * openat/openat2/accept), then io_uring will allocate an available direct descriptor instead of
+ * having the application pass one in. The picked direct descriptor will be returned in cqe->res, or
+ * `-ENFILE` if the space is full.
+ *
+ * Note: since Linux 5.19
+ */
+enum IORING_FILE_INDEX_ALLOC = ~0U;
 
 enum ReadWriteFlags : int
 {
@@ -422,6 +453,53 @@ enum PollFlags : uint
 }
 
 /**
+ * Flags that can be used with the `cancel` operation.
+ */
+enum CancelFlags : uint
+{
+    /// `IORING_ASYNC_CANCEL_ALL` (from linux 5.19)
+    /// Flag that allows to cancel any request that matches they key. It completes with the number
+    /// of requests found and canceled, or res < 0 if an error occured.
+    CANCEL_ALL = 1U << 0,
+
+    /// `IORING_ASYNC_CANCEL_FD` (from linux 5.19)
+    /// Tells the kernel that we're keying off the file fd instead of `user_data` for cancelation.
+    /// This allows canceling any request that a) uses a file, and b) was assigned the file based on
+    /// the value being passed in.
+    CANCEL_FD = 1U << 1,
+
+    /// `IORING_ASYNC_CANCEL_ANY` (from linux 5.19)
+    /// Rather than match on a specific key, be it user_data or file, allow canceling any request
+    /// that we can lookup. Works like IORING_ASYNC_CANCEL_ALL in that it cancels multiple requests,
+    /// but it doesn't key off user_data or the file.
+    ///
+    /// Can't be set with IORING_ASYNC_CANCEL_FD, as that's a key selector. Only one may be used at
+    /// the time.
+    CANCEL_ANY = 1U << 2,
+}
+
+// send/sendmsg and recv/recvmsg flags (sqe->ioprio)
+
+/// If set, instead of first attempting to send or receive and arm poll if that yields an `-EAGAIN`
+/// result, arm poll upfront and skip the initial transfer attempt.
+enum IORING_RECVSEND_POLL_FIRST     = 1U << 0;
+
+/// Multishot recv. Sets IORING_CQE_F_MORE if the handler will continue to report CQEs on behalf of
+/// the same SQE.
+enum IORING_RECV_MULTISHOT          = 1U << 1;
+
+/// Use registered buffers, the index is stored in the buf_index field.
+enum IORING_RECVSEND_FIXED_BUF      = 1U << 2;
+
+/// If set, SEND[MSG]_ZC should report the zerocopy usage in cqe.res for the IORING_CQE_F_NOTIF cqe.
+/// 0 is reported if zerocopy was actually possible. IORING_NOTIF_USAGE_ZC_COPIED if data was copied
+/// (at least partially).
+enum IORING_SEND_ZC_REPORT_USAGE    = 1U << 3;
+
+/// Accept flags stored in sqe->ioprio (since Linux 5.19)
+enum IORING_ACCEPT_MULTISHOT = 1U << 0;
+
+/**
  * Flags that can be used with the `accept4(2)` operation.
  */
 enum AcceptFlags : uint
@@ -506,7 +584,15 @@ enum Operation : ubyte
     LINKAT = 39,            /// `IORING_OP_LINKAT` - see linkat(2)
 
     // available from Linux 5.18
-    SG_RING = 40,           /// `IORING_OP_MSG_RING` - allows an SQE to signal another ring
+    MSG_RING = 40,          /// `IORING_OP_MSG_RING` - allows an SQE to signal another ring
+
+    // available from Linux 5.19
+    FSETXATTR = 41,         /// `IORING_OP_FSETXATTR` - see setxattr(2)
+    SETXATTR = 42,          /// `IORING_OP_SETXATTR` - see setxattr(2)
+    FGETXATTR = 43,         /// `IORING_OP_FGETXATTR` - see getxattr(2)
+    GETXATTR = 44,          /// `IORING_OP_GETXATTR` - see getxattr(2)
+    SOCKET = 45,            /// `IORING_OP_SOCKET` - see socket(2)
+    URING_CMD = 46,         /// `IORING_OP_URING_CMD`
 }
 
 /// sqe->flags
@@ -651,6 +737,12 @@ struct CompletionEntry
     ulong       user_data;  /** sqe->data submission passed back */
     int         res;        /** result code for this event */
     CQEFlags    flags;
+
+    /*
+     * If the ring is initialized with `IORING_SETUP_CQE32`, then this field contains 16-bytes of
+     * padding, doubling the size of the CQE.
+     */
+    ulong[0]    big_cqe;
 }
 
 /// Flags used with `CompletionEntry`
@@ -665,6 +757,10 @@ enum CQEFlags : uint
     /// `IORING_CQE_F_MORE` (from Linux 5.13)
     /// If set, parent SQE will generate more CQE entries
     MORE = 1U << 1,
+
+    /// `IORING_CQE_F_SOCK_NONEMPTY` (from Linux 5.19)
+    /// If set, more data to read after socket recv.
+    SOCK_NONEMPTY = 1U << 2,
 }
 
 enum {
@@ -826,7 +922,7 @@ enum SetupFlags : uint
     R_DISABLED = 1U << 6, /* start with ring disabled */
 
     /**
-     * `IORUNG_SETUP_SUBMIT_ALL`
+     * `IORING_SETUP_SUBMIT_ALL`
      *
      * Normally io_uring stops submitting a batch of request, if one of these
      * requests results in an error. This can cause submission of less than
@@ -855,6 +951,25 @@ enum SetupFlags : uint
      * Note: Available since 5.19.
      */
     COOP_TASKRUN = 1U << 8,
+
+    /**
+     * `IORING_SETUP_TASKRUN_FLAG`
+     *
+     * If COOP_TASKRUN is set, get notified if task work is available for running and a kernel
+     * transition would be needed to run it. This sets IORING_SQ_TASKRUN in the sq ring flags. Not
+     * valid with COOP_TASKRUN.
+     *
+     * Note: Available since 5.19.
+     */
+    TASKRUN_FLAG = 1U << 9,
+
+    /// `IORING_SETUP_SQE128`: SQEs are 128 byte
+    /// Note: since Linux 5.19
+    SQE128 = 1U << 10,
+
+    /// `IORING_SETUP_CQE32`: CQEs are 32 byte
+    /// Note: since Linux 5.19
+    CQE32 = 1U << 11,
 }
 
 /// `io_uring_params->features` flags
@@ -1038,7 +1153,6 @@ enum SubmissionQueueFlags: uint
     NEED_WAKEUP = 1U << 0,
 
     /// `IORING_SQ_CQ_OVERFLOW`: CQ ring is overflown
-    /// Since Kernel 5.8
     /// For those applications which are not willing to use io_uring_enter() to reap and handle
     /// cqes, they may completely rely on liburing's io_uring_peek_cqe(), but if cq ring has
     /// overflowed, currently because io_uring_peek_cqe() is not aware of this overflow, it won't
@@ -1046,7 +1160,19 @@ enum SubmissionQueueFlags: uint
     /// To fix this issue, export cq overflow status to userspace by adding new
     /// IORING_SQ_CQ_OVERFLOW flag, then helper functions() in liburing, such as io_uring_peek_cqe,
     /// can be aware of this cq overflow and do flush accordingly.
-    CQ_OVERFLOW = 1U << 1
+    ///
+    /// Note: Since Linux 5.8
+    CQ_OVERFLOW = 1U << 1,
+
+    /// `IORING_SQ_TASKRUN`: task should enter the kernel
+    /// If IORING_SETUP_COOP_TASKRUN is set to use cooperative scheduling for running task_work,
+    /// then IORING_SETUP_TASKRUN_FLAG can be set so the application can tell if task_work is
+    /// pending in the kernel for this ring. This allows use cases like io_uring_peek_cqe() to still
+    /// function appropriately, or for the task to know when it would be useful to call
+    /// io_uring_wait_cqe() to run pending events.
+    ///
+    /// Note: since Linux 5.19
+    TASKRUN = 1U << 2,
 }
 
 /**
@@ -1289,6 +1415,10 @@ enum RegisterOpCode : uint
 
     /// `IORING_UNREGISTER_RING_FDS` (from Linux 5.18)
     UNREGISTER_RING_FDS = 21,
+
+    /* register ring based provide buffer group */
+    REGISTER_PBUF_RING       = 22, /// `IORING_REGISTER_PBUF_RING` (from Linux 5.19)
+    UNREGISTER_PBUF_RING     = 23, /// `IORING_UNREGISTER_PBUF_RING` (from Linux 5.19)
 }
 
 /* io-wq worker categories */
@@ -1350,6 +1480,13 @@ static assert(SubmissionQueueRingOffsets.sizeof == 40);
 /// Indicating that OP is supported by the kernel
 enum IO_URING_OP_SUPPORTED = 1U << 0;
 
+/*
+ * Register a fully sparse file space, rather than pass in an array of all -1 file descriptors.
+ *
+ * Note: Available from Linux 5.19
+ */
+enum IORING_RSRC_REGISTER_SPARSE = 1U << 0;
+
 /**
  * Skip updating fd indexes set to this value in the fd table
  *
@@ -1392,6 +1529,43 @@ struct io_uring_restriction
     }
     ubyte resv;
     uint[3] resv2;
+}
+
+struct io_uring_buf
+{
+    ulong   addr;
+    uint    len;
+    ushort  bid;
+    ushort  resv;
+}
+
+struct io_uring_buf_ring
+{
+    union
+    {
+        /*
+         * To avoid spilling into more pages than we need to, the
+         * ring tail is overlaid with the io_uring_buf->resv field.
+         */
+        struct
+        {
+            ulong   resv1;
+            uint    resv2;
+            ushort  resv3;
+            ushort  tail;
+        }
+        io_uring_buf[0] bufs;
+    }
+}
+
+/* argument for IORING_(UN)REGISTER_PBUF_RING */
+struct io_uring_buf_reg
+{
+    ulong       ring_addr;
+    uint        ring_entries;
+    ushort      bgid;
+    ushort      pad;
+    ulong[3]    resv;
 }
 
 /**
