@@ -12,7 +12,7 @@ version (linux):
 import core.sys.posix.poll;
 import core.sys.posix.signal;
 
-@system nothrow @nogc:
+nothrow @nogc:
 
 /**
  * IO operation submission data structure (Submission queue entry).
@@ -1593,6 +1593,8 @@ struct io_uring_getevents_arg
     uint    pad;
     ulong   ts;
 }
+
+@system:
 
 /**
  * Setup a context for performing asynchronous I/O.
