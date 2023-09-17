@@ -23,6 +23,7 @@ import core.sys.posix.sys.socket;
 import core.sys.posix.sys.types;
 import core.sys.posix.sys.uio;
 import std.algorithm.comparison : among;
+import std.traits : Unqual;
 
 nothrow @nogc:
 
@@ -904,7 +905,7 @@ ref SubmissionEntry prepReadv(V)(return ref SubmissionEntry entry, int fd, ref c
  *      buffer = iovec buffers to be used by the operation
  */
 ref SubmissionEntry prepWritev(V)(return ref SubmissionEntry entry, int fd, ref const V buffer, long offset) @trusted
-    if (is(V == iovec[]) || is(V == iovec))
+    if ((is(Unqual!V == U[], U) && is(Unqual!U == iovec)) || is(Unqual!V == iovec))
 {
     static if (is(V == iovec[]))
     {
