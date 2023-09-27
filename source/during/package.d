@@ -907,7 +907,7 @@ ref SubmissionEntry prepReadv(V)(return ref SubmissionEntry entry, int fd, ref c
 ref SubmissionEntry prepWritev(V)(return ref SubmissionEntry entry, int fd, ref const V buffer, long offset) @trusted
     if ((is(Unqual!V == U[], U) && is(Unqual!U == iovec)) || is(Unqual!V == iovec))
 {
-    static if (is(V == iovec[]))
+    static if (is(typeof(buffer.length)))
     {
         assert(buffer.length, "Empty buffer");
         assert(buffer.length < uint.max, "Too many iovec buffers");
