@@ -2,7 +2,7 @@
 	"fileVersion": 1,
 	"versions": {
 		"during": {"path":"../.."},
-		"mempooled": "0.1.2",
-		"silly": "1.0.2"
+		"mempooled": "0.4.0",
+		"silly": "1.1.1"
 	}
 }

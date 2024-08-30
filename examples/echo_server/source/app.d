@@ -290,8 +290,10 @@ void closeClient(ClientContext* ctx)
     totalClients--;
     printf("%d: closing, total=%d\n", ctx.readCtx.fd, totalClients);
     close(ctx.readCtx.fd);
-    bpool.dealloc(cast(IOBuffer*)&ctx.buffers[0][0]);
-    bpool.dealloc(cast(IOBuffer*)&ctx.buffers[1][0]);
+    IOBuffer* rb = cast(IOBuffer*)&ctx.buffers[0][0];
+    IOBuffer* wb = cast(IOBuffer*)&ctx.buffers[1][0];
+    bpool.dealloc(rb);
+    bpool.dealloc(wb);
     cpool.dealloc(ctx);
 }
 
