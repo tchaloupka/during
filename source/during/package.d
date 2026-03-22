@@ -215,6 +215,15 @@ struct Uring
         return payload.cq.length;
     }
 
+    /// Peek at a pending CQE by index without consuming it (for diagnostics).
+    /// Index 0 = front (oldest unprocessed), up to length()-1.
+    ref const(CompletionEntry) peekAt(size_t i) const @safe pure return
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (i < payload.cq.length, "peekAt index out of range")
+    {
+        return payload.cq.peekAt(i);
+    }
+
     /// Get first `CompletionEntry` from cq ring
     ref CompletionEntry front() @safe pure return
     in (payload !is null, "Uring hasn't been initialized yet")
@@ -1926,6 +1935,13 @@ struct CompletionQueue
     }
 
     size_t length() const @safe pure { return tail - localHead; }
+
+    /// Peek at entry by index without consuming (0 = front)
+    ref const(CompletionEntry) peekAt(size_t i) const @safe pure return
+    {
+        assert(i < length, "peekAt index out of range");
+        return cqes[(localHead + cast(uint)i) & ringMask];
+    }
 
     uint overflow() const @safe pure { return atomicLoad!(MemoryOrder.raw)(*koverflow); }
 
