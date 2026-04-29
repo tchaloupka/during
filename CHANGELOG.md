@@ -1,0 +1,48 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## [0.4.0]
+
+### Added
+
+- `Uring.peekAt(size_t i)` and `CompletionQueue.peekAt(size_t i)` — peek at a
+  pending CQE by index without consuming it (useful for diagnostics).
+- New `setup()` overload accepting a full `SetupParameters` value so callers
+  can configure all io_uring setup fields, not only `SetupFlags`. (#11)
+- `SetupFlags.SUBMIT_ALL` — keep submitting the rest of a batch even when
+  one entry errors out (Linux 5.18).
+- `SetupFlags.COOP_TASKRUN` — disable forced inter-processor interrupts on
+  completion, deferring delivery to the next kernel/user transition
+  (Linux 5.19).
+- Linux 5.18 API sync: new ops, struct fields, and feature flags.
+- Linux 5.19 API sync: large io_uring surface update — additional
+  `Operation` values, `SubmissionEntry` fields, register opcodes, and
+  helper wrappers in `package.d`.
+- Optional Meson build alongside the existing dub configuration.
+
+### Changed
+
+- `setup(ref Uring, uint, ref SetupParameters)` is now
+  `setup(ref Uring, uint, ref const SetupParameters)`. Source-compatible for
+  all existing callers, but the mangled symbol changes — code linked
+  against 0.3.0 will need a rebuild.
+
+### Fixed
+
+- GDC and other newer-frontend compilers no longer reject struct field
+  access from `@safe` code with `cannot access @system field` — the
+  module-level `@system:` was scoped down to only the syscall wrappers.
+  Fixes the build failure reported in #15 against 0.3.0.
+- `prepWritev` template instantiation issues with newer compilers.
+- Compatibility fixes for newer DMD/LDC frontends and updated example
+  dependencies. (#14)
+- `popFront` now reliably advances the completion queue. (#9)
+- Kernel version check correctly handles major versions above 5. (#8)
+- LDC betterC workaround in the Meson build.
+- Echo server example uses `SO_REUSEPORT` instead of `SO_REUSEADDR`.
+
+[0.4.0]: https://github.com/tchaloupka/during/compare/v0.3.0...v0.4.0
