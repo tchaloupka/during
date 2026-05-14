@@ -1877,6 +1877,60 @@ ref SubmissionEntry prepFutexWaitv(return ref SubmissionEntry entry,
     return entry;
 }
 
+/**
+ * Prepares async `ftruncate(2)` operation (`IORING_OP_FTRUNCATE`). `len` is the desired file
+ * length in bytes.
+ *
+ * Note: Available from Linux 6.7
+ */
+ref SubmissionEntry prepFtruncate(return ref SubmissionEntry entry, int fd, long len) @safe
+{
+    entry.prepRW(Operation.FTRUNCATE, fd, null, 0, len);
+    return entry;
+}
+
+/**
+ * Prepares `IORING_OP_FIXED_FD_INSTALL` — promote a registered direct fd into a real fd in
+ * the process file table. `fd` is the index into the registered-files table (the SQE is
+ * issued with `IOSQE_FIXED_FILE` automatically). On success the new real fd is returned in
+ * the CQE's `res` field.
+ *
+ * `flags` accepts `IORING_FIXED_FD_NO_CLOEXEC` to skip setting `O_CLOEXEC` on the new fd.
+ *
+ * Note: Available from Linux 6.7
+ */
+ref SubmissionEntry prepFixedFdInstall(return ref SubmissionEntry entry,
+    int fd, uint flags = 0) @safe
+{
+    entry.prepRW(Operation.FIXED_FD_INSTALL, fd, null, 0, 0);
+    entry.flags = cast(SubmissionEntryFlags)(entry.flags | SubmissionEntryFlags.FIXED_FILE);
+    entry.install_fd_flags = flags;
+    return entry;
+}
+
+/**
+ * Prepares async `bind(2)` operation (`IORING_OP_BIND`).
+ *
+ * Note: Available from Linux 6.11
+ */
+ref SubmissionEntry prepBind(ADDR)(return ref SubmissionEntry entry,
+    int fd, ref const(ADDR) addr, uint addrlen) @trusted
+{
+    entry.prepRW(Operation.BIND, fd, cast(void*)&addr, 0, addrlen);
+    return entry;
+}
+
+/**
+ * Prepares async `listen(2)` operation (`IORING_OP_LISTEN`).
+ *
+ * Note: Available from Linux 6.11
+ */
+ref SubmissionEntry prepListen(return ref SubmissionEntry entry, int fd, int backlog) @safe
+{
+    entry.prepRW(Operation.LISTEN, fd, null, backlog, 0);
+    return entry;
+}
+
 private:
 
 // uring cleanup
