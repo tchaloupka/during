@@ -5,9 +5,10 @@ import tests.base;
 
 import core.stdc.stdio;
 import core.stdc.stdlib;
+import core.sys.linux.errno;
 import core.sys.linux.fcntl;
 import core.sys.posix.sys.uio : iovec;
-import core.sys.posix.unistd : close, read, unlink, write;
+import core.sys.posix.unistd : close, pipe, read, unlink, write;
 import std.algorithm : copy, equal, map;
 import std.range : iota;
 
@@ -229,4 +230,75 @@ unittest
     auto rd = read(file, cast(void*)&buf[0], 256);
     assert(rd == 256);
     assert(buf[0..256].equal(iota(0, 256)));
+}
+
+@("read_multishot")
+unittest
+{
+    if (!checkKernelVersion(6, 7)) return;
+
+    Uring io;
+    auto res = io.setup();
+    assert(res >= 0, "Error initializing IO");
+
+    int[2] p;
+    auto pr = pipe(p);
+    assert(pr == 0, "pipe()");
+    scope (exit) { close(p[0]); close(p[1]); }
+
+    // Provide two buffers under group 7 (IDs 0 and 1).
+    enum BGID = 7;
+    enum BSZ  = 32;
+    ubyte[BSZ * 2] pool;
+    io.putWith!(
+        (ref SubmissionEntry e, ref ubyte[BSZ * 2] mem)
+        {
+            // The (ubyte[][], len, bgid, bid) overload registers `len` buffers of equal size
+            // starting at mem.ptr — but we only have two contiguous slabs, so use the slice
+            // overload, which feeds one buffer-per-slice at the supplied starting id.
+            ubyte[][2] slabs;
+            slabs[0] = mem[0..BSZ];
+            slabs[1] = mem[BSZ..$];
+            e.prepProvideBuffers(slabs[], BSZ, BGID, 0);
+            e.user_data = 100;
+        })(pool);
+    auto sret = io.submit(1);
+    assert(sret == 1);
+    if (io.front.res < 0)
+    {
+        // PROVIDE_BUFFERS unavailable on this kernel — bail.
+        io.popFront();
+        return;
+    }
+    io.popFront();
+
+    io.putWith!(
+        (ref SubmissionEntry e, int fd)
+        {
+            e.prepReadMultishot(fd, BSZ, 0, BGID);
+            e.user_data = 200;
+        })(p[0]);
+    sret = io.submit(0);
+    assert(sret == 1);
+
+    ubyte[16] payload = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+    auto w = write(p[1], &payload[0], payload.length);
+    assert(w == payload.length);
+
+    io.wait(1);
+    auto cqe = io.front;
+    if (cqe.res == -EINVAL || cqe.res == -EOPNOTSUPP)
+    {
+        io.popFront();
+        return;
+    }
+    assert(cqe.res == cast(int)payload.length, "read_multishot byte count");
+    assert((cqe.flags & CQEFlags.BUFFER) != 0, "expected CQE_F_BUFFER");
+    // CQE_F_MORE indicates the multishot is still armed and will produce more CQEs.
+    // We don't strictly require it — the kernel is free to terminate early.
+    auto bid = cast(ushort)(cqe.flags >> CQE_BUFFER_SHIFT);
+    assert(bid < 2, "buffer id out of range");
+    auto base = bid == 0 ? pool[0..BSZ] : pool[BSZ..$];
+    assert(base[0..payload.length].equal(payload[]));
+    io.popFront();
 }

@@ -13,6 +13,8 @@ version (D_BetterC)
     import tests.socket;
     import tests.thread;
     import tests.timeout;
+    import tests.waitid;
+    import tests.zerocopy;
 
     import core.stdc.stdio;
     extern(C) void main()
@@ -27,6 +29,8 @@ version (D_BetterC)
         runTests!("Socket tests", tests.socket);
         runTests!("Thread tests", tests.thread);
         runTests!("Timeout tests", tests.timeout);
+        runTests!("Waitid tests", tests.waitid);
+        runTests!("Zerocopy tests", tests.zerocopy);
         printf("All unit tests have been run successfully.\n");
     }
 

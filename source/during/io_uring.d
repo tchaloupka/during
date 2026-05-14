@@ -64,6 +64,7 @@ struct SubmissionEntry
         uint                hardlink_flags;     /// from Linux 5.15
         uint                xattr_flags;        /// from Linux 5.19
         uint                msg_ring_flags;     /// from Linux 6.0
+        uint                waitid_flags;       /// from Linux 6.5
     }
 
     ulong user_data;                        /// data to be passed back at completion time
@@ -496,6 +497,11 @@ enum IORING_RECVSEND_FIXED_BUF      = 1U << 2;
 /// (at least partially).
 enum IORING_SEND_ZC_REPORT_USAGE    = 1U << 3;
 
+/// Reported in `cqe.res` of an `IORING_CQE_F_NOTIF` CQE if `IORING_SEND_ZC_REPORT_USAGE` was set
+/// on the request and the send had to fall back to a copy (at least partially). If unset, the
+/// transfer was performed without a copy.
+enum IORING_NOTIF_USAGE_ZC_COPIED   = 1U << 31;
+
 /// Accept flags stored in sqe->ioprio (since Linux 5.19)
 enum IORING_ACCEPT_MULTISHOT = 1U << 0;
 
@@ -593,6 +599,16 @@ enum Operation : ubyte
     GETXATTR = 44,          /// `IORING_OP_GETXATTR` - see getxattr(2)
     SOCKET = 45,            /// `IORING_OP_SOCKET` - see socket(2)
     URING_CMD = 46,         /// `IORING_OP_URING_CMD`
+
+    // available from Linux 6.0
+    SEND_ZC = 47,           /// `IORING_OP_SEND_ZC` - zero-copy send
+    SENDMSG_ZC = 48,        /// `IORING_OP_SENDMSG_ZC` - zero-copy sendmsg
+
+    // available from Linux 6.1
+    READ_MULTISHOT = 49,    /// `IORING_OP_READ_MULTISHOT` - multishot read into a buffer group
+
+    // available from Linux 6.5
+    WAITID = 50,            /// `IORING_OP_WAITID` - async waitid(2)
 }
 
 /// sqe->flags
@@ -761,6 +777,22 @@ enum CQEFlags : uint
     /// `IORING_CQE_F_SOCK_NONEMPTY` (from Linux 5.19)
     /// If set, more data to read after socket recv.
     SOCK_NONEMPTY = 1U << 2,
+
+    /// `IORING_CQE_F_NOTIF` (from Linux 6.0)
+    /// Set for notification CQEs. Used to distinguish the per-send completion
+    /// from the (later) zero-copy notification on `IORING_OP_SEND_ZC` /
+    /// `IORING_OP_SENDMSG_ZC`.
+    NOTIF = 1U << 3,
+
+    /// `IORING_CQE_F_BUF_MORE` (from Linux 6.8)
+    /// If set, the buffer ID set in the completion will be reused for the
+    /// next completion from the same buffer ring (partial consumption).
+    BUF_MORE = 1U << 4,
+
+    /// `IORING_CQE_F_SKIP` (from Linux 6.8)
+    /// If set, the application must ignore this CQE. Used internally for
+    /// chained completions.
+    SKIP = 1U << 5,
 }
 
 enum {
