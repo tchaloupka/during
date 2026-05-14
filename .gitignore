@@ -1,3 +1,12 @@
+# Nix
+.result/
+result
+result-*
+
+# Direnv
+.direnv/
+.env
+
 .dub
 build/
 *.o
