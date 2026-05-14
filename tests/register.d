@@ -190,3 +190,56 @@ unittest
         assert(prob.isSupported(Operation.RECV));
     }
 }
+
+// `bufRingStatus` on a non-existent buffer group must report an error rather than crashing.
+// This validates the io_uring_register plumbing and the `io_uring_buf_status` struct layout
+// without requiring a live buf ring.
+@("bufRingStatus on missing group returns error")
+unittest
+{
+    if (!checkKernelVersion(6, 8)) return;
+
+    Uring io;
+    auto res = io.setup();
+    assert(res >= 0, "Error initializing IO");
+
+    io_uring_buf_status status;
+    status.buf_group = 0xFEED;          // unlikely to exist
+    auto r = io.bufRingStatus(status);
+    assert(r < 0, "expected an error result for missing buf group");
+}
+
+// NAPI register/unregister round-trip. Many environments accept the registration even
+// without a configured NAPI-capable NIC — the call is per-ring, not per-interface — so we
+// assert success OR a kernel that returns -EINVAL for an unsupported configuration.
+@("registerNapi round-trip")
+unittest
+{
+    if (!checkKernelVersion(6, 9)) return;
+
+    Uring io;
+    auto res = io.setup();
+    assert(res >= 0, "Error initializing IO");
+
+    io_uring_napi napi;
+    napi.busy_poll_to = 50;             // 50us
+    napi.prefer_busy_poll = 1;
+
+    auto rr = io.registerNapi(napi);
+    if (rr == -EINVAL || rr == -EOPNOTSUPP)
+        return;
+    assert(rr == 0, "registerNapi");
+
+    io_uring_napi out_;
+    auto ur = io.unregisterNapi(out_);
+    assert(ur == 0, "unregisterNapi");
+}
+
+// Probe-only check for RECV_ZC: confirm the opcode value matches upstream so users with a
+// supported NIC can submit it. The op needs `register_ifq` (Phase 6) to be functionally
+// testable, so we don't drive an SQE here.
+@("recv_zc opcode enumeration")
+@safe unittest
+{
+    static assert(Operation.RECV_ZC == 58);
+}

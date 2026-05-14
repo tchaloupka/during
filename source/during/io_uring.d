@@ -82,7 +82,8 @@ struct SubmissionEntry
     union
     {
         int splice_fd_in;
-        uint file_index;
+        uint file_index;        /// from Linux 5.5
+        uint zcrx_ifq_idx;      /// from Linux 6.8 — index into the registered zcrx ifq table
     }
 
     union
@@ -626,6 +627,10 @@ enum Operation : ubyte
     // available from Linux 6.11
     BIND = 56,              /// `IORING_OP_BIND` - async bind(2)
     LISTEN = 57,            /// `IORING_OP_LISTEN` - async listen(2)
+
+    // available from Linux 6.13
+    RECV_ZC = 58,           /// `IORING_OP_RECV_ZC` - zero-copy receive (requires REGISTER_ZCRX_IFQ)
+    EPOLL_WAIT = 59,        /// `IORING_OP_EPOLL_WAIT` - async epoll_wait(2)
 }
 
 /// sqe->flags
@@ -1478,6 +1483,17 @@ enum RegisterOpCode : uint
     /// Limit the range of indices within the registered files table used by direct-fd
     /// allocations (e.g. via `IORING_FILE_INDEX_ALLOC`).
     REGISTER_FILE_ALLOC_RANGE = 25,
+
+    /// `IORING_REGISTER_PBUF_STATUS` (from Linux 6.8)
+    /// Query the current head index of a provided buffer ring.
+    REGISTER_PBUF_STATUS     = 26,
+
+    /// `IORING_REGISTER_NAPI` (from Linux 6.9)
+    /// Enable NAPI busy polling on the ring for receive-path latency reduction.
+    REGISTER_NAPI            = 27,
+
+    /// `IORING_UNREGISTER_NAPI` (from Linux 6.9)
+    UNREGISTER_NAPI          = 28,
 }
 
 /* io-wq worker categories */
@@ -1670,6 +1686,34 @@ struct futex_waitv
     ulong   uaddr;      /// pointer to the futex word
     uint    flags;      /// `FUTEX2_SIZE_*` (+ `FUTEX2_PRIVATE` / `FUTEX2_NUMA`)
     uint    __reserved;
+}
+
+/**
+ * Argument for `IORING_REGISTER_PBUF_STATUS` — read out the current head index of a provided
+ * buffer ring. Caller sets `buf_group` to the target group; on return `head` holds the kernel's
+ * current head index (i.e. the next buffer the kernel will hand out).
+ *
+ * Note: Available from Linux 6.8
+ */
+struct io_uring_buf_status
+{
+    uint        buf_group;  /// input — group id
+    uint        head;       /// output — current head
+    uint[8]     resv;
+}
+
+/**
+ * Argument for `IORING_REGISTER_NAPI` / `IORING_UNREGISTER_NAPI`. Configures NAPI busy-poll
+ * behaviour for the ring. `busy_poll_to` is the busy-poll timeout in microseconds.
+ *
+ * Note: Available from Linux 6.9
+ */
+struct io_uring_napi
+{
+    uint        busy_poll_to;       /// busy-poll timeout in microseconds
+    ubyte       prefer_busy_poll;   /// boolean: prefer busy polling over interrupts
+    ubyte[3]    pad;
+    ulong       resv;
 }
 
 /// `futex_waitv.flags` and `prepFutex*` `futex_flags` parameter bits.
