@@ -66,6 +66,7 @@ struct SubmissionEntry
         uint                msg_ring_flags;     /// from Linux 6.0
         uint                futex_flags;        /// from Linux 6.1
         uint                waitid_flags;       /// from Linux 6.5
+        uint                install_fd_flags;   /// from Linux 6.7
     }
 
     ulong user_data;                        /// data to be passed back at completion time
@@ -503,6 +504,10 @@ enum IORING_SEND_ZC_REPORT_USAGE    = 1U << 3;
 /// transfer was performed without a copy.
 enum IORING_NOTIF_USAGE_ZC_COPIED   = 1U << 31;
 
+/// `IORING_OP_FIXED_FD_INSTALL` flags (`sqe->install_fd_flags`). Without this flag the new
+/// real fd is created with `O_CLOEXEC`; setting it skips the close-on-exec bit.
+enum IORING_FIXED_FD_NO_CLOEXEC     = 1U << 0;
+
 /// Accept flags stored in sqe->ioprio (since Linux 5.19)
 enum IORING_ACCEPT_MULTISHOT = 1U << 0;
 
@@ -615,6 +620,12 @@ enum Operation : ubyte
     FUTEX_WAIT = 51,        /// `IORING_OP_FUTEX_WAIT` - async futex(2) FUTEX_WAIT
     FUTEX_WAKE = 52,        /// `IORING_OP_FUTEX_WAKE` - async futex(2) FUTEX_WAKE
     FUTEX_WAITV = 53,       /// `IORING_OP_FUTEX_WAITV` - async futex_waitv(2)
+    FIXED_FD_INSTALL = 54,  /// `IORING_OP_FIXED_FD_INSTALL` - turn a registered direct fd into a real fd
+    FTRUNCATE = 55,         /// `IORING_OP_FTRUNCATE` - async ftruncate(2)
+
+    // available from Linux 6.11
+    BIND = 56,              /// `IORING_OP_BIND` - async bind(2)
+    LISTEN = 57,            /// `IORING_OP_LISTEN` - async listen(2)
 }
 
 /// sqe->flags

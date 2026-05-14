@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `REGISTER_FILE_ALLOC_RANGE` with `Uring.registerSyncCancel` and
   `Uring.registerFileAllocRange` wrappers. Backing structs
   `io_uring_sync_cancel_reg` and `io_uring_file_index_range`.
+- Linux 6.7 ops: `Operation.FIXED_FD_INSTALL`, `FTRUNCATE` and prep helpers
+  `prepFixedFdInstall`, `prepFtruncate`. New `IORING_FIXED_FD_NO_CLOEXEC`
+  flag and `SubmissionEntry.install_fd_flags` union member.
+- Linux 6.11 socket lifecycle ops: `Operation.BIND`, `LISTEN` with
+  `prepBind` and `prepListen` helpers.
 
 ## [0.4.0]
 

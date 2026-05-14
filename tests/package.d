@@ -5,6 +5,7 @@ version (D_BetterC)
     import tests.api;
     import tests.base;
     import tests.cancel;
+    import tests.fixed_fd;
     import tests.fsync;
     import tests.futex;
     import tests.msg;
@@ -22,6 +23,7 @@ version (D_BetterC)
     {
         runTests!("API tests", tests.api);
         runTests!("Cancel tests", tests.cancel);
+        runTests!("Fixed-fd tests", tests.fixed_fd);
         runTests!("Fsync tests", tests.fsync);
         runTests!("Futex tests", tests.futex);
         runTests!("Msg tests", tests.msg);
