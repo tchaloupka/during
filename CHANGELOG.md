@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Linux 6.0+ ops: `Operation.SEND_ZC`, `SENDMSG_ZC`, `READ_MULTISHOT`, `WAITID`
+  and the matching prep helpers `prepSendZc`, `prepSendZcFixed`, `prepSendmsgZc`,
+  `prepReadMultishot`, `prepWaitid`.
+- `CQEFlags.NOTIF`, `BUF_MORE`, `SKIP` and the
+  `IORING_NOTIF_USAGE_ZC_COPIED` constant for zero-copy notification CQEs.
+- `SubmissionEntry.waitid_flags` union member.
+
 ## [0.4.0]
 
 ### Added

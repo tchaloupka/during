@@ -1692,6 +1692,98 @@ ref SubmissionEntry prepSocket(return ref SubmissionEntry entry,
     return entry;
 }
 
+/**
+ * Prepares zero-copy `send` operation (`IORING_OP_SEND_ZC`).
+ *
+ * Unlike the regular `send` op, this submits a request that will (when possible) bypass the
+ * kernel copy by pinning user pages. Two CQEs are generated per request: the first reports
+ * the transfer result (with `CQEFlags.MORE` set), the second is the zero-copy notification
+ * (`CQEFlags.NOTIF`) emitted once the kernel is done with the pages and the buffer can be
+ * reused. If `IORING_SEND_ZC_REPORT_USAGE` is set in `zc_flags`, the notification's `res`
+ * field will contain `IORING_NOTIF_USAGE_ZC_COPIED` when the kernel had to fall back to a
+ * copy, or `0` otherwise.
+ *
+ * Note: Available from Linux 6.0
+ */
+ref SubmissionEntry prepSendZc(return ref SubmissionEntry entry,
+    int sockfd, const(ubyte)[] buf, MsgFlags flags = MsgFlags.NONE, uint zc_flags = 0) @trusted
+{
+    entry.prepRW(Operation.SEND_ZC, sockfd, cast(void*)buf.ptr, cast(uint)buf.length, 0);
+    entry.msg_flags = flags;
+    entry.ioprio = cast(ushort)zc_flags;
+    return entry;
+}
+
+/**
+ * Prepares zero-copy `send` operation (`IORING_OP_SEND_ZC`) using a registered buffer.
+ *
+ * Note: Available from Linux 6.0
+ */
+ref SubmissionEntry prepSendZcFixed(return ref SubmissionEntry entry,
+    int sockfd, const(ubyte)[] buf, MsgFlags flags, uint zc_flags, ushort bufIndex) @trusted
+{
+    entry.prepSendZc(sockfd, buf, flags, zc_flags);
+    entry.ioprio = cast(ushort)(entry.ioprio | IORING_RECVSEND_FIXED_BUF);
+    entry.buf_index = bufIndex;
+    return entry;
+}
+
+/**
+ * Prepares zero-copy `sendmsg` operation (`IORING_OP_SENDMSG_ZC`). See `prepSendZc` for the
+ * notification semantics.
+ *
+ * Note: Available from Linux 6.1
+ */
+ref SubmissionEntry prepSendmsgZc(return ref SubmissionEntry entry, int fd, ref msghdr msg,
+    MsgFlags flags = MsgFlags.NONE) @trusted
+{
+    entry.prepSendMsg(fd, msg, flags);
+    entry.opcode = Operation.SENDMSG_ZC;
+    return entry;
+}
+
+/**
+ * Prepares multishot `read` operation (`IORING_OP_READ_MULTISHOT`).
+ *
+ * Reads are repeated against the same fd using buffers picked from the provided buffer group
+ * (`bufGroup`). Each successful CQE will set `CQEFlags.BUFFER` and `CQEFlags.MORE` while the
+ * request remains armed. The operation terminates (without `CQEFlags.MORE` set) on EOF, on
+ * error, or if no buffer was available (`-ENOBUFS`).
+ *
+ * Note: Available from Linux 6.7
+ */
+ref SubmissionEntry prepReadMultishot(return ref SubmissionEntry entry,
+    int fd, uint nbytes, long offset, ushort bufGroup) @safe
+{
+    entry.prepRW(Operation.READ_MULTISHOT, fd, null, nbytes, offset);
+    entry.buf_group = bufGroup;
+    entry.flags = SubmissionEntryFlags.BUFFER_SELECT;
+    return entry;
+}
+
+/**
+ * Prepares async `waitid(2)` operation (`IORING_OP_WAITID`).
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      idtype = `P_PID`, `P_PGID`, `P_ALL`, or `P_PIDFD`
+ *      id     = pid/pgid/pidfd to wait on (ignored for `P_ALL`)
+ *      infop  = optional `siginfo_t*` to receive child status (may be `null`)
+ *      options = wait options (e.g. `WEXITED | WSTOPPED`)
+ *      flags   = currently unused, pass 0
+ *
+ * Note: Available from Linux 6.5
+ */
+ref SubmissionEntry prepWaitid(return ref SubmissionEntry entry,
+    int idtype, uint id, siginfo_t* infop, int options, uint flags = 0) @trusted
+{
+    entry.prepRW(Operation.WAITID, cast(int)id, null, cast(uint)idtype, 0);
+    entry.waitid_flags = flags;
+    entry.file_index = cast(uint)options;
+    entry.addr2 = cast(ulong)cast(void*)infop;
+    return entry;
+}
+
 private:
 
 // uring cleanup
