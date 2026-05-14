@@ -64,6 +64,7 @@ struct SubmissionEntry
         uint                hardlink_flags;     /// from Linux 5.15
         uint                xattr_flags;        /// from Linux 5.19
         uint                msg_ring_flags;     /// from Linux 6.0
+        uint                futex_flags;        /// from Linux 6.1
         uint                waitid_flags;       /// from Linux 6.5
     }
 
@@ -609,6 +610,11 @@ enum Operation : ubyte
 
     // available from Linux 6.5
     WAITID = 50,            /// `IORING_OP_WAITID` - async waitid(2)
+
+    // available from Linux 6.7
+    FUTEX_WAIT = 51,        /// `IORING_OP_FUTEX_WAIT` - async futex(2) FUTEX_WAIT
+    FUTEX_WAKE = 52,        /// `IORING_OP_FUTEX_WAKE` - async futex(2) FUTEX_WAKE
+    FUTEX_WAITV = 53,       /// `IORING_OP_FUTEX_WAITV` - async futex_waitv(2)
 }
 
 /// sqe->flags
@@ -1451,6 +1457,16 @@ enum RegisterOpCode : uint
     /* register ring based provide buffer group */
     REGISTER_PBUF_RING       = 22, /// `IORING_REGISTER_PBUF_RING` (from Linux 5.19)
     UNREGISTER_PBUF_RING     = 23, /// `IORING_UNREGISTER_PBUF_RING` (from Linux 5.19)
+
+    /// `IORING_REGISTER_SYNC_CANCEL` (from Linux 6.0)
+    /// Synchronous request cancellation — caller blocks until the kernel has either canceled
+    /// the matching request(s) or determined there's nothing to cancel.
+    REGISTER_SYNC_CANCEL     = 24,
+
+    /// `IORING_REGISTER_FILE_ALLOC_RANGE` (from Linux 6.0)
+    /// Limit the range of indices within the registered files table used by direct-fd
+    /// allocations (e.g. via `IORING_FILE_INDEX_ALLOC`).
+    REGISTER_FILE_ALLOC_RANGE = 25,
 }
 
 /* io-wq worker categories */
@@ -1599,6 +1615,60 @@ struct io_uring_buf_reg
     ushort      pad;
     ulong[3]    resv;
 }
+
+/**
+ * Argument to `IORING_REGISTER_SYNC_CANCEL`. Synchronously cancels matching in-flight
+ * requests; `addr`, `fd`, `flags`, and `opcode` act as match keys (combined the same way as
+ * `IORING_OP_ASYNC_CANCEL`). `timeout` bounds the cancel wait — `{-1, -1}` means "no timeout".
+ *
+ * Note: Available from Linux 6.0
+ */
+struct io_uring_sync_cancel_reg
+{
+    ulong               addr;
+    int                 fd;
+    uint                flags;
+    KernelTimespec      timeout;
+    ubyte               opcode;
+    ubyte[7]            pad;
+    ulong[3]            pad2;
+}
+
+/**
+ * Argument to `IORING_REGISTER_FILE_ALLOC_RANGE` — restricts the range within the registered
+ * file table used by `IORING_FILE_INDEX_ALLOC`-style direct fd allocations.
+ *
+ * Note: Available from Linux 6.0
+ */
+struct io_uring_file_index_range
+{
+    uint    off;        /// starting offset
+    uint    len;        /// number of slots
+    ulong   resv;
+}
+
+/**
+ * Single entry passed to `IORING_OP_FUTEX_WAITV`. Mirrors `struct futex_waitv` from
+ * `<linux/futex.h>`.
+ *
+ * Note: Available from Linux 6.7
+ */
+struct futex_waitv
+{
+    ulong   val;        /// expected value of the futex
+    ulong   uaddr;      /// pointer to the futex word
+    uint    flags;      /// `FUTEX2_SIZE_*` (+ `FUTEX2_PRIVATE` / `FUTEX2_NUMA`)
+    uint    __reserved;
+}
+
+/// `futex_waitv.flags` and `prepFutex*` `futex_flags` parameter bits.
+/// Match the `FUTEX2_*` constants from `<linux/futex.h>`.
+enum FUTEX2_SIZE_U8     = 0x00; /// 8-bit futex
+enum FUTEX2_SIZE_U16    = 0x01; /// 16-bit futex
+enum FUTEX2_SIZE_U32    = 0x02; /// 32-bit futex (the only size supported on most arches today)
+enum FUTEX2_SIZE_U64    = 0x03; /// 64-bit futex
+enum FUTEX2_NUMA        = 0x04; /// NUMA-aware futex
+enum FUTEX2_PRIVATE     = 0x80; /// process-private (skips NUMA hash lookup)
 
 /**
  * io_uring_restriction->opcode values
