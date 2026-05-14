@@ -6,6 +6,7 @@ version (D_BetterC)
     import tests.base;
     import tests.cancel;
     import tests.fsync;
+    import tests.futex;
     import tests.msg;
     import tests.poll;
     import tests.register;
@@ -22,6 +23,7 @@ version (D_BetterC)
         runTests!("API tests", tests.api);
         runTests!("Cancel tests", tests.cancel);
         runTests!("Fsync tests", tests.fsync);
+        runTests!("Futex tests", tests.futex);
         runTests!("Msg tests", tests.msg);
         runTests!("Poll tests", tests.poll);
         runTests!("Register tests", tests.register);

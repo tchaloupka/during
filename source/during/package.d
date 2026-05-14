@@ -779,6 +779,39 @@ struct Uring
         if (_expect(r < 0, false)) return -errno;
         return 0;
     }
+
+    /**
+     * Synchronously cancel one or more in-flight requests matching the keys in `reg`. Returns
+     * the number of cancelled requests on success, `-errno` on failure. Use
+     * `KernelTimespec(-1, -1)` in `reg.timeout` to wait indefinitely.
+     *
+     * Note: Available from Linux 6.0
+     */
+    int registerSyncCancel(scope ref io_uring_sync_cancel_reg reg) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_SYNC_CANCEL, &reg, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return r;
+    }
+
+    /**
+     * Restrict the range of indices within the registered file table that the kernel will use
+     * for direct-fd allocations (e.g. when an SQE has `file_index == IORING_FILE_INDEX_ALLOC`).
+     * Requires a prior `registerFiles[Sparse]` setup.
+     *
+     * Note: Available from Linux 6.0
+     */
+    int registerFileAllocRange(uint off, uint len) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        io_uring_file_index_range range;
+        range.off = off;
+        range.len = len;
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_FILE_ALLOC_RANGE, &range, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
 }
 
 /**
@@ -1781,6 +1814,66 @@ ref SubmissionEntry prepWaitid(return ref SubmissionEntry entry,
     entry.waitid_flags = flags;
     entry.file_index = cast(uint)options;
     entry.addr2 = cast(ulong)cast(void*)infop;
+    return entry;
+}
+
+/**
+ * Prepares async futex wait (`IORING_OP_FUTEX_WAIT`). The request completes when the kernel
+ * wakes the futex via FUTEX_WAKE or when the request is cancelled.
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      futex = pointer to the futex word (must remain valid until completion)
+ *      val   = expected value; the wait fails fast with `-EAGAIN` if `*futex != val`
+ *      mask  = bitmask for selective wakes (matches `FUTEX_WAKE` with the same mask). Use
+ *              `~0UL` to wake unconditionally.
+ *      futex2_flags = `FUTEX2_SIZE_*` plus optional `FUTEX2_PRIVATE` / `FUTEX2_NUMA`.
+ *      flags = currently unused, pass 0.
+ *
+ * Note: Available from Linux 6.7
+ */
+ref SubmissionEntry prepFutexWait(return ref SubmissionEntry entry,
+    const(uint)* futex, ulong val, ulong mask, uint futex2_flags, uint flags = 0) @trusted
+{
+    entry.prepRW(Operation.FUTEX_WAIT, cast(int)futex2_flags, cast(void*)futex, 0, val);
+    entry.futex_flags = flags;
+    entry.addr3 = mask;
+    return entry;
+}
+
+/**
+ * Prepares async futex wake (`IORING_OP_FUTEX_WAKE`).
+ *
+ * Params:
+ *      entry = `SubmissionEntry` to prepare
+ *      futex = pointer to the futex word
+ *      val   = number of waiters to wake
+ *      mask  = bitmask to match against waiters. Use `~0UL` to wake any waiter.
+ *      futex2_flags = `FUTEX2_SIZE_*` plus optional `FUTEX2_PRIVATE` / `FUTEX2_NUMA`.
+ *      flags = currently unused, pass 0.
+ *
+ * Note: Available from Linux 6.7
+ */
+ref SubmissionEntry prepFutexWake(return ref SubmissionEntry entry,
+    const(uint)* futex, ulong val, ulong mask, uint futex2_flags, uint flags = 0) @trusted
+{
+    entry.prepRW(Operation.FUTEX_WAKE, cast(int)futex2_flags, cast(void*)futex, 0, val);
+    entry.futex_flags = flags;
+    entry.addr3 = mask;
+    return entry;
+}
+
+/**
+ * Prepares async vectored futex wait (`IORING_OP_FUTEX_WAITV`). The request completes when
+ * any of the `nr_futex` entries is woken.
+ *
+ * Note: Available from Linux 6.7
+ */
+ref SubmissionEntry prepFutexWaitv(return ref SubmissionEntry entry,
+    const(futex_waitv)* futex, uint nr_futex, uint flags = 0) @trusted
+{
+    entry.prepRW(Operation.FUTEX_WAITV, 0, cast(void*)futex, nr_futex, 0);
+    entry.futex_flags = flags;
     return entry;
 }
 

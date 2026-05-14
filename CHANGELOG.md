@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `CQEFlags.NOTIF`, `BUF_MORE`, `SKIP` and the
   `IORING_NOTIF_USAGE_ZC_COPIED` constant for zero-copy notification CQEs.
 - `SubmissionEntry.waitid_flags` union member.
+- Linux 6.7 futex ops: `Operation.FUTEX_WAIT`, `FUTEX_WAKE`, `FUTEX_WAITV` and
+  prep helpers `prepFutexWait`, `prepFutexWake`, `prepFutexWaitv`. New
+  `futex_waitv` struct and `FUTEX2_SIZE_*` / `FUTEX2_PRIVATE` / `FUTEX2_NUMA`
+  constants. `SubmissionEntry.futex_flags` union member.
+- Linux 6.0 register opcodes: `RegisterOpCode.REGISTER_SYNC_CANCEL`,
+  `REGISTER_FILE_ALLOC_RANGE` with `Uring.registerSyncCancel` and
+  `Uring.registerFileAllocRange` wrappers. Backing structs
+  `io_uring_sync_cancel_reg` and `io_uring_file_index_range`.
 
 ## [0.4.0]
 
