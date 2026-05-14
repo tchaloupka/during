@@ -28,6 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   flag and `SubmissionEntry.install_fd_flags` union member.
 - Linux 6.11 socket lifecycle ops: `Operation.BIND`, `LISTEN` with
   `prepBind` and `prepListen` helpers.
+- Linux 6.13 ops: `Operation.RECV_ZC`, `EPOLL_WAIT` with `prepRecvZc` and
+  `prepEpollWait` helpers. New `SubmissionEntry.zcrx_ifq_idx` union member
+  for addressing the zerocopy-RX ifq.
+- Linux 6.8+ register opcodes: `REGISTER_PBUF_STATUS`, `REGISTER_NAPI`,
+  `UNREGISTER_NAPI` with `Uring.bufRingStatus`, `Uring.registerNapi`,
+  `Uring.unregisterNapi` wrappers and backing structs `io_uring_buf_status`,
+  `io_uring_napi`.
 
 ## [0.4.0]
 

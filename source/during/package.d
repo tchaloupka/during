@@ -812,6 +812,49 @@ struct Uring
         if (_expect(r < 0, false)) return -errno;
         return 0;
     }
+
+    /**
+     * Read the current head index of a provided buffer ring. The caller fills `status.buf_group`
+     * to identify the target ring; on success `status.head` is populated.
+     *
+     * Note: Available from Linux 6.8
+     */
+    int bufRingStatus(scope ref io_uring_buf_status status) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_PBUF_STATUS, &status, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Enable NAPI busy-polling on the ring. `napi.busy_poll_to` is the busy-poll timeout in
+     * microseconds, `napi.prefer_busy_poll` selects busy poll over interrupt-driven receive.
+     * On return, `napi` is filled with the previous configuration.
+     *
+     * Note: Available from Linux 6.9
+     */
+    int registerNapi(scope ref io_uring_napi napi) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_NAPI, &napi, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Disable NAPI busy-polling on the ring. On return, `napi` is filled with the
+     * configuration that was in effect.
+     *
+     * Note: Available from Linux 6.9
+     */
+    int unregisterNapi(scope ref io_uring_napi napi) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_NAPI, &napi, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
 }
 
 /**
@@ -1928,6 +1971,40 @@ ref SubmissionEntry prepBind(ADDR)(return ref SubmissionEntry entry,
 ref SubmissionEntry prepListen(return ref SubmissionEntry entry, int fd, int backlog) @safe
 {
     entry.prepRW(Operation.LISTEN, fd, null, backlog, 0);
+    return entry;
+}
+
+/**
+ * Prepares async `epoll_wait(2)` (`IORING_OP_EPOLL_WAIT`). `events` receives up to
+ * `maxEvents` ready events; the CQE's `res` field reports the number of events filled in.
+ *
+ * Note: Available from Linux 6.13
+ */
+ref SubmissionEntry prepEpollWait(return ref SubmissionEntry entry,
+    int epfd, epoll_event[] events, uint flags = 0) @trusted
+{
+    assert(events.length && events.length <= int.max, "events buffer length");
+    entry.prepRW(Operation.EPOLL_WAIT, epfd, cast(void*)events.ptr, cast(uint)events.length, 0);
+    entry.rw_flags = cast(ReadWriteFlags)flags;
+    return entry;
+}
+
+/**
+ * Prepares zero-copy receive (`IORING_OP_RECV_ZC`). The receive uses a pre-registered
+ * interface queue (`registerIfq`, available in a later phase) addressed by `ifqIdx`; the
+ * kernel fills a provided buffer ring with received packet payloads without copying. Returns
+ * one or more CQEs marked with `CQEFlags.MORE` (multishot) or a single CQE without `MORE`
+ * (one-shot).
+ *
+ * Note: Available from Linux 6.13. Requires a configured NIC zerocopy-RX ifq, so this op is
+ * functionally testable only on hosts with a supported network interface.
+ */
+ref SubmissionEntry prepRecvZc(return ref SubmissionEntry entry, int sockfd, uint len,
+    MsgFlags flags, uint ifqIdx) @safe
+{
+    entry.prepRW(Operation.RECV_ZC, sockfd, null, len, 0);
+    entry.msg_flags = flags;
+    entry.zcrx_ifq_idx = ifqIdx;
     return entry;
 }
 

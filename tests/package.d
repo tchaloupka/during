@@ -5,6 +5,7 @@ version (D_BetterC)
     import tests.api;
     import tests.base;
     import tests.cancel;
+    import tests.epoll_wait;
     import tests.fixed_fd;
     import tests.fsync;
     import tests.futex;
@@ -23,6 +24,7 @@ version (D_BetterC)
     {
         runTests!("API tests", tests.api);
         runTests!("Cancel tests", tests.cancel);
+        runTests!("Epoll-wait tests", tests.epoll_wait);
         runTests!("Fixed-fd tests", tests.fixed_fd);
         runTests!("Fsync tests", tests.fsync);
         runTests!("Futex tests", tests.futex);
