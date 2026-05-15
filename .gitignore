@@ -1,4 +1,5 @@
 .dub
+build/
 *.o
 *.a
 during-test*

@@ -5,6 +5,7 @@ license "BSL-1.0"
 homepage "https://github.com/tchaloupka/during"
 copyright "Copyright © 2019, Tomáš Chaloupka"
 targetType "library"
+targetPath "build"
 platforms "linux"
 
 configuration "default" {
