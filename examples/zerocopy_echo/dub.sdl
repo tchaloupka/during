@@ -1,0 +1,5 @@
+name "zerocopy_echo"
+description "TCP echo over IORING_OP_SEND_ZC"
+targetPath "build"
+
+dependency "during" path="../.."

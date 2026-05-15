@@ -2080,7 +2080,13 @@ enum FUTEX2_SIZE_U16    = 0x01; /// 16-bit futex
 enum FUTEX2_SIZE_U32    = 0x02; /// 32-bit futex (the only size supported on most arches today)
 enum FUTEX2_SIZE_U64    = 0x03; /// 64-bit futex
 enum FUTEX2_NUMA        = 0x04; /// NUMA-aware futex
+enum FUTEX2_MPOL        = 0x08; /// memory-policy futex (kernel 6.18+)
 enum FUTEX2_PRIVATE     = 0x80; /// process-private (skips NUMA hash lookup)
+
+/// Mask value that matches every waiter, sized to a 32-bit futex word. Equivalent to
+/// `FUTEX_BITSET_MATCH_ANY` from `<linux/futex.h>`. Pass to `prepFutexWait` / `prepFutexWake`
+/// when you don't want bitset-based selective wakes.
+enum FUTEX_BITSET_MATCH_ANY = 0xFFFFFFFFU;
 
 /**
  * io_uring_restriction->opcode values

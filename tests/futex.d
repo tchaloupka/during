@@ -3,7 +3,6 @@ module tests.futex;
 import during;
 import tests.base;
 
-import core.stdc.stdio : printf;
 import core.sys.linux.errno;
 import core.sys.posix.pthread;
 import core.sys.posix.unistd : close, pipe, usleep;
@@ -38,7 +37,7 @@ unittest
     io.putWith!(
         (ref SubmissionEntry e, uint* w)
         {
-            e.prepFutexWait(w, 0, ~0UL, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE, 0);
+            e.prepFutexWait(w, 0, FUTEX_BITSET_MATCH_ANY, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE, 0);
             e.user_data = 1;
         })(&word);
 
@@ -68,7 +67,7 @@ unittest
     io.putWith!(
         (ref SubmissionEntry e, uint* w)
         {
-            e.prepFutexWake(w, 1, ~0UL, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE, 0);
+            e.prepFutexWake(w, 1, FUTEX_BITSET_MATCH_ANY, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE, 0);
             e.user_data = 1;
         })(&word);
 
@@ -163,7 +162,7 @@ unittest
     io.putWith!(
         (ref SubmissionEntry e, uint* w)
         {
-            e.prepFutexWait(w, 0, ~0UL, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE, 0);
+            e.prepFutexWait(w, 0, FUTEX_BITSET_MATCH_ANY, FUTEX2_SIZE_U32 | FUTEX2_PRIVATE, 0);
             e.user_data = 1;
         })(&word);
 
@@ -180,7 +179,7 @@ unittest
     atomicStore!(MemoryOrder.rel)(ctx.stop, 1);
     pthread_join(tid, null);
 
-    if (gotRes == -EINVAL || gotRes == -EOPNOTSUPP)
+    if (gotRes == -EOPNOTSUPP)
         return; // op not present on this kernel.
     assert(gotRes == 0, "FUTEX_WAIT was not woken by helper thread");
     assert(ctx.attempts >= 1, "helper made no wake attempts");

@@ -1,0 +1,5 @@
+name "futex_pingpong"
+description "Two threads, futex wait/wake driven by io_uring"
+targetPath "build"
+
+dependency "during" path="../.."
