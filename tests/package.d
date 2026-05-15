@@ -18,6 +18,7 @@ version (D_BetterC)
     import tests.sqe128;
     import tests.thread;
     import tests.timeout;
+    import tests.wait_reg;
     import tests.waitid;
     import tests.zerocopy;
 
@@ -39,6 +40,7 @@ version (D_BetterC)
         runTests!("SQE128 tests", tests.sqe128);
         runTests!("Thread tests", tests.thread);
         runTests!("Timeout tests", tests.timeout);
+        runTests!("Wait-reg tests", tests.wait_reg);
         runTests!("Waitid tests", tests.waitid);
         runTests!("Zerocopy tests", tests.zerocopy);
         printf("All unit tests have been run successfully.\n");
