@@ -35,6 +35,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `UNREGISTER_NAPI` with `Uring.bufRingStatus`, `Uring.registerNapi`,
   `Uring.unregisterNapi` wrappers and backing structs `io_uring_buf_status`,
   `io_uring_napi`.
+- Linux 6.13 ops: `Operation.READV_FIXED`, `WRITEV_FIXED` with `prepReadvFixed`
+  and `prepWritevFixed` helpers.
+- Linux 6.14 op: `Operation.PIPE` with `prepPipe` and `prepPipeDirect`.
+- Linux 6.16 ops: `Operation.NOP128`, `URING_CMD128` with `prepNop128`,
+  `prepUringCmd`, `prepUringCmd128`. Note: a functional NOP128 test is gated
+  on a follow-up fix to the SQE storage path (currently mmaps 64 B/SQE
+  regardless of `SetupFlags.SQE128`).
+- Generic `uring_cmd` helpers: `prepCmdSock`, `prepCmdGetsockname`,
+  `prepCmdDiscard` and `SOCKET_URING_OP_*` / `BLOCK_URING_CMD_DISCARD`
+  subcommand constants.
+- Bundle helpers: `prepSendBundle`, `prepSendSetAddr` and the
+  `IORING_RECVSEND_BUNDLE` flag (Linux 6.10).
+- `prepMsgRingCqeFlags` and the `IORING_MSG_RING_FLAGS_PASS` flag for
+  message-ring CQE flag passthrough (Linux 6.3).
+- Extended `SubmissionEntry` unions to expose `uring_cmd_flags`, `nop_flags`,
+  `pipe_flags`, `optlen`, `addr_len`, `optval`, and the
+  `level`/`optname` overlay required by socket `uring_cmd` ops.
+- Bumped the `Probe` capacity from 64 to 128 ops to make room for the new
+  opcodes.
 
 ## [0.4.0]
 

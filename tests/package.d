@@ -10,10 +10,12 @@ version (D_BetterC)
     import tests.fsync;
     import tests.futex;
     import tests.msg;
+    import tests.pipe;
     import tests.poll;
     import tests.register;
     import tests.rw;
     import tests.socket;
+    import tests.sqe128;
     import tests.thread;
     import tests.timeout;
     import tests.waitid;
@@ -29,10 +31,12 @@ version (D_BetterC)
         runTests!("Fsync tests", tests.fsync);
         runTests!("Futex tests", tests.futex);
         runTests!("Msg tests", tests.msg);
+        runTests!("Pipe tests", tests.pipe);
         runTests!("Poll tests", tests.poll);
         runTests!("Register tests", tests.register);
         runTests!("RW tests", tests.rw);
         runTests!("Socket tests", tests.socket);
+        runTests!("SQE128 tests", tests.sqe128);
         runTests!("Thread tests", tests.thread);
         runTests!("Timeout tests", tests.timeout);
         runTests!("Waitid tests", tests.waitid);
