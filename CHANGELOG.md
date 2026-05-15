@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `SubmissionQueue` now allocates the SQE region with the correct stride
+  (64 B for default rings, 128 B for `SetupFlags.SQE128` rings). Previously
+  the mmap was hardcoded at `entries * 64`, which left an SQE128 ring's
+  trailing `cmd[]` payload outside the mapped region — NOP128 and
+  URING_CMD128 were unusable. `SubmissionQueue.sqes` (typed slice) is
+  replaced internally by a `void*` + `entries` + `stride` trio with a
+  `slot(uint)` ref accessor; the put / putWith hot path is unchanged at
+  the call site.
+
 ### Added
 
 - Linux 6.0+ ops: `Operation.SEND_ZC`, `SENDMSG_ZC`, `READ_MULTISHOT`, `WAITID`

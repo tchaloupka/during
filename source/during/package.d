@@ -2247,7 +2247,7 @@ struct UringDesc
     {
         if (regBuffers) free(cast(void*)&regBuffers[0]);
         if (sq.ring) munmap(sq.ring, sq.ringSize);
-        if (sq.sqes) munmap(cast(void*)&sq.sqes[0], sq.sqes.length * SubmissionEntry.sizeof);
+        if (sq.sqesPtr) munmap(sq.sqesPtr, sq.entries * sq.stride);
         if (cq.ring && cq.ring != sq.ring) munmap(cq.ring, cq.ringSize);
         close(fd);
     }
@@ -2306,14 +2306,21 @@ struct UringDesc
             *((cast(uint*)(sq.ring + params.sq_off.array)) + i) = i;
         }
 
+        // Each SQE is 64 bytes by default, or 128 bytes if the ring was created with
+        // `IORING_SETUP_SQE128`. The standard SubmissionEntry struct is 64 bytes; in SQE128
+        // mode the trailing 64 bytes are reserved for the `cmd[]` payload of URING_CMD128
+        // requests and must be addressable via the mmap region.
+        sq.stride = (params.flags & SetupFlags.SQE128) ? 128 : 64;
+        sq.entries = entries;
+
         auto psqes = mmap(
-            null, entries * SubmissionEntry.sizeof,
+            null, cast(size_t)entries * sq.stride,
             PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE,
             fd, SetupParameters.SUBMISSION_QUEUE_ENTRIES_OFFSET
         );
 
         if (psqes == MAP_FAILED) return -errno;
-        sq.sqes = (cast(SubmissionEntry*)psqes)[0..entries];
+        sq.sqesPtr = psqes;
 
         entries = *cast(uint*)(cq.ring + params.cq_off.ring_entries);
         cq.khead        = cast(uint*)(cq.ring + params.cq_off.head);
@@ -2343,8 +2350,12 @@ struct SubmissionQueue
     void* ring; // pointer to the mmaped region
     size_t ringSize; // size of mmaped memory block
 
-    // mmapped list of entries (fixed length)
-    SubmissionEntry[] sqes;
+    // Raw SQE storage. The stride is 64 for default rings and 128 for `SetupFlags.SQE128`
+    // rings — the kernel always exposes the 64-byte SQE struct at the start of each slot,
+    // and (in SQE128 mode) 64 bytes of trailing `cmd[]` payload for `IORING_OP_URING_CMD128`.
+    void* sqesPtr;
+    uint  entries;
+    uint  stride; // bytes per SQE slot (64 or 128)
 
     uint localTail; // used for batch submission
 
@@ -2363,29 +2374,39 @@ struct SubmissionQueue
         return cast(SubmissionQueueFlags)atomicLoad!(MemoryOrder.raw)(*kflags);
     }
 
-    bool full() const @safe pure { return sqes.length == length; }
+    bool full() const @safe pure { return entries == length; }
 
     size_t length() const @safe pure { return tail - head; }
 
-    size_t capacity() const @safe pure { return sqes.length - length; }
+    size_t capacity() const @safe pure { return entries - length; }
 
-    ref SubmissionEntry next()() @safe pure return
+    /// Return a ref to the slot at `i & ringMask`. Stride-aware: in SQE128 rings, the slot
+    /// covers 128 bytes; the standard SQE fields are in the first 64, the trailing 64 are
+    /// accessible via the `cmd[]` zero-length array on `SubmissionEntry`.
+    pragma(inline, true)
+    ref SubmissionEntry slot(uint i) @system pure return
     {
-        assert(!full, "SumbissionQueue is full");
-        return sqes[localTail++ & ringMask];
+        // `entry-by-byte-offset` to honour the runtime stride.
+        return *cast(SubmissionEntry*)(cast(ubyte*)sqesPtr + cast(size_t)(i & ringMask) * stride);
     }
 
-    void put()(auto ref SubmissionEntry entry) @safe pure
+    ref SubmissionEntry next()() @trusted pure return
     {
         assert(!full, "SumbissionQueue is full");
-        sqes[localTail++ & ringMask] = entry;
+        return slot(localTail++);
+    }
+
+    void put()(auto ref SubmissionEntry entry) @trusted pure
+    {
+        assert(!full, "SumbissionQueue is full");
+        slot(localTail++) = entry;
     }
 
     void put(OP)(auto ref OP op)
         if (!is(OP == SubmissionEntry))
     {
         assert(!full, "SumbissionQueue is full");
-        sqes[localTail++ & ringMask].fill(op);
+        () @trusted { slot(localTail++).fill(op); }();
     }
 
     private void putWith(alias FN, ARGS...)(auto ref ARGS args)
@@ -2399,11 +2420,11 @@ struct SubmissionQueue
             "Alias function must accept at least `ref SubmissionEntry`");
 
         static assert(
-            is(typeof(FN(sqes[localTail & ringMask], args))),
+            is(typeof(FN(slot(localTail), args))),
             "Provided function is not callable with " ~ (Parameters!((ref SubmissionEntry e, ARGS args) {})).stringof);
 
         assert(!full, "SumbissionQueue is full");
-        FN(sqes[localTail++ & ringMask], args);
+        () @trusted { FN(slot(localTail++), args); }();
     }
 
     uint dropped() const @safe pure { return atomicLoad!(MemoryOrder.raw)(*kdropped); }
