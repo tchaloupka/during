@@ -288,6 +288,39 @@ unittest
     nopRoundTrip(io, 3);
 }
 
+// `IORING_NOP_INJECT_RESULT`: the kernel sets `cqe.res` to the value the caller passed in
+// `sqe.len`. Lets test code drive arbitrary error codes through the completion path. Linux
+// 6.13+.
+@("nop inject_result drives custom cqe.res")
+unittest
+{
+    if (!checkKernelVersion(6, 13)) return;
+
+    Uring io;
+    auto res = io.setup();
+    assert(res >= 0);
+
+    enum INJECTED = 1234;
+    io.putWith!(
+        (ref SubmissionEntry e)
+        {
+            e.prepNop();
+            e.nop_flags = IORING_NOP_INJECT_RESULT;
+            e.len = INJECTED;
+            e.user_data = 1;
+        });
+    auto sret = io.submit(0);
+    assert(sret == 1);
+
+    io.wait(1);
+    auto cqe = io.front;
+    scope (exit) io.popFront();
+    if (cqe.res == -EINVAL || cqe.res == -EOPNOTSUPP)
+        return; // older kernel without NOP flag support
+    assert(cqe.res == INJECTED, "INJECT_RESULT should surface sqe.len in cqe.res");
+    assert(cqe.user_data == 1);
+}
+
 // A NOP round-trip on a ring with SINGLE_ISSUER + DEFER_TASKRUN — confirms the flags reach
 // the kernel correctly and don't break the basic submit/wait path. The combo is documented
 // as requiring SINGLE_ISSUER for DEFER_TASKRUN to take effect.
