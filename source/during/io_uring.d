@@ -1088,6 +1088,80 @@ enum SetupFlags : uint
     /// `IORING_SETUP_CQE32`: CQEs are 32 byte
     /// Note: since Linux 5.19
     CQE32 = 1U << 11,
+
+    /**
+     * `IORING_SETUP_SINGLE_ISSUER` (from Linux 6.0)
+     *
+     * Hint that only one task / thread will ever submit on this ring. Lets the kernel skip
+     * synchronisation that would otherwise be needed for shared submission. Misuse (multiple
+     * submitters) is detected and returns `-EEXIST`.
+     */
+    SINGLE_ISSUER = 1U << 12,
+
+    /**
+     * `IORING_SETUP_DEFER_TASKRUN` (from Linux 6.1)
+     *
+     * Defer task_work to run only when the ring is being entered, rather than at the next
+     * kernel/user transition on the submitting task. Eliminates a class of interrupts and
+     * cuts latency for many workloads. Requires `SINGLE_ISSUER`.
+     */
+    DEFER_TASKRUN = 1U << 13,
+
+    /**
+     * `IORING_SETUP_NO_MMAP` (from Linux 6.5)
+     *
+     * Application provides the memory backing the SQ / CQ / SQE rings; the kernel does not
+     * allocate or mmap them. The application passes the pointers via `SetupParameters` and
+     * is responsible for keeping the memory mapped and aligned. Disables `resizeRings`.
+     */
+    NO_MMAP = 1U << 14,
+
+    /**
+     * `IORING_SETUP_REGISTERED_FD_ONLY` (from Linux 6.5)
+     *
+     * The ring fd is only ever accessed via the registered-ring-fd path, never as a real fd.
+     * Allows `io_uring_setup` to skip allocating a real fd at all (it's only put in the
+     * registered-ring slot). Use only when you intend to immediately register the ring fd.
+     */
+    REGISTERED_FD_ONLY = 1U << 15,
+
+    /**
+     * `IORING_SETUP_NO_SQARRAY` (from Linux 6.6)
+     *
+     * Skip the indirect SQ array — head/tail now index the SQE array directly. Saves a small
+     * mmap region. Default for newly-created rings on recent kernels.
+     */
+    NO_SQARRAY = 1U << 16,
+
+    /**
+     * `IORING_SETUP_HYBRID_IOPOLL` (from Linux 6.13)
+     *
+     * Combine `IOPOLL` busy-poll with a fallback to interrupt-driven completion when the
+     * polling task is idle, trading some latency for CPU at low load.
+     */
+    HYBRID_IOPOLL = 1U << 17,
+
+    /**
+     * `IORING_SETUP_CQE_MIXED` (from Linux 6.18)
+     *
+     * Allow a mix of 16- and 32-byte CQEs in the same ring (per-CQE `CQEFlags.F_32` selects).
+     */
+    CQE_MIXED = 1U << 18,
+
+    /**
+     * `IORING_SETUP_SQE_MIXED` (from Linux 6.18)
+     *
+     * Allow a mix of 64- and 128-byte SQEs in the same ring.
+     */
+    SQE_MIXED = 1U << 19,
+
+    /**
+     * `IORING_SETUP_SQ_REWIND` (from Linux 6.18)
+     *
+     * Requires `NO_SQARRAY` and is incompatible with `SQPOLL`. Lets the application rewind
+     * the SQ tail to retry SQEs that have not yet been processed.
+     */
+    SQ_REWIND = 1U << 20,
 }
 
 /// `io_uring_params->features` flags
@@ -1222,6 +1296,28 @@ enum SetupFeatures : uint
 
     /// `IORING_FEAT_LINKED_FILE` (from Linux 5.18)
     LINKED_FILE = 1U << 12,
+
+    /// `IORING_FEAT_REG_REG_RING` (from Linux 6.3)
+    /// The kernel supports `IORING_REGISTER_USE_REGISTERED_RING` — register opcodes can be
+    /// passed the registered-ring fd handle instead of a real fd.
+    REG_REG_RING = 1U << 13,
+
+    /// `IORING_FEAT_RECVSEND_BUNDLE` (from Linux 6.10)
+    /// The kernel recognises `IORING_RECVSEND_BUNDLE` on send/recv SQEs.
+    RECVSEND_BUNDLE = 1U << 14,
+
+    /// `IORING_FEAT_MIN_TIMEOUT` (from Linux 6.13)
+    /// `io_uring_getevents_arg.min_wait_usec` is honoured by the kernel.
+    MIN_TIMEOUT = 1U << 15,
+
+    /// `IORING_FEAT_RW_ATTR` (from Linux 6.13)
+    /// Read/write SQEs support the `attr_ptr` / `attr_type_mask` extension fields.
+    RW_ATTR = 1U << 16,
+
+    /// `IORING_FEAT_NO_IOWAIT` (from Linux 6.16)
+    /// The kernel can be told (via `io_uring_set_iowait`) not to account a ring's blocking
+    /// reads as iowait.
+    NO_IOWAIT = 1U << 17,
 }
 
 /**

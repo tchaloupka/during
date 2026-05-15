@@ -287,3 +287,25 @@ unittest
     assert(rsh == 0, "resizeRings shrink");
     nopRoundTrip(io, 3);
 }
+
+// A NOP round-trip on a ring with SINGLE_ISSUER + DEFER_TASKRUN — confirms the flags reach
+// the kernel correctly and don't break the basic submit/wait path. The combo is documented
+// as requiring SINGLE_ISSUER for DEFER_TASKRUN to take effect.
+@("single_issuer + defer_taskrun NOP round-trip")
+unittest
+{
+    if (!checkKernelVersion(6, 1)) return;
+
+    Uring io;
+    auto res = io.setup(4, SetupFlags.SINGLE_ISSUER | SetupFlags.DEFER_TASKRUN);
+    if (res == -EINVAL) return; // kernel without DEFER_TASKRUN — bail.
+    assert(res >= 0, "setup with SINGLE_ISSUER | DEFER_TASKRUN");
+
+    io.putWith!((ref SubmissionEntry e) { e.prepNop(); e.user_data = 7; });
+    auto sret = io.submit(1);
+    assert(sret == 1);
+    auto cqe = io.front;
+    scope (exit) io.popFront();
+    assert(cqe.res == 0);
+    assert(cqe.user_data == 7);
+}
