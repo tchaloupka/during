@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Linux 7.1 catch-up: `SubmissionEntry.write_stream` byte field, `CQEFlags.F_32`
+  (6.18) and `F_TSTAMP_HW` (6.18) plus `IORING_TIMESTAMP_HW_SHIFT` /
+  `TYPE_SHIFT`, `TimeoutFlags.MULTISHOT` (6.4) and `IMMEDIATE_ARG` (6.18),
+  `PollFlags.ADD_LEVEL` (6.0), `CancelFlags.CANCEL_FD_FIXED` (6.1) /
+  `CANCEL_USERDATA` (6.6) / `CANCEL_OP` (6.6), `IORING_ACCEPT_DONTWAIT` /
+  `_POLL_FIRST` (6.6), `IORING_SEND_VECTORIZED` (7.0),
+  `IORING_MSG_RING_CQE_SKIP` (6.5), `IORING_URING_CMD_FIXED` (6.0) /
+  `_MULTISHOT` (6.18) / `_MASK`, all six `IORING_NOP_*` flags (6.13/6.18),
+  `IORING_RW_ATTR_FLAG_PI` (6.13), `EnterFlags.ABS_TIMER` (6.10) /
+  `NO_IOWAIT` (6.16), `RegisterOpCode.REGISTER_ZCRX_CTRL` (6.16),
+  `SetupParameters.PROVIDED_BUFFER_RING_OFFSET` / `_SHIFT` / `MMAP_MASK`.
+- ZCRX scaffolding: `io_uring_zcrx_rqe`, `io_uring_zcrx_cqe`,
+  `io_uring_zcrx_area_reg`, `IORING_ZCRX_AREA_DMABUF`,
+  `IORING_ZCRX_AREA_SHIFT` / `_MASK`, plus the `io_timespec` struct.
+- `io_uring_napi` struct extended with `opcode` and `op_param` fields to match
+  the kernel 6.18 layout; backward-compatible (zero-initialised callers still
+  get the original register/unregister behaviour). New
+  `IO_URING_NAPI_REGISTER_OP` / `STATIC_ADD_ID` / `STATIC_DEL_ID` opcode
+  constants and `TRACKING_DYNAMIC` / `STATIC` / `INACTIVE` strategy constants.
+
+### Tests
+
+- `tests.api nop inject_result drives custom cqe.res` — sets
+  `IORING_NOP_INJECT_RESULT` + `sqe.len` and asserts the value surfaces in
+  `cqe.res`. Kernel-gated on 6.13.
+- `tests.timeout timeout multishot fires repeatedly` — counts three CQEs
+  from a single `MULTISHOT` timeout and asserts only the last lacks
+  `CQEFlags.MORE`. Kernel-gated on 6.4.
+- `tests.timeout timeout immediate_arg accepts inline nanoseconds` — builds
+  a TIMEOUT SQE by hand with `IMMEDIATE_ARG`, puts the duration in
+  `sqe.addr`, asserts `-ETIME`. Kernel-gated on 6.18.
+- `tests.poll poll add_level on pre-readable eventfd` — arms a level-
+  triggered poll on a pre-readable eventfd, asserts the SQE is accepted
+  and completes. Kernel-gated on 6.0.
+
 ## [0.5.0]
 
 Brings the binding up to liburing 2.9 / Linux 6.x parity. 19 new opcodes, 11 new

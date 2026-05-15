@@ -71,3 +71,44 @@ unittest
         io.popFront();
     }
 }
+
+// `PollFlags.ADD_LEVEL`: switch the poll from the default edge-triggered semantics to
+// level-triggered. An eventfd that's already readable when the poll is armed must complete
+// immediately — without the LEVEL flag, an edge-triggered poll would still fire here too
+// (eventfd's initial readable state acts as an edge from the poll's perspective), so the
+// real signal is that the SQE was accepted without `-EINVAL`. Linux 6.0+.
+@("poll add_level on pre-readable eventfd")
+unittest
+{
+    if (!checkKernelVersion(6, 0)) return;
+
+    Uring io;
+    auto res = io.setup();
+    assert(res >= 0);
+
+    auto evt = eventfd(0, EFD_NONBLOCK);
+    assert(evt != -1, "eventfd()");
+    scope (exit) close(evt);
+
+    // Make the eventfd readable before arming the poll.
+    ulong val = 1;
+    auto w = write(evt, cast(ubyte*)&val, 8);
+    assert(w == 8);
+
+    io.putWith!(
+        (ref SubmissionEntry e, int fd)
+        {
+            e.prepPollAdd(fd, PollEvents.IN, PollFlags.ADD_LEVEL);
+            e.user_data = 1;
+        })(evt);
+
+    auto sret = io.submit(0);
+    assert(sret == 1);
+
+    io.wait(1);
+    auto cqe = io.front;
+    scope (exit) io.popFront();
+    if (cqe.res == -EINVAL || cqe.res == -EOPNOTSUPP)
+        return;
+    assert(cqe.res >= 0, "level-triggered poll on a ready fd should succeed");
+}

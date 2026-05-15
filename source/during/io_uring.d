@@ -104,6 +104,14 @@ struct SubmissionEntry
             ushort addr_len;
             ushort[1] __pad3;
         }
+        /// One-byte payload at the same offset as `addr_len`; selects the write stream for
+        /// rw ops on file systems that expose multiple streams (e.g. zoned namespaces). From
+        /// Linux 7.1.
+        struct
+        {
+            ubyte write_stream;
+            ubyte[3] __pad4;
+        }
     }
 
     union
@@ -420,6 +428,23 @@ enum TimeoutFlags : uint
      * `IORING_TIMEOUT_UPDATE_MASK` (from Linux 5.15)
      */
     UPDATE_MASK = UPDATE | LINK_TIMEOUT_UPDATE,
+
+    /**
+     * `IORING_TIMEOUT_MULTISHOT` (from Linux 6.4)
+     *
+     * Keep firing the timeout repeatedly until cancelled. Each completion carries
+     * `CQEFlags.MORE` while the request remains armed.
+     */
+    MULTISHOT = 1U << 6,
+
+    /**
+     * `IORING_TIMEOUT_IMMEDIATE_ARG` (from Linux 6.18)
+     *
+     * If set, `sqe->addr` is interpreted as a timeout value in nanoseconds rather than a
+     * pointer to a `KernelTimespec`. Lets callers avoid pinning a timespec on the stack
+     * for short relative timeouts.
+     */
+    IMMEDIATE_ARG = 1U << 7,
 }
 
 /**
@@ -476,6 +501,14 @@ enum PollFlags : uint
      * Note: available from Linux 5.13
      */
     UPDATE_USER_DATA = 1U << 2,
+
+    /**
+     * `IORING_POLL_ADD_LEVEL` (from Linux 6.0)
+     *
+     * Switch the poll request from the default edge-triggered semantics to level-triggered.
+     * Useful when arming a poll without first draining the file descriptor.
+     */
+    ADD_LEVEL = 1U << 3,
 }
 
 /**
@@ -502,6 +535,21 @@ enum CancelFlags : uint
     /// Can't be set with IORING_ASYNC_CANCEL_FD, as that's a key selector. Only one may be used at
     /// the time.
     CANCEL_ANY = 1U << 2,
+
+    /// `IORING_ASYNC_CANCEL_FD_FIXED` (from Linux 6.1)
+    /// Like `CANCEL_FD`, but `sqe->fd` is interpreted as a registered-files index.
+    CANCEL_FD_FIXED = 1U << 3,
+
+    /// `IORING_ASYNC_CANCEL_USERDATA` (from Linux 6.6)
+    /// Explicitly key off `user_data` (default for `prepCancel`). Pair with `CANCEL_OP` to
+    /// AND in an opcode match.
+    CANCEL_USERDATA = 1U << 4,
+
+    /// `IORING_ASYNC_CANCEL_OP` (from Linux 6.6)
+    /// Match the cancel against `reg.opcode` (or the SQE's `prepCancel` opcode field) as
+    /// well as the chosen key. Lets callers cancel "all read-like requests" without
+    /// individually tracking their user_data.
+    CANCEL_OP = 1U << 5,
 }
 
 // send/sendmsg and recv/recvmsg flags (sqe->ioprio)
@@ -528,6 +576,10 @@ enum IORING_SEND_ZC_REPORT_USAGE    = 1U << 3;
 /// runs out of buffers. From Linux 6.10.
 enum IORING_RECVSEND_BUNDLE         = 1U << 4;
 
+/// Used with `IORING_OP_SEND` to indicate `sqe->addr` points at a `struct iovec` array. The
+/// effect is similar to `IORING_OP_SENDMSG` without the header overhead. From Linux 7.0.
+enum IORING_SEND_VECTORIZED         = 1U << 5;
+
 /// Reported in `cqe.res` of an `IORING_CQE_F_NOTIF` CQE if `IORING_SEND_ZC_REPORT_USAGE` was set
 /// on the request and the send had to fall back to a copy (at least partially). If unset, the
 /// transfer was performed without a copy.
@@ -546,9 +598,49 @@ enum IO_URING_BPF_FILTER_SZ_STRICT  = 1U << 1;
 /// `io_uring_bpf.cmd_type`: register a classic-BPF filter for an io_uring opcode.
 enum IO_URING_BPF_CMD_FILTER        = 1;
 
+/// `MSG_RING` flag (`sqe->msg_ring_flags`). When set, the target CQE is allocated but not
+/// actually posted — useful for prefetch-style notifications. From Linux 6.5.
+enum IORING_MSG_RING_CQE_SKIP       = 1U << 0;
+
 /// `MSG_RING` flag (`sqe->msg_ring_flags`). When set, the kernel passes the value stored in
 /// `sqe->file_index` as the target CQE's flags field. From Linux 6.3.
 enum IORING_MSG_RING_FLAGS_PASS     = 1U << 1;
+
+/// `IORING_OP_URING_CMD` / `URING_CMD128` flag (`sqe->uring_cmd_flags`). Use the registered
+/// buffer addressed by `sqe->buf_index` for the command's data payload. From Linux 6.0.
+enum IORING_URING_CMD_FIXED         = 1U << 0;
+
+/// `IORING_OP_URING_CMD` flag (from Linux 6.18). Multishot uring_cmd; must be combined with
+/// `IOSQE_BUFFER_SELECT`. Not compatible with `IORING_URING_CMD_FIXED`.
+enum IORING_URING_CMD_MULTISHOT     = 1U << 1;
+
+/// Mask of supported `uring_cmd_flags` bits.
+enum IORING_URING_CMD_MASK          = IORING_URING_CMD_FIXED | IORING_URING_CMD_MULTISHOT;
+
+/// `IORING_OP_NOP` flag (`sqe->nop_flags`). Inject the result code from `sqe->len` into the
+/// CQE's `res` field. Useful for testing error-handling paths. From Linux 6.13.
+enum IORING_NOP_INJECT_RESULT       = 1U << 0;
+
+/// `IORING_OP_NOP` flag — make the NOP go through the file table path (kernel test hook).
+/// From Linux 6.13.
+enum IORING_NOP_FILE                = 1U << 1;
+
+/// `IORING_OP_NOP` flag — make the NOP go through the fixed-files path. From Linux 6.13.
+enum IORING_NOP_FIXED_FILE          = 1U << 2;
+
+/// `IORING_OP_NOP` flag — make the NOP go through the fixed-buffers path. From Linux 6.13.
+enum IORING_NOP_FIXED_BUFFER        = 1U << 3;
+
+/// `IORING_OP_NOP` flag — defer the NOP completion to task_work. From Linux 6.13.
+enum IORING_NOP_TW                  = 1U << 4;
+
+/// `IORING_OP_NOP` flag — post a 32-byte CQE for this NOP. Requires `SetupFlags.CQE32` or
+/// `CQE_MIXED`. From Linux 6.18.
+enum IORING_NOP_CQE32               = 1U << 5;
+
+/// `IORING_RW_ATTR_FLAG_PI` (`sqe->attr_type_mask`). Marks the request as carrying a PI
+/// (protection information) attribute pointed at by `sqe->attr_ptr`. From Linux 6.13.
+enum IORING_RW_ATTR_FLAG_PI         = 1U << 0;
 
 /// Subcommands carried in `sqe->cmd_op` for `IORING_OP_URING_CMD` socket operations.
 enum SOCKET_URING_OP_SIOCINQ      = 0;
@@ -563,7 +655,15 @@ enum SOCKET_URING_OP_GETSOCKNAME  = 5;
 enum BLOCK_URING_CMD_DISCARD      = 0;
 
 /// Accept flags stored in sqe->ioprio (since Linux 5.19)
-enum IORING_ACCEPT_MULTISHOT = 1U << 0;
+enum IORING_ACCEPT_MULTISHOT  = 1U << 0;
+
+/// `IORING_ACCEPT_DONTWAIT` (from Linux 6.6) — never wait, return `-EAGAIN` immediately if
+/// no connection is pending.
+enum IORING_ACCEPT_DONTWAIT   = 1U << 1;
+
+/// `IORING_ACCEPT_POLL_FIRST` (from Linux 6.6) — arm poll first, skip the initial accept
+/// attempt. Reduces useless syscalls in event-loop-style accept patterns.
+enum IORING_ACCEPT_POLL_FIRST = 1U << 2;
 
 /**
  * Flags that can be used with the `accept4(2)` operation.
@@ -879,7 +979,23 @@ enum CQEFlags : uint
     /// If set, the application must ignore this CQE. Used internally for
     /// chained completions.
     SKIP = 1U << 5,
+
+    /// `IORING_CQE_F_32` (from Linux 6.18)
+    /// Marks a 32-byte CQE in a ring configured with `SetupFlags.CQE_MIXED`.
+    F_32 = 1U << 15,
+
+    /// `IORING_CQE_F_TSTAMP_HW` (from Linux 6.18)
+    /// Set on `SOCKET_URING_OP_TX_TIMESTAMP` notification CQEs to indicate the timestamp
+    /// originates from the NIC hardware rather than the kernel software clock.
+    F_TSTAMP_HW = 1U << IORING_TIMESTAMP_HW_SHIFT,
 }
+
+/// Shift used to derive `CQEFlags.F_TSTAMP_HW`. The bit at this position in `cqe->flags`
+/// signals a hardware-sourced timestamp on `SOCKET_URING_OP_TX_TIMESTAMP` CQEs.
+enum IORING_TIMESTAMP_HW_SHIFT   = 16;
+
+/// Shift used to encode the timestamp type bit on TX_TIMESTAMP CQEs.
+enum IORING_TIMESTAMP_TYPE_SHIFT = IORING_TIMESTAMP_HW_SHIFT + 1;
 
 enum {
     CQE_BUFFER_SHIFT = 16, /// Note: available from Linux 5.7
@@ -900,6 +1016,13 @@ struct SetupParameters
     enum ulong COMPLETION_QUEUE_RING_OFFSET = 0x8000000UL;
     /// `IORING_OFF_SQES`: mmap offset for submission entries
     enum ulong SUBMISSION_QUEUE_ENTRIES_OFFSET = 0x10000000UL;
+    /// `IORING_OFF_PBUF_RING`: base mmap offset for provided buffer rings. Combine with a
+    /// per-group offset (`bgid << IORING_OFF_PBUF_SHIFT`). From Linux 6.0.
+    enum ulong PROVIDED_BUFFER_RING_OFFSET   = 0x80000000UL;
+    /// Bit position used to encode the buffer-group id into the mmap offset above.
+    enum uint  PROVIDED_BUFFER_RING_SHIFT    = 16;
+    /// Mask covering the bits used by the magic mmap offsets.
+    enum ulong MMAP_MASK                     = 0xf8000000UL;
 
     /// (output) allocated entries in submission queue
     /// (both ring index `array` and separate entry array at `SUBMISSION_QUEUE_ENTRIES_OFFSET`).
@@ -1683,7 +1806,9 @@ enum RegisterOpCode : uint
     /// Query various aspects of io_uring — see `linux/io_uring/query.h`.
     REGISTER_QUERY           = 35,
 
-    // 36 = IORING_REGISTER_ZCRX_CTRL (auxiliary zcrx configuration, omitted here).
+    /// `IORING_REGISTER_ZCRX_CTRL` (from Linux 6.16)
+    /// Auxiliary zcrx control operations (subcommands defined by `enum zcrx_ctrl_op`).
+    REGISTER_ZCRX_CTRL       = 36,
 
     /// `IORING_REGISTER_BPF_FILTER` (from Linux 6.16)
     /// Register a BPF program that filters completions before they reach userspace.
@@ -1733,6 +1858,14 @@ enum EnterFlags: uint
     ENTER_REGISTERED_RING   = 1U << 4,
 
     /**
+     * `IORING_ENTER_ABS_TIMER` (from Linux 6.10)
+     *
+     * Interpret `io_uring_getevents_arg.ts` as an absolute deadline against the clock
+     * registered with `registerClock` (default `CLOCK_MONOTONIC`).
+     */
+    ABS_TIMER               = 1U << 5,
+
+    /**
      * `IORING_ENTER_EXT_ARG_REG` (from Linux 6.13)
      *
      * Causes `args` to be interpreted as an index into a registered wait-region (see
@@ -1740,6 +1873,14 @@ enum EnterFlags: uint
      * `io_uring_getevents_arg`. Pairs with `IORING_GETEVENTS`.
      */
     EXT_ARG_REG             = 1U << 6,
+
+    /**
+     * `IORING_ENTER_NO_IOWAIT` (from Linux 6.16)
+     *
+     * Tell the kernel not to account time spent blocked in this enter call as iowait. Pairs
+     * with `Uring.setIowait(false)`.
+     */
+    NO_IOWAIT               = 1U << 7,
 }
 
 /// Time specification as defined in kernel headers (used by TIMEOUT operations)
@@ -1754,6 +1895,12 @@ static assert(CompletionQueueRingOffsets.sizeof == 40);
 static assert(SetupParameters.sizeof == 120);
 static assert(SubmissionEntry.sizeof == 64);
 static assert(SubmissionQueueRingOffsets.sizeof == 40);
+static assert(io_uring_napi.sizeof == 16);
+static assert(io_uring_zcrx_rqe.sizeof == 16);
+static assert(io_uring_zcrx_cqe.sizeof == 16);
+static assert(io_uring_zcrx_offsets.sizeof == 32);
+static assert(io_uring_zcrx_area_reg.sizeof == 48);
+static assert(io_timespec.sizeof == 16);
 
 /// Indicating that OP is supported by the kernel
 enum IO_URING_OP_SUPPORTED = 1U << 0;
@@ -1940,18 +2087,85 @@ struct io_uring_buf_status
     uint[8]     resv;
 }
 
+/// `io_uring_napi.opcode` values.
+/// Note: A zero-initialised `io_uring_napi` selects `REGISTER_OP` for backward
+/// compatibility with the original (pre-6.18) two-field layout.
+enum IO_URING_NAPI_REGISTER_OP   = 0;  /// register/unregister (backward-compatible default)
+enum IO_URING_NAPI_STATIC_ADD_ID = 1;  /// add a napi id to the static tracking list
+enum IO_URING_NAPI_STATIC_DEL_ID = 2;  /// remove a napi id from the static tracking list
+
+/// `io_uring_napi.op_param` values when `opcode == IO_URING_NAPI_REGISTER_OP`.
+enum IO_URING_NAPI_TRACKING_DYNAMIC  = 0;
+enum IO_URING_NAPI_TRACKING_STATIC   = 1;
+enum IO_URING_NAPI_TRACKING_INACTIVE = 255;
+
 /**
  * Argument for `IORING_REGISTER_NAPI` / `IORING_UNREGISTER_NAPI`. Configures NAPI busy-poll
  * behaviour for the ring. `busy_poll_to` is the busy-poll timeout in microseconds.
  *
- * Note: Available from Linux 6.9
+ * The struct has a backward-compatible layout: zero-initialised callers leave `opcode` and
+ * `op_param` at 0, selecting the original register/unregister behaviour. Linux 6.18+ users
+ * can write `IO_URING_NAPI_STATIC_*` into `opcode` to manage the static NAPI tracking list.
+ *
+ * Note: Available from Linux 6.9 (extended in 6.18 with opcode/op_param)
  */
 struct io_uring_napi
 {
     uint        busy_poll_to;       /// busy-poll timeout in microseconds
     ubyte       prefer_busy_poll;   /// boolean: prefer busy polling over interrupts
-    ubyte[3]    pad;
-    ulong       resv;
+    ubyte       opcode;             /// `IO_URING_NAPI_*` op selector (6.18+)
+    ubyte[2]    pad;
+    uint        op_param;           /// per-op argument: tracking-strategy or napi id (6.18+)
+    uint        resv;
+}
+
+/**
+ * Unsigned-fields timespec matching `struct io_timespec` from the kernel UAPI. Distinct
+ * from `KernelTimespec` (which uses signed fields, matching `struct __kernel_timespec`).
+ * Used by the TX_TIMESTAMP CQE payload and a few zcrx structs.
+ *
+ * Note: Available from Linux 6.18
+ */
+struct io_timespec
+{
+    ulong       tv_sec;
+    ulong       tv_nsec;
+}
+
+/// Refill queue entry posted by userspace into the zcrx ifq region.
+struct io_uring_zcrx_rqe
+{
+    ulong       off;
+    uint        len;
+    uint        __pad;
+}
+
+/// Completion entry returned by the kernel on the zcrx ifq.
+struct io_uring_zcrx_cqe
+{
+    ulong       off;
+    ulong       __pad;
+}
+
+/// `io_uring_zcrx_area_reg.flags` bits.
+enum IORING_ZCRX_AREA_DMABUF = 1;
+
+/// Bit position of the area id within zcrx offsets. Use `IORING_ZCRX_AREA_MASK` to mask out
+/// the offset bits before extracting the area id with `>> IORING_ZCRX_AREA_SHIFT`.
+enum IORING_ZCRX_AREA_SHIFT = 48;
+
+/// Mask covering the area-id bits of a zcrx offset.
+enum ulong IORING_ZCRX_AREA_MASK = ~(((cast(ulong)1) << IORING_ZCRX_AREA_SHIFT) - 1);
+
+/// Argument for `IORING_REGISTER_ZCRX_IFQ`'s area pointer.
+struct io_uring_zcrx_area_reg
+{
+    ulong       addr;
+    ulong       len;
+    ulong       rq_area_token;
+    uint        flags;          /// see `IORING_ZCRX_AREA_DMABUF`
+    uint        dmabuf_fd;
+    ulong[2]    __resv;
 }
 
 /**
