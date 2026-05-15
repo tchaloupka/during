@@ -406,3 +406,47 @@ unittest
         io.popFront();
     }
 }
+
+@("cqe_mixed advances over 32-byte CQEs")
+unittest
+{
+    if (!checkKernelVersion(6, 18)) return;
+
+    Uring io;
+    auto res = io.setup(4, SetupFlags.CQE_MIXED);
+    if (res == -EINVAL) return;
+    assert(res >= 0, "setup(CQE_MIXED)");
+
+    io.putWith!((ref SubmissionEntry e)
+    {
+        e.prepNop();
+        e.nop_flags = IORING_NOP_CQE32;
+        e.user_data = 1;
+    });
+    auto sret = io.submit(1);
+    assert(sret == 1);
+
+    auto cqe = io.front;
+    if (cqe.res == -EINVAL || cqe.res == -EOPNOTSUPP)
+    {
+        io.popFront();
+        return;
+    }
+    assert(cqe.res == 0);
+    assert(cqe.user_data == 1);
+    assert((cqe.flags & CQEFlags.F_32) != 0, "expected 32-byte CQE marker");
+    io.popFront();
+    assert(io.empty, "popFront must advance past both slots of a 32-byte CQE");
+
+    io.putWith!((ref SubmissionEntry e)
+    {
+        e.prepNop();
+        e.user_data = 2;
+    });
+    sret = io.submit(1);
+    assert(sret == 1);
+    cqe = io.front;
+    scope (exit) io.popFront();
+    assert(cqe.res == 0);
+    assert(cqe.user_data == 2);
+}

@@ -2565,7 +2565,8 @@ struct UringDesc
         cq.ktail        = cast(uint*)(cq.ring + params.cq_off.tail);
         cq.ringMask     = *cast(uint*)(cq.ring + params.cq_off.ring_mask);
         cq.koverflow    = cast(uint*)(cq.ring + params.cq_off.overflow);
-        cq.cqes         = (cast(CompletionEntry*)(cq.ring + params.cq_off.cqes))[0..entries];
+        cq.shift        = (params.flags & SetupFlags.CQE32) ? 1 : 0;
+        cq.cqes         = (cast(CompletionEntry*)(cq.ring + params.cq_off.cqes))[0..entries << cq.shift];
         cq.kflags       = cast(uint*)(cq.ring + params.cq_off.flags);
         return 0;
     }
@@ -2736,6 +2737,7 @@ struct CompletionQueue
     CompletionEntry[] cqes; // array of entries (fixed length)
 
     uint ringMask; // constant mask used to determine array index from head/tail
+    uint shift; // 1 for CQE32 rings, 0 for 16-byte and CQE_MIXED rings
 
     // mmap details (for cleanup)
     void* ring;
@@ -2758,14 +2760,14 @@ struct CompletionQueue
     ref CompletionEntry front() @safe pure return
     {
         assert(!empty, "CompletionQueue is empty");
-        return cqes[localHead & ringMask];
+        return cqes[(localHead & ringMask) << shift];
     }
 
     void popFront() @safe pure
     {
         pragma(inline);
         assert(!empty, "CompletionQueue is empty");
-        localHead++;
+        localHead += cqeSlots(front);
         flushHead();
     }
 
@@ -2775,13 +2777,24 @@ struct CompletionQueue
     ref const(CompletionEntry) peekAt(size_t i) const @safe pure return
     {
         assert(i < length, "peekAt index out of range");
-        return cqes[(localHead + cast(uint)i) & ringMask];
+        uint h = localHead;
+        foreach (_; 0..i)
+        {
+            auto cqe = &cqes[(h & ringMask) << shift];
+            h += cqeSlots(*cqe);
+        }
+        return cqes[(h & ringMask) << shift];
     }
 
     uint overflow() const @safe pure { return atomicLoad!(MemoryOrder.raw)(*koverflow); }
 
     /// Runtime CQ flags - written by the application, shouldn't be modified by the kernel.
     void flags(CQRingFlags flags) @safe pure { atomicStore!(MemoryOrder.raw)(*kflags, flags); }
+}
+
+private uint cqeSlots(ref const CompletionEntry cqe) @safe pure nothrow @nogc
+{
+    return (cqe.flags & CQEFlags.F_32) ? 2 : 1;
 }
 
 // just a helper to use atomicStore more easily with older compilers
