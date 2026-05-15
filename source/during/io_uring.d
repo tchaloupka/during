@@ -41,6 +41,14 @@ struct SubmissionEntry
     {
         ulong addr;                         /// pointer to buffer or iovecs
         ulong splice_off_in;
+
+        /// For socket `uring_cmd` ops (`SOCKET_URING_OP_*`) the kernel reads `level`/`optname`
+        /// out of this slot. From Linux 6.7.
+        struct
+        {
+            uint    level;
+            uint    optname;
+        }
     }
     uint len;                               /// buffer size or number of iovecs
 
@@ -64,9 +72,12 @@ struct SubmissionEntry
         uint                hardlink_flags;     /// from Linux 5.15
         uint                xattr_flags;        /// from Linux 5.19
         uint                msg_ring_flags;     /// from Linux 6.0
+        uint                uring_cmd_flags;    /// from Linux 6.0
         uint                futex_flags;        /// from Linux 6.1
         uint                waitid_flags;       /// from Linux 6.5
         uint                install_fd_flags;   /// from Linux 6.7
+        uint                nop_flags;          /// from Linux 6.10
+        uint                pipe_flags;         /// from Linux 6.10
     }
 
     ulong user_data;                        /// data to be passed back at completion time
@@ -84,6 +95,15 @@ struct SubmissionEntry
         int splice_fd_in;
         uint file_index;        /// from Linux 5.5
         uint zcrx_ifq_idx;      /// from Linux 6.8 — index into the registered zcrx ifq table
+        uint optlen;            /// from Linux 6.7 — option length for socket cmd ops
+
+        /// `addr_len` is used by `prepSendSetAddr` / `prepSendto` to carry the address length
+        /// for `IORING_OP_SEND`. From Linux 6.7.
+        struct
+        {
+            ushort addr_len;
+            ushort[1] __pad3;
+        }
     }
 
     union
@@ -93,6 +113,8 @@ struct SubmissionEntry
             ulong addr3;
             ulong[1] __pad2;
         }
+        /// `optval` for socket `uring_cmd` SET/GETSOCKOPT ops. From Linux 6.7.
+        ulong optval;
         /*
          * If the ring is initialized with `IORING_SETUP_SQE128`, then
          * this field is used for 80 bytes of arbitrary command data
@@ -500,6 +522,12 @@ enum IORING_RECVSEND_FIXED_BUF      = 1U << 2;
 /// (at least partially).
 enum IORING_SEND_ZC_REPORT_USAGE    = 1U << 3;
 
+/// Used with `IOSQE_BUFFER_SELECT` on `IORING_OP_SEND` / `IORING_OP_RECV` to bundle multiple
+/// messages worth of data from the provided buffer ring into a single submission. Each CQE
+/// reports the per-message result; the operation terminates with `-ENOBUFS` when the ring
+/// runs out of buffers. From Linux 6.10.
+enum IORING_RECVSEND_BUNDLE         = 1U << 4;
+
 /// Reported in `cqe.res` of an `IORING_CQE_F_NOTIF` CQE if `IORING_SEND_ZC_REPORT_USAGE` was set
 /// on the request and the send had to fall back to a copy (at least partially). If unset, the
 /// transfer was performed without a copy.
@@ -508,6 +536,22 @@ enum IORING_NOTIF_USAGE_ZC_COPIED   = 1U << 31;
 /// `IORING_OP_FIXED_FD_INSTALL` flags (`sqe->install_fd_flags`). Without this flag the new
 /// real fd is created with `O_CLOEXEC`; setting it skips the close-on-exec bit.
 enum IORING_FIXED_FD_NO_CLOEXEC     = 1U << 0;
+
+/// `MSG_RING` flag (`sqe->msg_ring_flags`). When set, the kernel passes the value stored in
+/// `sqe->file_index` as the target CQE's flags field. From Linux 6.3.
+enum IORING_MSG_RING_FLAGS_PASS     = 1U << 1;
+
+/// Subcommands carried in `sqe->cmd_op` for `IORING_OP_URING_CMD` socket operations.
+enum SOCKET_URING_OP_SIOCINQ      = 0;
+enum SOCKET_URING_OP_SIOCOUTQ     = 1;
+enum SOCKET_URING_OP_GETSOCKOPT   = 2;
+enum SOCKET_URING_OP_SETSOCKOPT   = 3;
+enum SOCKET_URING_OP_TX_TIMESTAMP = 4;
+enum SOCKET_URING_OP_GETSOCKNAME  = 5;
+
+/// Subcommand carried in `sqe->cmd_op` for `IORING_OP_URING_CMD` issued against a block
+/// device file descriptor. Mirrors `BLOCK_URING_CMD_DISCARD` from `<linux/blkdev.h>`.
+enum BLOCK_URING_CMD_DISCARD      = 0;
 
 /// Accept flags stored in sqe->ioprio (since Linux 5.19)
 enum IORING_ACCEPT_MULTISHOT = 1U << 0;
@@ -631,6 +675,17 @@ enum Operation : ubyte
     // available from Linux 6.13
     RECV_ZC = 58,           /// `IORING_OP_RECV_ZC` - zero-copy receive (requires REGISTER_ZCRX_IFQ)
     EPOLL_WAIT = 59,        /// `IORING_OP_EPOLL_WAIT` - async epoll_wait(2)
+
+    // available from Linux 6.13
+    READV_FIXED = 60,       /// `IORING_OP_READV_FIXED` - vectored read against registered buffers
+    WRITEV_FIXED = 61,      /// `IORING_OP_WRITEV_FIXED` - vectored write against registered buffers
+
+    // available from Linux 6.14
+    PIPE = 62,              /// `IORING_OP_PIPE` - async pipe(2)/pipe2(2)
+
+    // available from Linux 6.16 (SQE128 path)
+    NOP128 = 63,            /// `IORING_OP_NOP128` - 128-byte NOP for testing SQE128 rings
+    URING_CMD128 = 64,      /// `IORING_OP_URING_CMD128` - 128-byte uring_cmd
 }
 
 /// sqe->flags

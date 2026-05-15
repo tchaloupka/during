@@ -232,6 +232,77 @@ unittest
     assert(buf[0..256].equal(iota(0, 256)));
 }
 
+// READV_FIXED / WRITEV_FIXED: vectored I/O against registered buffers. We register a single
+// scratch buffer, then issue a writev_fixed of two iovec slices (front+back of the buffer)
+// and a readv_fixed to verify the round-trip.
+@("readv_fixed / writev_fixed round-trip")
+unittest
+{
+    if (!checkKernelVersion(6, 13)) return;
+
+    Uring io;
+    auto res = io.setup();
+    assert(res >= 0, "Error initializing IO");
+
+    auto fname = getTestFileName!"readv_fixed_test";
+    auto fd = openFile(fname, O_CREAT | O_RDWR);
+    scope (exit) { close(fd); unlink(&fname[0]); }
+
+    ubyte[128] regBuf;
+    auto rr = io.registerBuffers(regBuf[]);
+    assert(rr == 0);
+    scope (exit) io.unregisterBuffers();
+
+    ubyte[64] front = void;
+    ubyte[64] back  = void;
+    foreach (i; 0..64) { front[i] = cast(ubyte)i; back[i] = cast(ubyte)(64 + i); }
+    regBuf[0..64]   = front[];
+    regBuf[64..128] = back[];
+
+    iovec[2] wv;
+    wv[0].iov_base = cast(void*)&regBuf[0];   wv[0].iov_len = 64;
+    wv[1].iov_base = cast(void*)&regBuf[64];  wv[1].iov_len = 64;
+
+    io.putWith!(
+        (ref SubmissionEntry e, int f, iovec[] v)
+        {
+            e.prepWritevFixed(f, v, 0, ReadWriteFlags.NONE, 0);
+            e.user_data = 1;
+        })(fd, wv[]);
+    auto sret = io.submit(1);
+    assert(sret == 1);
+    io.wait(1);
+    auto cqe = io.front;
+    if (cqe.res == -EINVAL || cqe.res == -EOPNOTSUPP)
+    {
+        io.popFront();
+        return;
+    }
+    assert(cqe.res == 128, "writev_fixed byte count");
+    io.popFront();
+
+    // Now zero the buffer and read back.
+    regBuf[] = 0;
+    iovec[2] rv;
+    rv[0].iov_base = cast(void*)&regBuf[0];   rv[0].iov_len = 64;
+    rv[1].iov_base = cast(void*)&regBuf[64];  rv[1].iov_len = 64;
+
+    io.putWith!(
+        (ref SubmissionEntry e, int f, iovec[] v)
+        {
+            e.prepReadvFixed(f, v, 0, ReadWriteFlags.NONE, 0);
+            e.user_data = 2;
+        })(fd, rv[]);
+    sret = io.submit(1);
+    assert(sret == 1);
+    io.wait(1);
+    cqe = io.front;
+    scope (exit) io.popFront();
+    assert(cqe.res == 128, "readv_fixed byte count");
+    assert(regBuf[0..64]   == front[]);
+    assert(regBuf[64..128] == back[]);
+}
+
 @("read_multishot")
 unittest
 {

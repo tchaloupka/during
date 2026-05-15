@@ -85,11 +85,11 @@ int setup(ref Uring uring, uint entries, ref const SetupParameters params) @safe
  */
 struct Probe
 {
-    static assert (Operation.max < 64, "Needs to be adjusted");
+    static assert (Operation.max < 128, "Needs to be adjusted");
     private
     {
         io_uring_probe probe;
-        io_uring_probe_op[64] ops;
+        io_uring_probe_op[128] ops;
         int err;
     }
 
@@ -2005,6 +2005,210 @@ ref SubmissionEntry prepRecvZc(return ref SubmissionEntry entry, int sockfd, uin
     entry.prepRW(Operation.RECV_ZC, sockfd, null, len, 0);
     entry.msg_flags = flags;
     entry.zcrx_ifq_idx = ifqIdx;
+    return entry;
+}
+
+/**
+ * Prepares vectored read against a registered buffer (`IORING_OP_READV_FIXED`). Each iovec
+ * must point into the registered buffer identified by `bufIndex`. `rwFlags` accepts the same
+ * bits as `preadv2(2)` (e.g. `RWF_HIPRI`, `RWF_NOWAIT`).
+ *
+ * Note: Available from Linux 6.13
+ */
+ref SubmissionEntry prepReadvFixed(return ref SubmissionEntry entry,
+    int fd, const(iovec)[] iovecs, long offset, ReadWriteFlags rwFlags, ushort bufIndex) @trusted
+{
+    assert(iovecs.length && iovecs.length <= int.max, "iovecs length");
+    entry.prepRW(Operation.READV_FIXED, fd, cast(void*)iovecs.ptr, cast(uint)iovecs.length, offset);
+    entry.rw_flags = rwFlags;
+    entry.buf_index = bufIndex;
+    return entry;
+}
+
+/**
+ * Prepares vectored write against a registered buffer (`IORING_OP_WRITEV_FIXED`). See
+ * `prepReadvFixed` for parameter semantics.
+ *
+ * Note: Available from Linux 6.13
+ */
+ref SubmissionEntry prepWritevFixed(return ref SubmissionEntry entry,
+    int fd, const(iovec)[] iovecs, long offset, ReadWriteFlags rwFlags, ushort bufIndex) @trusted
+{
+    assert(iovecs.length && iovecs.length <= int.max, "iovecs length");
+    entry.prepRW(Operation.WRITEV_FIXED, fd, cast(void*)iovecs.ptr, cast(uint)iovecs.length, offset);
+    entry.rw_flags = rwFlags;
+    entry.buf_index = bufIndex;
+    return entry;
+}
+
+/**
+ * Prepares async `pipe2(2)` (`IORING_OP_PIPE`). `fds[0]` will receive the read end, `fds[1]`
+ * the write end on completion. `pipeFlags` accepts `O_CLOEXEC`, `O_DIRECT`, `O_NONBLOCK` —
+ * same bits as the `flags` argument of `pipe2(2)`.
+ *
+ * Note: Available from Linux 6.14
+ */
+ref SubmissionEntry prepPipe(return ref SubmissionEntry entry,
+    return ref int[2] fds, int pipeFlags = 0) @trusted
+{
+    entry.prepRW(Operation.PIPE, 0, cast(void*)fds.ptr, 0, 0);
+    entry.pipe_flags = cast(uint)pipeFlags;
+    return entry;
+}
+
+/**
+ * Prepares async `pipe2(2)` writing the fds into the registered files table starting at
+ * `fileIndex`. `fileIndex == IORING_FILE_INDEX_ALLOC` asks the kernel to pick two free slots.
+ * The two ends land in consecutive table slots; on completion the CQE `res` reports the
+ * starting slot.
+ *
+ * Note: Available from Linux 6.14
+ */
+ref SubmissionEntry prepPipeDirect(return ref SubmissionEntry entry,
+    return ref int[2] fds, uint fileIndex, int pipeFlags = 0) @trusted
+{
+    entry.prepPipe(fds, pipeFlags);
+    // The kernel encodes "alloc" as the special sentinel; otherwise the value is offset by 1
+    // so that 0 can still mean "no fixed slot". This mirrors upstream io_uring_prep_pipe_direct.
+    entry.file_index = (fileIndex == IORING_FILE_INDEX_ALLOC) ? IORING_FILE_INDEX_ALLOC : (fileIndex + 1);
+    return entry;
+}
+
+/**
+ * Prepares a 128-byte `nop` (`IORING_OP_NOP128`). Only meaningful on rings created with
+ * `SetupFlags.SQE128` — exposes the second-half SQE payload for kernels/code that need to
+ * exercise the SQE128 layout.
+ *
+ * Note: Available from Linux 6.16
+ */
+ref SubmissionEntry prepNop128(return ref SubmissionEntry entry) @safe
+{
+    entry.prepRW(Operation.NOP128, -1, null, 0, 0);
+    return entry;
+}
+
+/**
+ * Prepares a `uring_cmd` (`IORING_OP_URING_CMD`). `cmdOp` is the sub-command (e.g. one of
+ * `SOCKET_URING_OP_*` for socket fds, or a driver-specific value such as
+ * `BLOCK_URING_CMD_DISCARD` for block-device fds).
+ *
+ * The 16-byte command payload should be written into `entry.addr3` etc. by callers (or use
+ * a higher-level helper such as `prepCmdSock`). Use `prepUringCmd128` and `SetupFlags.SQE128`
+ * for commands needing the 80-byte large-SQE payload.
+ *
+ * Note: Available from Linux 5.19
+ */
+ref SubmissionEntry prepUringCmd(return ref SubmissionEntry entry, int fd, uint cmdOp) @safe
+{
+    entry.opcode = Operation.URING_CMD;
+    entry.fd = fd;
+    entry.cmd_op = cmdOp;
+    entry.__pad1 = 0;
+    entry.addr = 0;
+    entry.len = 0;
+    return entry;
+}
+
+/// ditto, but for 128-byte SQEs.
+ref SubmissionEntry prepUringCmd128(return ref SubmissionEntry entry, int fd, uint cmdOp) @safe
+{
+    entry.prepUringCmd(fd, cmdOp);
+    entry.opcode = Operation.URING_CMD128;
+    return entry;
+}
+
+/**
+ * Prepares a socket `uring_cmd` (`SOCKET_URING_OP_GETSOCKOPT` / `SOCKET_URING_OP_SETSOCKOPT`,
+ * etc.). Mirrors `io_uring_prep_cmd_sock`.
+ *
+ * Note: Available from Linux 6.7
+ */
+ref SubmissionEntry prepCmdSock(return ref SubmissionEntry entry, uint cmdOp, int fd,
+    uint level, uint optname, scope void* optval, uint optlen) @trusted
+{
+    entry.prepUringCmd(fd, cmdOp);
+    entry.optval = cast(ulong)optval;
+    entry.optname = optname;
+    entry.optlen = optlen;
+    entry.level = level;
+    return entry;
+}
+
+/**
+ * Prepares `SOCKET_URING_OP_GETSOCKNAME` (`peer = 0`) or `SOCKET_URING_OP_GETPEERNAME`
+ * (`peer = 1`). The socket name is written to `*sockaddr_len` bytes of `*sockaddr`; on
+ * completion `*sockaddr_len` is updated.
+ *
+ * Note: Available from Linux 6.7
+ */
+ref SubmissionEntry prepCmdGetsockname(return ref SubmissionEntry entry, int fd,
+    sockaddr* sockaddr_, socklen_t* sockaddr_len, int peer) @trusted
+{
+    entry.prepUringCmd(fd, SOCKET_URING_OP_GETSOCKNAME);
+    entry.addr = cast(ulong)sockaddr_;
+    entry.addr3 = cast(ulong)sockaddr_len;
+    entry.optlen = cast(uint)peer;
+    return entry;
+}
+
+/**
+ * Prepares `BLOCK_URING_CMD_DISCARD` (`IORING_OP_URING_CMD` over a block device fd). Issues
+ * an asynchronous discard of `nbytes` bytes starting at `offset`.
+ *
+ * Note: Available from Linux 6.10
+ */
+ref SubmissionEntry prepCmdDiscard(return ref SubmissionEntry entry, int fd,
+    ulong offset, ulong nbytes) @safe
+{
+    entry.prepUringCmd(fd, BLOCK_URING_CMD_DISCARD);
+    entry.addr = offset;
+    entry.addr3 = nbytes;
+    return entry;
+}
+
+/**
+ * Prepares `IORING_OP_MSG_RING` with `IORING_MSG_RING_FLAGS_PASS` so the receiving ring
+ * observes the requested `cqeFlags` on the target CQE. Mirrors `io_uring_prep_msg_ring_cqe_flags`.
+ *
+ * Note: Available from Linux 6.3
+ */
+ref SubmissionEntry prepMsgRingCqeFlags(return ref SubmissionEntry entry,
+    int fd, uint len, ulong data, uint flags, uint cqeFlags) @safe
+{
+    entry.prepRW(Operation.MSG_RING, fd, null, len, data);
+    entry.msg_ring_flags = IORING_MSG_RING_FLAGS_PASS | flags;
+    entry.file_index = cqeFlags;
+    return entry;
+}
+
+/**
+ * Prepares a bundled send (`IORING_OP_SEND` with `IORING_RECVSEND_BUNDLE`). Bundles fan out
+ * over the provided buffer ring identified by `bufGroup`: the kernel will send as much data
+ * as the ring has available in one submission, generating one CQE per buffer consumed.
+ *
+ * Note: Available from Linux 6.10
+ */
+ref SubmissionEntry prepSendBundle(return ref SubmissionEntry entry,
+    int sockfd, MsgFlags flags, ushort bufGroup) @safe
+{
+    entry.prepSend(sockfd, null, flags);
+    entry.ioprio = cast(ushort)(entry.ioprio | IORING_RECVSEND_BUNDLE);
+    entry.flags = cast(SubmissionEntryFlags)(entry.flags | SubmissionEntryFlags.BUFFER_SELECT);
+    entry.buf_group = bufGroup;
+    return entry;
+}
+
+/**
+ * Attach a destination address to a previously-prepared `prepSend` SQE — turns it into the
+ * equivalent of `sendto(2)`. Useful for `SOCK_DGRAM` sockets.
+ *
+ * Note: Available from Linux 6.10
+ */
+ref SubmissionEntry prepSendSetAddr(ADDR)(return ref SubmissionEntry entry,
+    ref const ADDR dest, ushort addrLen) @trusted
+{
+    entry.addr2 = cast(ulong)cast(void*)&dest;
+    entry.addr_len = addrLen;
     return entry;
 }
 
