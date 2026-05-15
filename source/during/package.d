@@ -57,6 +57,9 @@ int setup(ref Uring uring, uint entries = 128, SetupFlags flags = SetupFlags.NON
 int setup(ref Uring uring, uint entries, ref const SetupParameters params) @safe
 {
     assert(uring.payload is null, "Uring is already initialized");
+    if (params.flags & (SetupFlags.NO_MMAP | SetupFlags.REGISTERED_FD_ONLY))
+        return -EINVAL; // this wrapper currently owns the ring mmap lifecycle
+
     uring.payload = () @trusted { return cast(UringDesc*)calloc(1, UringDesc.sizeof); }();
     if (uring.payload is null) return -errno;
 
@@ -301,6 +304,20 @@ struct Uring
     }
 
     /**
+     * Advances the userspace submission queue and returns a slot suitable for a 128-byte SQE
+     * (`Operation.NOP128` / `Operation.URING_CMD128`). On `SetupFlags.SQE128` rings this is
+     * equivalent to `next`; on `SetupFlags.SQE_MIXED` rings it reserves two contiguous 64-byte
+     * slots, inserting a skipped NOP if needed to avoid wrapping a 128-byte SQE over the ring end.
+     */
+    ref SubmissionEntry next128()() @safe pure
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (payload.params.flags & (SetupFlags.SQE128 | SetupFlags.SQE_MIXED),
+        "Ring was not created with SQE128 or SQE_MIXED")
+    {
+        return payload.sq.next128();
+    }
+
+    /**
      * If completion queue is full, the new event maybe dropped.
      * This value records number of dropped events.
      */
@@ -363,6 +380,7 @@ struct Uring
             }
             immutable r = io_uring_enter(payload.fd, len, 0, flags, args);
             if (_expect(r < 0, false)) return -errno;
+            payload.sq.submitted(r);
             return r;
         }
         return 0;
@@ -432,6 +450,7 @@ struct Uring
             }
             immutable r = io_uring_enter(payload.fd, len, want, flags, args);
             if (_expect(r < 0, false)) return -errno;
+            payload.sq.submitted(r);
             return r;
         }
         return wait(want); // just simple wait
@@ -999,6 +1018,7 @@ struct Uring
         immutable r = io_uring_enter(
             payload.fd, len, want, flags, cast(const(sigset_t*))cast(size_t)regIndex);
         if (_expect(r < 0, false)) return -errno;
+        payload.sq.submitted(r);
         return r;
     }
 
@@ -2511,9 +2531,12 @@ struct UringDesc
         // Indirection array of indexes to the sqes array (head and tail are pointing to this array).
         // As we don't need some fancy mappings, just initialize it with constant indexes and forget about it.
         // That way, head and tail are actually indexes to our sqes array.
-        foreach (i; 0..entries)
+        if (!(params.flags & SetupFlags.NO_SQARRAY))
         {
-            *((cast(uint*)(sq.ring + params.sq_off.array)) + i) = i;
+            foreach (i; 0..entries)
+            {
+                *((cast(uint*)(sq.ring + params.sq_off.array)) + i) = i;
+            }
         }
 
         // Each SQE is 64 bytes by default, or 128 bytes if the ring was created with
@@ -2522,6 +2545,8 @@ struct UringDesc
         // requests and must be addressable via the mmap region.
         sq.stride = (params.flags & SetupFlags.SQE128) ? 128 : 64;
         sq.entries = entries;
+        sq.rewind = (params.flags & SetupFlags.SQ_REWIND) != 0;
+        sq.sqeMixed = (params.flags & SetupFlags.SQE_MIXED) != 0;
 
         auto psqes = mmap(
             null, cast(size_t)entries * sq.stride,
@@ -2566,17 +2591,30 @@ struct SubmissionQueue
     void* sqesPtr;
     uint  entries;
     uint  stride; // bytes per SQE slot (64 or 128)
+    bool  rewind;
+    bool  sqeMixed;
 
     uint localTail; // used for batch submission
 
-    uint head() const @safe pure { return atomicLoad!(MemoryOrder.acq)(*khead); }
+    uint head() const @safe pure
+    {
+        return rewind ? 0 : atomicLoad!(MemoryOrder.acq)(*khead);
+    }
+
     uint tail() const @safe pure { return localTail; }
 
     void flushTail() @safe pure
     {
         pragma(inline, true);
+        if (rewind) return;
         // debug printf("SQ updating tail: %d\n", localTail);
         atomicStore!(MemoryOrder.rel)(*ktail, localTail);
+    }
+
+    void submitted(int submitted) @safe pure
+    {
+        pragma(inline, true);
+        if (rewind && submitted > 0) localTail = 0;
     }
 
     SubmissionQueueFlags flags() const @safe pure
@@ -2606,10 +2644,23 @@ struct SubmissionQueue
         return slot(localTail++);
     }
 
+    ref SubmissionEntry next128()() @trusted pure return
+    {
+        if (!sqeMixed) return next();
+
+        auto idx = reserve128Slot();
+        return slot(idx);
+    }
+
     void put()(auto ref SubmissionEntry entry) @trusted pure
     {
-        assert(!full, "SumbissionQueue is full");
-        slot(localTail++) = entry;
+        if (sqeMixed && is128Operation(entry.opcode))
+            slot(reserve128Slot()) = entry;
+        else
+        {
+            assert(!full, "SumbissionQueue is full");
+            slot(localTail++) = entry;
+        }
     }
 
     void put(OP)(auto ref OP op)
@@ -2638,6 +2689,37 @@ struct SubmissionQueue
     }
 
     uint dropped() const @safe pure { return atomicLoad!(MemoryOrder.raw)(*kdropped); }
+
+    private uint reserve128Slot() @trusted pure
+    {
+        assert(sqeMixed, "Ring was not created with SQE_MIXED");
+
+        auto h = head;
+        auto t = localTail;
+        if (((t + 1) & ringMask) == 0)
+        {
+            assert((t + 2) - h < entries, "SumbissionQueue does not have room for wrapped SQE128");
+            auto pad = &slot(t);
+            *pad = SubmissionEntry.init;
+            (*pad).opcode = Operation.NOP;
+            (*pad).fd = -1;
+            (*pad).flags = SubmissionEntryFlags.CQE_SKIP_SUCCESS;
+            localTail = t + 1;
+            t = localTail;
+        }
+        else
+        {
+            assert((t + 1) - h < entries, "SumbissionQueue does not have room for SQE128");
+        }
+
+        localTail = t + 2;
+        return t;
+    }
+}
+
+private bool is128Operation(Operation op) @safe pure nothrow @nogc
+{
+    return op == Operation.NOP128 || op == Operation.URING_CMD128;
 }
 
 struct CompletionQueue

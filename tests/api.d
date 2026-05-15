@@ -309,3 +309,67 @@ unittest
     assert(cqe.res == 0);
     assert(cqe.user_data == 7);
 }
+
+@("no_mmap setup is rejected by wrapper")
+unittest
+{
+    if (!checkKernelVersion(6, 5)) return;
+
+    SetupParameters params;
+    params.flags = SetupFlags.NO_MMAP;
+
+    Uring io;
+    auto res = io.setup(4, params);
+    assert(res == -EINVAL, "NO_MMAP requires caller-owned ring memory, which this wrapper does not expose");
+
+    params.flags = SetupFlags.NO_MMAP | SetupFlags.REGISTERED_FD_ONLY;
+    Uring io2;
+    res = io2.setup(4, params);
+    assert(res == -EINVAL, "REGISTERED_FD_ONLY depends on the unsupported NO_MMAP path");
+}
+
+@("no_sqarray NOP round-trip")
+unittest
+{
+    if (!checkKernelVersion(6, 6)) return;
+
+    Uring io;
+    auto res = io.setup(4, SetupFlags.NO_SQARRAY);
+    if (res == -EINVAL) return;
+    assert(res >= 0, "setup(NO_SQARRAY)");
+
+    io.putWith!((ref SubmissionEntry e) { e.prepNop(); e.user_data = 1; });
+    auto sret = io.submit(1);
+    assert(sret == 1);
+    auto cqe = io.front;
+    scope (exit) io.popFront();
+    assert(cqe.res == 0);
+    assert(cqe.user_data == 1);
+}
+
+@("sq_rewind submits fresh entries from slot zero")
+unittest
+{
+    if (!checkKernelVersion(6, 18)) return;
+
+    Uring io;
+    auto res = io.setup(4, SetupFlags.NO_SQARRAY | SetupFlags.SQ_REWIND);
+    if (res == -EINVAL) return;
+    assert(res >= 0, "setup(SQ_REWIND)");
+
+    foreach (tag; 1UL .. 3UL)
+    {
+        io.putWith!(
+            (ref SubmissionEntry e, ulong t)
+            {
+                e.prepNop();
+                e.user_data = t;
+            })(tag);
+        auto sret = io.submit(1);
+        assert(sret == 1);
+        auto cqe = io.front;
+        assert(cqe.res == 0);
+        assert(cqe.user_data == tag);
+        io.popFront();
+    }
+}
