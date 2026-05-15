@@ -537,6 +537,15 @@ enum IORING_NOTIF_USAGE_ZC_COPIED   = 1U << 31;
 /// real fd is created with `O_CLOEXEC`; setting it skips the close-on-exec bit.
 enum IORING_FIXED_FD_NO_CLOEXEC     = 1U << 0;
 
+/// `io_uring_bpf_filter.flags`: deny any operation that has no explicit filter installed.
+enum IO_URING_BPF_FILTER_DENY_REST  = 1U << 0;
+
+/// `io_uring_bpf_filter.flags`: require the caller-provided PDU size to exactly match the op.
+enum IO_URING_BPF_FILTER_SZ_STRICT  = 1U << 1;
+
+/// `io_uring_bpf.cmd_type`: register a classic-BPF filter for an io_uring opcode.
+enum IO_URING_BPF_CMD_FILTER        = 1;
+
 /// `MSG_RING` flag (`sqe->msg_ring_flags`). When set, the kernel passes the value stored in
 /// `sqe->file_index` as the target CQE's flags field. From Linux 6.3.
 enum IORING_MSG_RING_FLAGS_PASS     = 1U << 1;
@@ -1549,6 +1558,40 @@ enum RegisterOpCode : uint
 
     /// `IORING_UNREGISTER_NAPI` (from Linux 6.9)
     UNREGISTER_NAPI          = 28,
+
+    /// `IORING_REGISTER_CLOCK` (from Linux 6.10)
+    /// Select the clock source used by ring-side timeouts.
+    REGISTER_CLOCK           = 29,
+
+    /// `IORING_REGISTER_CLONE_BUFFERS` (from Linux 6.10)
+    /// Clone the registered buffer table from a source ring into this ring.
+    REGISTER_CLONE_BUFFERS   = 30,
+
+    /// `IORING_REGISTER_SEND_MSG_RING` (from Linux 6.10)
+    /// Synchronously send an `IORING_OP_MSG_RING` SQE without owning a ring.
+    REGISTER_SEND_MSG_RING   = 31,
+
+    /// `IORING_REGISTER_ZCRX_IFQ` (from Linux 6.11)
+    /// Register a NIC hardware receive queue for zerocopy RX.
+    REGISTER_ZCRX_IFQ        = 32,
+
+    /// `IORING_REGISTER_RESIZE_RINGS` (from Linux 6.12)
+    /// Resize the SQ / CQ of an existing ring without re-creating it.
+    REGISTER_RESIZE_RINGS    = 33,
+
+    /// `IORING_REGISTER_MEM_REGION` (from Linux 6.13)
+    /// Register a user-provided memory region (currently used by the wait_reg API).
+    REGISTER_MEM_REGION      = 34,
+
+    /// `IORING_REGISTER_QUERY` (from Linux 6.15)
+    /// Query various aspects of io_uring — see `linux/io_uring/query.h`.
+    REGISTER_QUERY           = 35,
+
+    // 36 = IORING_REGISTER_ZCRX_CTRL (auxiliary zcrx configuration, omitted here).
+
+    /// `IORING_REGISTER_BPF_FILTER` (from Linux 6.16)
+    /// Register a BPF program that filters completions before they reach userspace.
+    REGISTER_BPF_FILTER      = 37,
 }
 
 /* io-wq worker categories */
@@ -1592,6 +1635,15 @@ enum EnterFlags: uint
      * support for an io_uring_register(2) API that allows to register the ring fds themselves.
      */
     ENTER_REGISTERED_RING   = 1U << 4,
+
+    /**
+     * `IORING_ENTER_EXT_ARG_REG` (from Linux 6.13)
+     *
+     * Causes `args` to be interpreted as an index into a registered wait-region (see
+     * `Uring.registerWaitReg` / `Uring.submitAndWaitReg`) rather than as a pointer to
+     * `io_uring_getevents_arg`. Pairs with `IORING_GETEVENTS`.
+     */
+    EXT_ARG_REG             = 1U << 6,
 }
 
 /// Time specification as defined in kernel headers (used by TIMEOUT operations)
@@ -1730,6 +1782,41 @@ struct io_uring_file_index_range
 }
 
 /**
+ * Classic-BPF filter registration payload for `IORING_REGISTER_BPF_FILTER`.
+ * `filter_ptr` points at an array of `struct sock_filter` instructions and `filter_len`
+ * is the number of instructions in that array.
+ *
+ * Note: Available from Linux 6.16
+ */
+struct io_uring_bpf_filter
+{
+    uint        opcode;
+    uint        flags;
+    uint        filter_len;
+    ubyte       pdu_size;
+    ubyte[3]    resv;
+    ulong       filter_ptr;
+    ulong[5]    resv2;
+}
+
+static assert(io_uring_bpf_filter.sizeof == 64);
+
+/**
+ * Argument for `IORING_REGISTER_BPF_FILTER`.
+ *
+ * Note: Available from Linux 6.16
+ */
+struct io_uring_bpf
+{
+    ushort                  cmd_type;
+    ushort                  cmd_flags;
+    uint                    resv;
+    io_uring_bpf_filter     filter;
+}
+
+static assert(io_uring_bpf.sizeof == 72);
+
+/**
  * Single entry passed to `IORING_OP_FUTEX_WAITV`. Mirrors `struct futex_waitv` from
  * `<linux/futex.h>`.
  *
@@ -1769,6 +1856,125 @@ struct io_uring_napi
     ubyte       prefer_busy_poll;   /// boolean: prefer busy polling over interrupts
     ubyte[3]    pad;
     ulong       resv;
+}
+
+/**
+ * Argument for `IORING_REGISTER_CLOCK`. `clockid` is a `CLOCK_*` value from `<time.h>`
+ * (e.g. `CLOCK_MONOTONIC`, `CLOCK_REALTIME`, `CLOCK_BOOTTIME`).
+ *
+ * Note: Available from Linux 6.10
+ */
+struct io_uring_clock_register
+{
+    uint        clockid;
+    uint[3]     __resv;
+}
+
+/// `io_uring_clone_buffers.flags` bits.
+enum IORING_REGISTER_SRC_REGISTERED = 1U << 0;
+enum IORING_REGISTER_DST_REPLACE    = 1U << 1;
+
+/**
+ * Argument for `IORING_REGISTER_CLONE_BUFFERS`. Copies `nr` registered buffers from the ring
+ * identified by `src_fd` into this ring starting at slot `dst_off`. `nr == 0` clones all of
+ * source's registered buffers.
+ *
+ * Note: Available from Linux 6.10
+ */
+struct io_uring_clone_buffers
+{
+    uint        src_fd;
+    uint        flags;
+    uint        src_off;
+    uint        dst_off;
+    uint        nr;
+    uint[3]     pad;
+}
+
+/// `io_uring_region_desc.flags` — see `IORING_MEM_REGION_TYPE_USER`.
+enum IORING_MEM_REGION_TYPE_USER = 1;
+
+/// `io_uring_mem_region_reg.flags` bits.
+enum IORING_MEM_REGION_REG_WAIT_ARG = 1;
+
+/**
+ * Descriptor of a memory region exposed to (or owned by) the kernel via
+ * `IORING_REGISTER_MEM_REGION`.
+ *
+ * Note: Available from Linux 6.13
+ */
+struct io_uring_region_desc
+{
+    ulong       user_addr;
+    ulong       size;
+    uint        flags;          /// `IORING_MEM_REGION_TYPE_USER`
+    uint        id;
+    ulong       mmap_offset;
+    ulong[4]    __resv;
+}
+
+/**
+ * Argument for `IORING_REGISTER_MEM_REGION`. `region_uptr` points at the `io_uring_region_desc`.
+ *
+ * Note: Available from Linux 6.13
+ */
+struct io_uring_mem_region_reg
+{
+    ulong       region_uptr;    /// pointer to `io_uring_region_desc`
+    ulong       flags;          /// e.g. `IORING_MEM_REGION_REG_WAIT_ARG`
+    ulong[2]    __resv;
+}
+
+/// Offsets the kernel reports for a registered zcrx interface queue.
+struct io_uring_zcrx_offsets
+{
+    uint        head;
+    uint        tail;
+    uint        rqes;
+    uint        __resv2;
+    ulong[2]    __resv;
+}
+
+/**
+ * Argument for `IORING_REGISTER_ZCRX_IFQ`. Pins a NIC hardware receive queue (`if_idx`/`if_rxq`)
+ * to this ring for zerocopy receive. `area_ptr` and `region_ptr` point at the userspace
+ * buffer area and the io_uring memory region respectively.
+ *
+ * Note: Available from Linux 6.11. Functionally usable only on hosts with a supported NIC.
+ */
+struct io_uring_zcrx_ifq_reg
+{
+    uint        if_idx;
+    uint        if_rxq;
+    uint        rq_entries;
+    uint        flags;
+    ulong       area_ptr;       /// pointer to `io_uring_zcrx_area_reg`
+    ulong       region_ptr;     /// pointer to `io_uring_region_desc`
+    io_uring_zcrx_offsets offsets;
+    uint        zcrx_id;
+    uint        rx_buf_len;
+    ulong[3]    __resv;
+}
+
+/**
+ * Wait-registration entry passed to `IORING_REGISTER_MEM_REGION` with
+ * `IORING_MEM_REGION_REG_WAIT_ARG` set. Each entry pre-configures a wait timeout (`ts`),
+ * minimum wait (`min_wait_usec`), and signal mask for later use via
+ * `Uring.submitAndWaitReg(want, regIndex)`.
+ *
+ * Note: Available from Linux 6.13. Note that liburing 2.9 itself stubs
+ * `io_uring_register_wait_reg` to return `-EINVAL`, so usage today goes through the raw
+ * `MEM_REGION` register opcode.
+ */
+struct io_uring_reg_wait
+{
+    KernelTimespec      ts;
+    uint                min_wait_usec;
+    uint                flags;
+    ulong               sigmask;
+    uint                sigmask_sz;
+    uint[3]             pad;
+    ulong[2]            pad2;
 }
 
 /// `futex_waitv.flags` and `prepFutex*` `futex_flags` parameter bits.

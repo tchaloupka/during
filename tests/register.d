@@ -243,3 +243,58 @@ unittest
 {
     static assert(Operation.RECV_ZC == 58);
 }
+
+// cloneBuffers across two rings: register a buffer in `src`, clone to `dst`, then read
+// through `dst` using a fixed-buffer read to prove the buffer is accessible via dst's
+// buf_index.
+@("cloneBuffers shares registered buffer with destination ring")
+unittest
+{
+    if (!checkKernelVersion(6, 10)) return;
+
+    Uring src;
+    auto rs = src.setup();
+    assert(rs >= 0, "src setup");
+    Uring dst;
+    auto rd = dst.setup();
+    assert(rd >= 0, "dst setup");
+
+    // Register a 128-byte buffer in src.
+    ubyte[128] buf;
+    foreach (i, ref b; buf) b = cast(ubyte)i;
+    auto rr = src.registerBuffers(buf[]);
+    assert(rr == 0, "src registerBuffers");
+
+    // Clone it into dst.
+    auto cr = dst.cloneBuffers(src);
+    if (cr == -EINVAL || cr == -EOPNOTSUPP) return; // kernel without clone_buffers
+    assert(cr == 0, "cloneBuffers");
+
+    // Use the cloned buffer for a fixed read via dst.
+    auto fname = getTestFileName!"clone_buffers_test";
+    auto fd = open(&fname[0], O_CREAT | O_RDWR, 0x1a4);
+    assert(fd >= 0);
+    scope (exit) { close(fd); unlink(&fname[0]); }
+    ubyte[16] payload = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+    auto w = write(fd, &payload[0], payload.length);
+    assert(w == payload.length);
+    auto lr = lseek(fd, 0, 0);
+    assert(lr == 0);
+
+    // Zero the buffer in src's address space (it's shared with dst by clone), then read
+    // through dst using the cloned buf_index=0.
+    buf[] = 0;
+    dst.putWith!(
+        (ref SubmissionEntry e, int f, ubyte[] b)
+        {
+            e.prepReadFixed(f, 0, b, 0);
+            e.user_data = 1;
+        })(fd, buf[0..payload.length]);
+    auto sret = dst.submit(1);
+    assert(sret == 1);
+    dst.wait(1);
+    auto cqe = dst.front;
+    scope (exit) dst.popFront();
+    assert(cqe.res == cast(int)payload.length, "fixed read via cloned buffer");
+    assert(buf[0..payload.length] == payload[]);
+}

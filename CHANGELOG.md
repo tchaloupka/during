@@ -65,6 +65,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `level`/`optname` overlay required by socket `uring_cmd` ops.
 - Bumped the `Probe` capacity from 64 to 128 ops to make room for the new
   opcodes.
+- Linux 6.10+ register opcodes: `RegisterOpCode.REGISTER_CLOCK`,
+  `REGISTER_CLONE_BUFFERS`, `REGISTER_SEND_MSG_RING`, `REGISTER_ZCRX_IFQ`
+  (6.11), `REGISTER_RESIZE_RINGS` (6.12), `REGISTER_MEM_REGION` (6.13),
+  `REGISTER_QUERY` (6.15), `REGISTER_BPF_FILTER` (6.16) with backing structs
+  `io_uring_clock_register`, `io_uring_clone_buffers`,
+  `io_uring_region_desc`, `io_uring_mem_region_reg`,
+  `io_uring_zcrx_offsets`, `io_uring_zcrx_ifq_reg`, `io_uring_reg_wait`.
+- `Uring` register/wait wrappers: `registerClock`, `cloneBuffers`,
+  `cloneBuffersOffset`, `resizeRings`, `registerMemRegion`,
+  `registerWaitReg`, `submitAndWaitReg`, `submitAndWaitMinTimeout`,
+  `sendMsgRingSync` (static — does not need an initialized `Uring`),
+  `registerIfq`, `registerBpfFilter`.
+- `EnterFlags.EXT_ARG_REG` (Linux 6.13) and the
+  `IORING_REGISTER_SRC_REGISTERED` / `IORING_REGISTER_DST_REPLACE` /
+  `IORING_MEM_REGION_TYPE_USER` / `IORING_MEM_REGION_REG_WAIT_ARG` flag
+  constants.
 
 ## [0.4.0]
 

@@ -3,6 +3,7 @@ module tests.api;
 import during;
 import tests.base;
 
+import core.sys.linux.errno;
 version (D_Exceptions) import std.exception : assertThrown;
 import std.range;
 
@@ -244,3 +245,45 @@ unittest
 //     version (D_BetterC) errmsg = "Not implemented";
 //     else throw new Exception("Not implemented");
 // }
+
+// resizeRings grows then shrinks the ring; a NOP round-trip after each resize confirms
+// the SQ/CQ memory and our cached pointers are in sync with the kernel's new layout.
+@("resizeRings grows and shrinks")
+unittest
+{
+    if (!checkKernelVersion(6, 12)) return;
+
+    Uring io;
+    auto rs = io.setup(8);
+    assert(rs >= 0);
+
+    static void nopRoundTrip(ref Uring io, ulong tag)
+    {
+        io.putWith!(
+            (ref SubmissionEntry e, ulong t) { e.prepNop(); e.user_data = t; })(tag);
+        auto sret = io.submit(1);
+        assert(sret == 1);
+        auto cqe = io.front;
+        assert(cqe.user_data == tag);
+        assert(cqe.res == 0);
+        io.popFront();
+    }
+    nopRoundTrip(io, 1);
+
+    // Grow to 32 SQEs / 64 CQEs.
+    SetupParameters bigger;
+    bigger.sq_entries = 32;
+    bigger.cq_entries = 64;
+    auto rg = io.resizeRings(bigger);
+    if (rg == -EINVAL || rg == -EOPNOTSUPP) return;
+    assert(rg == 0, "resizeRings grow");
+    nopRoundTrip(io, 2);
+
+    // Shrink back.
+    SetupParameters smaller;
+    smaller.sq_entries = 4;
+    smaller.cq_entries = 8;
+    auto rsh = io.resizeRings(smaller);
+    assert(rsh == 0, "resizeRings shrink");
+    nopRoundTrip(io, 3);
+}

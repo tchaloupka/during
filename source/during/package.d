@@ -855,6 +855,216 @@ struct Uring
         if (_expect(r < 0, false)) return -errno;
         return 0;
     }
+
+    /**
+     * Select the clock source used for ring-side timeouts (e.g. `IORING_OP_TIMEOUT`).
+     * `clockid` is one of the `CLOCK_*` values from `<time.h>`.
+     *
+     * Note: Available from Linux 6.10
+     */
+    int registerClock(uint clockid) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        io_uring_clock_register reg;
+        reg.clockid = clockid;
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_CLOCK, &reg, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Clone the entire registered-buffer table from `src` into this ring (`dst`). The two
+     * rings can be in the same or different processes (passed by ring fd). The destination
+     * ring must not already have buffers registered unless `flags` includes
+     * `IORING_REGISTER_DST_REPLACE`.
+     *
+     * Note: Available from Linux 6.10
+     */
+    int cloneBuffers(ref const Uring src, uint flags = 0) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (src.payload !is null, "Source Uring hasn't been initialized")
+    {
+        return cloneBuffersOffset(src, 0, 0, 0, flags);
+    }
+
+    /**
+     * Clone a sub-range of registered buffers from `src`. `nr == 0` is shorthand for "clone
+     * the whole source table starting at `srcOff`".
+     *
+     * Note: Available from Linux 6.10
+     */
+    int cloneBuffersOffset(ref const Uring src, uint dstOff, uint srcOff, uint nr, uint flags) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (src.payload !is null, "Source Uring hasn't been initialized")
+    {
+        io_uring_clone_buffers cb;
+        cb.src_fd  = cast(uint)src.payload.fd;
+        cb.flags   = flags & ~IORING_REGISTER_SRC_REGISTERED; // src always passed as a raw fd here
+        cb.src_off = srcOff;
+        cb.dst_off = dstOff;
+        cb.nr      = nr;
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_CLONE_BUFFERS, &cb, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Resize the SQ / CQ of this ring in-place. `newParams.sq_entries` / `cq_entries` set
+     * the new sizes; the kernel preserves in-flight requests across the resize. Internally
+     * unmaps and re-mmaps the rings to point at the kernel's new regions. Fails (with
+     * `-EINVAL`) on rings created with `IORING_SETUP_NO_MMAP`.
+     *
+     * Note: Available from Linux 6.12
+     */
+    int resizeRings(ref SetupParameters newParams) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_RESIZE_RINGS, &newParams, 1);
+        if (_expect(r < 0, false)) return -errno;
+
+        // The kernel atomically swaps the underlying ring memory. Drop the old mappings
+        // (the file descriptor is unchanged) and re-map with the params it just filled in.
+        munmap(payload.sq.sqesPtr, payload.sq.entries * payload.sq.stride);
+        munmap(payload.sq.ring, payload.sq.ringSize);
+        if (payload.cq.ring && payload.cq.ring != payload.sq.ring)
+            munmap(payload.cq.ring, payload.cq.ringSize);
+
+        payload.sq = SubmissionQueue.init;
+        payload.cq = CompletionQueue.init;
+        payload.params = newParams;
+
+        return payload.mapRings();
+    }
+
+    /**
+     * Register a memory region with the kernel. Currently the practical use is the wait-arg
+     * registration path (`IORING_MEM_REGION_REG_WAIT_ARG` in `reg.flags`).
+     *
+     * Note: Available from Linux 6.13
+     */
+    int registerMemRegion(scope ref io_uring_mem_region_reg reg) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_MEM_REGION, &reg, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Register an array of wait-arg entries (`reg`/`nr`). Each slot pre-configures a timeout,
+     * minimum wait, and sigmask that `submitAndWaitReg` (below) can reference by index. The
+     * wait-arg region is exposed via `REGISTER_MEM_REGION` with the `WAIT_ARG` flag set.
+     *
+     * Note: Available from Linux 6.13 — liburing 2.9 stubs its own helper to return `-EINVAL`,
+     * so this wrapper goes through the `MEM_REGION` opcode directly.
+     */
+    int registerWaitReg(io_uring_reg_wait[] reg) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (reg.length > 0, "empty wait_reg array")
+    {
+        io_uring_region_desc desc;
+        desc.user_addr   = cast(ulong)cast(void*)reg.ptr;
+        desc.size        = reg.length * io_uring_reg_wait.sizeof;
+        desc.flags       = IORING_MEM_REGION_TYPE_USER;
+
+        io_uring_mem_region_reg mr;
+        mr.region_uptr = cast(ulong)cast(void*)&desc;
+        mr.flags       = IORING_MEM_REGION_REG_WAIT_ARG;
+
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_MEM_REGION, &mr, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Submit pending SQEs and wait for at least `want` CQEs against the wait-arg slot at
+     * `regIndex` (pre-registered via `registerWaitReg`). The wait inherits the timeout,
+     * minimum-wait and sigmask configured in that slot.
+     *
+     * Note: Available from Linux 6.13
+     */
+    int submitAndWaitReg(uint want, int regIndex) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (want > 0, "Invalid want value")
+    {
+        immutable len = cast(int)payload.sq.length;
+        if (len > 0) payload.sq.flushTail();
+        EnterFlags flags = EnterFlags.GETEVENTS | EnterFlags.EXT_ARG_REG;
+        if (payload.params.flags & SetupFlags.SQPOLL)
+        {
+            if (payload.sq.flags & SubmissionQueueFlags.NEED_WAKEUP)
+                flags |= EnterFlags.SQ_WAKEUP;
+        }
+        // The "args" pointer is reinterpreted as a wait-arg index in EXT_ARG_REG mode.
+        immutable r = io_uring_enter(
+            payload.fd, len, want, flags, cast(const(sigset_t*))cast(size_t)regIndex);
+        if (_expect(r < 0, false)) return -errno;
+        return r;
+    }
+
+    /**
+     * Submit pending SQEs and wait for at least `want` CQEs with an absolute timeout `ts`
+     * and a minimum wait `minWaitUsec` (the kernel will let through completions arriving
+     * sooner than `ts` once it has waited at least `minWaitUsec` microseconds).
+     *
+     * Note: Available from Linux 6.13
+     */
+    int submitAndWaitMinTimeout(uint want, ref const KernelTimespec ts, uint minWaitUsec,
+        const(sigset_t)* sigmask = null) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    in (want > 0, "Invalid want value")
+    {
+        io_uring_getevents_arg arg;
+        arg.sigmask     = cast(ulong)cast(const(void*))sigmask;
+        arg.sigmask_sz  = sigmask is null ? 0 : sigset_t.sizeof;
+        arg.pad         = minWaitUsec;          // overlays kernel `min_wait_usec`
+        arg.ts          = cast(ulong)cast(const(void*))&ts;
+        return wait!io_uring_getevents_arg(want, &arg);
+    }
+
+    /**
+     * `IORING_REGISTER_SEND_MSG_RING` — synchronously deliver an `IORING_OP_MSG_RING` SQE
+     * to another ring without owning a fully-fledged ring. The provided `sqe` must already
+     * be prepared with `prepMsgRing` (or `prepMsgRingCqeFlags`) targeting the destination
+     * ring fd.
+     *
+     * Note: This is a thin wrapper around `io_uring_register(-1, REGISTER_SEND_MSG_RING, sqe, 1)`
+     * and does NOT require an initialized `Uring`. Available from Linux 6.10.
+     */
+    static int sendMsgRingSync(ref SubmissionEntry sqe) @trusted
+    {
+        immutable r = io_uring_register(-1, RegisterOpCode.REGISTER_SEND_MSG_RING, &sqe, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return r;
+    }
+
+    /**
+     * Register a NIC hardware receive queue for zerocopy receive. Requires a supported NIC
+     * and is hence environment-dependent — the SQE-side counterpart is `IORING_OP_RECV_ZC`.
+     *
+     * Note: Available from Linux 6.11
+     */
+    int registerIfq(scope ref io_uring_zcrx_ifq_reg reg) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_ZCRX_IFQ, &reg, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Install a classic-BPF filter rule that the kernel evaluates before accepting matching
+     * SQEs. `bpf.filter.filter_ptr` points at `sock_filter` instructions.
+     *
+     * Note: Available from Linux 6.16
+     */
+    int registerBpfFilter(scope ref io_uring_bpf bpf) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_BPF_FILTER, &bpf, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
 }
 
 /**
