@@ -81,6 +81,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `IORING_REGISTER_SRC_REGISTERED` / `IORING_REGISTER_DST_REPLACE` /
   `IORING_MEM_REGION_TYPE_USER` / `IORING_MEM_REGION_REG_WAIT_ARG` flag
   constants.
+- Setup flags: `SetupFlags.SINGLE_ISSUER` (6.0), `DEFER_TASKRUN` (6.1),
+  `NO_MMAP` (6.5), `REGISTERED_FD_ONLY` (6.5), `NO_SQARRAY` (6.6),
+  `HYBRID_IOPOLL` (6.13), `CQE_MIXED` / `SQE_MIXED` / `SQ_REWIND` (6.18).
+- Feature bits: `SetupFeatures.REG_REG_RING` (6.3), `RECVSEND_BUNDLE` (6.10),
+  `MIN_TIMEOUT` (6.13), `RW_ATTR` (6.13), `NO_IOWAIT` (6.16).
 
 ## [0.4.0]
 
