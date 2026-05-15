@@ -2098,8 +2098,10 @@ ref SubmissionEntry prepWaitid(return ref SubmissionEntry entry,
  *      entry = `SubmissionEntry` to prepare
  *      futex = pointer to the futex word (must remain valid until completion)
  *      val   = expected value; the wait fails fast with `-EAGAIN` if `*futex != val`
- *      mask  = bitmask for selective wakes (matches `FUTEX_WAKE` with the same mask). Use
- *              `~0UL` to wake unconditionally.
+ *      mask  = bitmask for selective wakes (matches `FUTEX_WAKE` with the same mask). The
+ *              value must fit within the size declared by `futex2_flags` — for the common
+ *              `FUTEX2_SIZE_U32` case use `FUTEX_BITSET_MATCH_ANY` (`0xFFFFFFFF`); the kernel
+ *              rejects masks with bits set above the size with `-EINVAL`.
  *      futex2_flags = `FUTEX2_SIZE_*` plus optional `FUTEX2_PRIVATE` / `FUTEX2_NUMA`.
  *      flags = currently unused, pass 0.
  *

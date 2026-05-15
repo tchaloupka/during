@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0]
+
+Brings the binding up to liburing 2.9 / Linux 6.x parity. 19 new opcodes, 11 new
+register opcodes, 10 new setup flags, 5 new feature bits, plus structural fixes
+for the SQE storage path.
+
 ### Fixed
 
 - `SubmissionQueue` now allocates the SQE region with the correct stride
@@ -86,6 +92,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `HYBRID_IOPOLL` (6.13), `CQE_MIXED` / `SQE_MIXED` / `SQ_REWIND` (6.18).
 - Feature bits: `SetupFeatures.REG_REG_RING` (6.3), `RECVSEND_BUNDLE` (6.10),
   `MIN_TIMEOUT` (6.13), `RW_ATTR` (6.13), `NO_IOWAIT` (6.16).
+- `FUTEX_BITSET_MATCH_ANY` constant and `FUTEX2_MPOL` (kernel 6.18).
+- Examples: `examples/zerocopy_echo` (TCP echo over `SEND_ZC`, asserts the
+  send + notification two-CQE pattern) and `examples/futex_pingpong` (two
+  threads, io_uring `FUTEX_WAIT` woken via legacy `futex(2)` wake).
+
+[0.5.0]: https://github.com/tchaloupka/during/compare/v0.4.0...v0.5.0
 
 ## [0.4.0]
 

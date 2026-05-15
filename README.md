@@ -18,11 +18,15 @@ Main features:
   * range interface to submit and receive operations
   * helper functions to prepare operations
   * chainable function calls
-* up to date with Linux 5.14
+* up to date with Linux 6.x / liburing 2.9 — full opcode and register-opcode parity
+  (zero-copy networking, futex, socket lifecycle, vectored-fixed I/O, pipe, SQE128,
+  bundles, wait registration, ring resize, buffer cloning, NAPI, BPF filter, …)
 
 **Note:**
 
-* not all operations are properly tested yet (from Kernel 5.4, 5.5, 5.6, 5.7, 5.8)
+* features newer than the host kernel are kernel-gated at runtime in the test suite
+  (tests skip cleanly on older kernels) — use `Uring.probe()` to detect support in your
+  own code
 * PR's are always welcome
 
 ## Docs
@@ -91,14 +95,14 @@ For more examples, see `tests` and `examples` subfolders or the documentation.
 Just add
 
 ```
-dependency "during" version="~>0.1.0"
+dependency "during" version="~>0.5.0"
 ```
 
 to your `dub.sdl` project file, or
 
 ```
 "dependencies": {
-    "during: "~>0.1.0"
+    "during": "~>0.5.0"
 }
 ```
 
