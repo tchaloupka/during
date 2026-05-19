@@ -209,3 +209,38 @@ unittest
     assert(cqe.res == 0, "NOP128 via putWith must be a valid two-slot op");
     assert(cqe.user_data == 1);
 }
+
+// Regression guard: SQ_REWIND compaction must preserve the full runtime slot width. In an
+// SQE128 ring the trailing cmd[] bytes are in the second half of the slot; copying only the
+// SubmissionEntry header loses payload that real URING_CMD128 users need the kernel to see.
+@("SQ_REWIND preserves SQE128 payload during partial-submit compaction")
+unittest
+{
+    if (!checkKernelVersion(7, 0)) return; // IORING_SETUP_SQ_REWIND
+
+    Uring io;
+    auto res = io.setup(8, SetupFlags.SQ_REWIND | SetupFlags.NO_SQARRAY | SetupFlags.SQE128);
+    if (res == -EINVAL) return;
+    assert(res >= 0, "setup(SQ_REWIND|NO_SQARRAY|SQE128)");
+
+    io.putWith!((ref SubmissionEntry e) { e.prepNop(); e.user_data = 1; });
+    io.putWith!((ref SubmissionEntry e) { e.prepNop(); e.opcode = cast(Operation)0xFF; e.user_data = 2; });
+
+    {
+        auto sqe = &io.next128();
+        (*sqe).prepNop128();
+        sqe.user_data = 3;
+        auto tail = (cast(ubyte*)sqe.cmd.ptr)[0 .. 64];
+        foreach (i, ref b; tail) b = cast(ubyte)(0xA0 ^ i);
+    }
+
+    auto first = io.submit();
+    assert(first == 2, "kernel should consume the good NOP and malformed SQE only");
+
+    io.wait(1);
+    while (!io.empty) io.popFront();
+
+    auto slot = io.debugSubmissionSlotBytes(0);
+    foreach (i; 0 .. 64)
+        assert(slot[64 + i] == cast(ubyte)(0xA0 ^ i), "SQE128 tail payload must survive compaction");
+}

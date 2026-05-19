@@ -4,7 +4,6 @@ import during;
 import tests.base;
 
 import core.sys.linux.errno;
-import core.sys.posix.sys.mman : mmap, munmap, MAP_ANON, MAP_FAILED, MAP_PRIVATE, PROT_READ, PROT_WRITE;
 
 // Posix CLOCK ids exposed by the kernel. CLOCK_BOOTTIME isn't in druntime's posix bindings
 // (it's Linux-specific), so define just the two we need locally.
@@ -50,9 +49,36 @@ unittest
     entries[1].min_wait_usec = 10;
 
     auto rr = io.registerWaitReg(entries[]);
-    // Accept success (regions API enabled) or kernel rejection (older or incomplete).
-    assert(rr == 0 || rr == -EINVAL || rr == -EOPNOTSUPP,
-        "unexpected registerWaitReg result");
+    assert(rr == -EINVAL, "registerWaitReg should reject non-R_DISABLED rings before syscall");
+}
+
+@("allocWaitRegRegion returns page-aligned wait entries")
+unittest
+{
+    import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
+
+    auto region = allocWaitRegRegion(2);
+    assert(region, "allocWaitRegRegion");
+    assert(region.error == 0, "allocation error");
+    assert(region.entries.length == 2, "entry count");
+    assert(region.mappingBytes >= io_uring_reg_wait.sizeof * 2, "mapping size");
+    immutable pageSize = cast(size_t)sysconf(_SC_PAGESIZE);
+    assert((cast(size_t)cast(void*)region.entries.ptr % pageSize) == 0, "entries must be page aligned");
+}
+
+@("registerWaitReg rejects non-page-aligned slices")
+unittest
+{
+    if (!checkKernelVersion(6, 13)) return;
+
+    Uring io;
+    auto res = io.setup(8, SetupFlags.R_DISABLED);
+    if (res == -EINVAL) return;
+    assert(res >= 0, "setup(R_DISABLED)");
+
+    io_uring_reg_wait[1] entries;
+    auto rr = io.registerWaitReg(entries[]);
+    assert(rr == -EINVAL, "registerWaitReg should reject stack-backed wait entries before syscall");
 }
 
 // Full round-trip through submitAndWaitReg. Pre-fix the EXT_ARG_REG enter was mis-wired
@@ -70,15 +96,9 @@ unittest
     if (res == -EINVAL) return;
     assert(res >= 0, "setup(R_DISABLED)");
 
-    // The WAIT_ARG region must be page-aligned, whole-page memory.
-    enum pageSz = 4096;
-    auto p = () @trusted {
-        return mmap(null, pageSz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-    }();
-    assert(p !is MAP_FAILED, "mmap");
-    scope (exit) () @trusted { munmap(p, pageSz); }();
-
-    auto regs = () @trusted { return (cast(io_uring_reg_wait*)p)[0 .. 1]; }();
+    auto region = allocWaitRegRegion(1);
+    assert(region, "allocWaitRegRegion");
+    auto regs = region.entries;
     regs[0].ts = KernelTimespec(0, 10_000_000); // 10ms
     regs[0].flags = IORING_REG_WAIT_TS;
 

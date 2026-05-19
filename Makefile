@@ -1,9 +1,10 @@
 .PHONY: all
 
+BUILD_DIR = build
 SRC_FILES = -Isource/ source/during/*.d
 TEST_FILES = -Itests/ tests/*.d
 TEST_FLAGS = -debug -g -unittest -w -vcolumns
-SILLY_DIR = ~/.dub/packages/silly-1.0.0/silly
+SILLY_DIR = ~/.dub/packages/silly/1.1.1/silly
 SILLY_FILES = -I$(SILLY_DIR) $(SILLY_DIR)/silly.d
 
 ifeq ($(DC),ldc2)
@@ -11,37 +12,40 @@ ifeq ($(DC),ldc2)
 endif
 
 $(SILLY_DIR):
-	dub fetch silly --version="1.0.0"
+	dub fetch silly --version="1.1.1"
 
-buildTestSilly: $(SILLY_DIR)
-	$(DC) -of=during-test -version=test_root $(TEST_FLAGS) $(SRC_FILES) $(TEST_FILES) $(SILLY_FILES)
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
-buildTest:
-	$(DC) -of=during-test -version=test_root $(TEST_FLAGS) $(SRC_FILES) $(TEST_FILES)
+buildTestSilly: $(SILLY_DIR) | $(BUILD_DIR)
+	$(DC) -of=$(BUILD_DIR)/during-test -version=test_root $(TEST_FLAGS) $(SRC_FILES) $(TEST_FILES) $(SILLY_FILES)
+
+buildTest: | $(BUILD_DIR)
+	$(DC) -of=$(BUILD_DIR)/during-test -version=test_root $(TEST_FLAGS) $(SRC_FILES) $(TEST_FILES)
 
 test: buildTestSilly
-	./during-test -t 1
+	./$(BUILD_DIR)/during-test -t 1
 
 testPlain: buildTest
-	./during-test
+	./$(BUILD_DIR)/during-test
 
-buildTestBC:
-	$(DC) -of=during-test-bc $(TEST_FLAGS) -betterC $(SRC_FILES) $(TEST_FILES)
+buildTestBC: | $(BUILD_DIR)
+	$(DC) -of=$(BUILD_DIR)/during-test-betterC $(TEST_FLAGS) -betterC $(SRC_FILES) $(TEST_FILES)
 
 testBC: buildTestBC
-	./during-test-bc
+	./$(BUILD_DIR)/during-test-betterC
 
-buildCodecov: $(SILLY_DIR)
-	$(DC) -of=during-test-codecov -version=test_root -cov $(TEST_FLAGS) $(SRC_FILES) $(TEST_FILES) $(SILLY_FILES)
+buildCodecov: $(SILLY_DIR) | $(BUILD_DIR)
+	$(DC) -of=$(BUILD_DIR)/during-test-codecov -version=test_root -cov $(TEST_FLAGS) $(SRC_FILES) $(TEST_FILES) $(SILLY_FILES)
 
 codecov: buildCodecov
-	./during-test-codecov | true
+	./$(BUILD_DIR)/during-test-codecov | true
 
 all: buildTest buildTestBC codecov
 
 clean:
+	- rm -rf $(BUILD_DIR)
 	- rm -f *.a
 	- rm -f *.o
-	- rm -f during-test*
 	- rm -f *.dat
 	- rm -f ./*.lst
