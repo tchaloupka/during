@@ -187,3 +187,25 @@ unittest
     foreach (i; 0..7) assert(seen[i] == 100 + i, "pre-wrap NOPs complete in order");
     assert(seen[7] == 200, "NOP128 completes after the padder is skipped");
 }
+
+// Regression guard: putWith reserves a slot before the op is built. On an SQE_MIXED ring a
+// 128-byte op (NOP128/URING_CMD128) must still get two contiguous slots — pre-fix it landed
+// in a single 64-byte slot and the kernel rejected it with -EINVAL.
+@("putWith builds a valid NOP128 on an SQE_MIXED ring")
+unittest
+{
+    if (!checkKernelVersion(6, 19)) return; // IORING_OP_NOP128
+
+    Uring io;
+    auto res = io.setup(8, SetupFlags.SQE_MIXED);
+    if (res == -EINVAL) return; // SQE_MIXED unsupported
+    assert(res >= 0, "setup(SQE_MIXED)");
+
+    io.putWith!((ref SubmissionEntry e) { e.prepNop128(); e.user_data = 1; });
+    auto sret = io.submit(1);
+    assert(sret == 2, "a 128-byte op must consume two SQ slots");
+    auto cqe = io.front;
+    scope (exit) io.popFront();
+    assert(cqe.res == 0, "NOP128 via putWith must be a valid two-slot op");
+    assert(cqe.user_data == 1);
+}

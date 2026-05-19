@@ -2576,7 +2576,19 @@ int io_uring_enter(int fd, uint to_submit, uint min_complete, EnterFlags flags, 
 int io_uring_enter(int fd, uint to_submit, uint min_complete, EnterFlags flags, const io_uring_getevents_arg* args)
 {
     pragma(inline);
-    return syscall(SYS_io_uring_enter, fd, to_submit, min_complete, flags, args, io_uring_getevents_arg.sizeof);
+    // Passing an `io_uring_getevents_arg` requires `IORING_ENTER_EXT_ARG` — without it the
+    // kernel interprets the pointer as a plain `sigset_t` and rejects the mismatched size.
+    return syscall(SYS_io_uring_enter, fd, to_submit, min_complete,
+        flags | EnterFlags.EXT_ARG, args, io_uring_getevents_arg.sizeof);
+}
+
+/// ditto - low-level variant with an explicit `arg`/`argsz` pair, used for the
+/// `IORING_ENTER_EXT_ARG_REG` registered-wait ABI where `arg` is a byte offset.
+int io_uring_enter(int fd, uint to_submit, uint min_complete, EnterFlags flags,
+    const(void)* arg, size_t argsz)
+{
+    pragma(inline);
+    return syscall(SYS_io_uring_enter, fd, to_submit, min_complete, flags, arg, argsz);
 }
 
 /**

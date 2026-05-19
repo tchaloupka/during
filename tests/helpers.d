@@ -140,6 +140,20 @@ unittest
     assert(rbuf == wbuf, "readv2 data mismatch");
 }
 
+// prepSendBundle mirrors liburing's io_uring_prep_send_bundle: a SEND with no buffer pointer,
+// the caller-supplied len forwarded to sqe->len, and the BUNDLE ioprio flag.
+@("prepSendBundle mirrors liburing send_bundle")
+unittest
+{
+    SubmissionEntry e = void;
+    e.prepSendBundle(7, 4096, MsgFlags.NONE);
+    assert(e.opcode == Operation.SEND, "opcode");
+    assert(e.fd == 7, "fd");
+    assert(e.addr == 0, "bundled send carries no buffer pointer");
+    assert(e.len == 4096, "len is forwarded to sqe->len");
+    assert((e.ioprio & IORING_RECVSEND_BUNDLE) != 0, "BUNDLE flag");
+}
+
 // cancelFd matches in-flight requests by file descriptor instead of by user_data.
 @("cancelFd: cancel a poll by fd")
 unittest

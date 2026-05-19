@@ -450,3 +450,123 @@ unittest
     assert(cqe.res == 0);
     assert(cqe.user_data == 2);
 }
+
+// Regression guard for the undersized CQ mmap on CQE32 rings: the kernel sizes the cqes area
+// for 32-byte CQEs, so the mmap must be doubled. NO_SQARRAY is used so the cqes are the last
+// thing in the single mmap region — otherwise the sq-array term of the size formula happens
+// to cover the shortfall and hides the bug. Driving the CQ tail past a full ring wrap reads
+// the high 32-byte slots; with the old (16-byte-scaled) mmap this faults.
+@("cqe32 ring drains the full mapped cqe area")
+unittest
+{
+    if (!checkKernelVersion(6, 6)) return; // IORING_SETUP_NO_SQARRAY
+
+    Uring io;
+    auto res = io.setup(1024, SetupFlags.CQE32 | SetupFlags.NO_SQARRAY);
+    if (res == -EINVAL) return; // CQE32 / NO_SQARRAY unsupported on this host
+    assert(res >= 0, "setup(CQE32)");
+
+    enum total = 1024 * 3; // > one full wrap of the cq_entries (== 2*sq_entries) ring
+    uint done;
+    while (done < total)
+    {
+        uint batch = total - done < 256 ? total - done : 256;
+        foreach (i; 0..batch)
+            io.putWith!((ref SubmissionEntry e, ulong ud) { e.prepNop(); e.user_data = ud; })
+                (cast(ulong)(done + i));
+        auto sret = io.submit(batch);
+        assert(sret == batch, "submit batch");
+        foreach (i; 0..batch)
+        {
+            assert(!io.empty, "missing CQE");
+            assert(io.front.res == 0, "nop res");
+            io.popFront();
+        }
+        done += batch;
+    }
+}
+
+// Regression guard: a wait carrying an io_uring_getevents_arg must set IORING_ENTER_EXT_ARG.
+// Without it the kernel reads the pointer as a sigset_t and the enter fails with -EINVAL.
+@("submitAndWaitMinTimeout drives the EXT_ARG getevents path")
+unittest
+{
+    if (!checkKernelVersion(5, 11)) return; // EXT_ARG timespec wait
+
+    Uring io;
+    auto res = io.setup();
+    assert(res >= 0, "setup");
+
+    // Empty ring: the wait must go through io_uring_enter with the getevents_arg; a 10ms
+    // timeout makes it return cleanly. Pre-fix this returns -EINVAL instead of 0.
+    KernelTimespec ts = { tv_sec: 0, tv_nsec: 10_000_000 };
+    auto wr = io.submitAndWaitMinTimeout(1, ts, 0);
+    // A valid EXT_ARG wait either gets a completion (0) or times out (-ETIME). Pre-fix the
+    // missing IORING_ENTER_EXT_ARG flag made the kernel reject the call with -EINVAL.
+    assert(wr == 0 || wr == -ETIME, "getevents_arg wait rejected — IORING_ENTER_EXT_ARG missing?");
+}
+
+// Regression guard: on CQE_MIXED rings head/tail count 16-byte slots, so a 32-byte CQE spans
+// two. length() must report logical completions, not the raw slot span.
+@("cqe_mixed length counts logical CQEs not slots")
+unittest
+{
+    if (!checkKernelVersion(6, 18)) return;
+
+    Uring io;
+    auto res = io.setup(8, SetupFlags.CQE_MIXED);
+    if (res == -EINVAL) return;
+    assert(res >= 0, "setup(CQE_MIXED)");
+
+    // two 32-byte CQEs + one 16-byte == 5 slots, but 3 logical completions
+    foreach (ud; 0..3)
+        io.putWith!((ref SubmissionEntry e, ulong u)
+        {
+            e.prepNop();
+            if (u < 2) e.nop_flags = IORING_NOP_CQE32;
+            e.user_data = u;
+        })(cast(ulong)ud);
+    auto sret = io.submit(3);
+    assert(sret == 3, "submit");
+
+    if (io.front.res == -EINVAL || io.front.res == -EOPNOTSUPP)
+    {
+        foreach (_; 0..3) io.popFront();
+        return; // 32-byte NOP CQEs unsupported on this host
+    }
+    assert(io.length == 3, "length must count logical CQEs, not 16-byte slots");
+
+    foreach (_; 0..3) io.popFront();
+    assert(io.empty, "all CQEs consumed");
+}
+
+// Regression guard: a malformed SQE makes the kernel stop a batch mid-way. On a SQ_REWIND ring
+// the kernel rewinds its head, so the SQEs past the bad one must be kept for the next submit —
+// pre-fix submitted() reset localTail to 0 and dropped them.
+@("SQ_REWIND keeps unsubmitted SQEs after a partial submit")
+unittest
+{
+    if (!checkKernelVersion(7, 0)) return; // IORING_SETUP_SQ_REWIND
+
+    Uring io;
+    auto res = io.setup(8, SetupFlags.SQ_REWIND | SetupFlags.NO_SQARRAY);
+    if (res == -EINVAL) return; // SQ_REWIND unsupported
+    assert(res >= 0, "setup(SQ_REWIND|NO_SQARRAY)");
+
+    io.putWith!((ref SubmissionEntry e) { e.prepNop(); e.user_data = 1; });
+    io.putWith!((ref SubmissionEntry e) { e.prepNop(); e.opcode = cast(Operation)0xFF; e.user_data = 2; });
+    io.putWith!((ref SubmissionEntry e) { e.prepNop(); e.user_data = 3; });
+
+    auto first = io.submit();
+    assert(first > 0 && first < 3, "kernel should stop the batch at the malformed SQE");
+
+    io.wait(1);
+    while (!io.empty) io.popFront();
+
+    // the trailing good NOP must still be queued; pre-fix it was lost
+    auto second = io.submit();
+    assert(second == 1, "the SQE after the malformed one must survive the partial submit");
+    io.wait(1);
+    assert(io.front.user_data == 3, "leftover NOP completes");
+    io.popFront();
+}

@@ -1087,6 +1087,10 @@ struct Uring
      * minimum wait, and sigmask that `submitAndWaitReg` (below) can reference by index. The
      * wait-arg region is exposed via `REGISTER_MEM_REGION` with the `WAIT_ARG` flag set.
      *
+     * The kernel pins whole pages for the region, so `reg` must point at page-aligned memory
+     * backed by a whole number of pages (e.g. an `mmap`-ed buffer). The ring must have been
+     * created with `SetupFlags.R_DISABLED`; call `enableRings` afterwards.
+     *
      * Note: Available from Linux 6.13 — liburing 2.9 stubs its own helper to return `-EINVAL`,
      * so this wrapper goes through the `MEM_REGION` opcode directly.
      */
@@ -1094,9 +1098,13 @@ struct Uring
     in (payload !is null, "Uring hasn't been initialized yet")
     in (reg.length > 0, "empty wait_reg array")
     {
+        import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
+        immutable pageSize = cast(size_t)sysconf(_SC_PAGESIZE);
+
         io_uring_region_desc desc;
         desc.user_addr   = cast(ulong)cast(void*)reg.ptr;
-        desc.size        = reg.length * io_uring_reg_wait.sizeof;
+        // Both user_addr and size must be page-aligned (io_create_region rejects otherwise).
+        desc.size        = (reg.length * io_uring_reg_wait.sizeof + pageSize - 1) & ~(pageSize - 1);
         desc.flags       = IORING_MEM_REGION_TYPE_USER;
 
         io_uring_mem_region_reg mr;
@@ -1115,21 +1123,25 @@ struct Uring
      *
      * Note: Available from Linux 6.13
      */
-    int submitAndWaitReg(uint want, int regIndex) @trusted
+    int submitAndWaitReg(uint want, uint regIndex) @trusted
     in (payload !is null, "Uring hasn't been initialized yet")
     in (want > 0, "Invalid want value")
     {
         immutable len = cast(int)payload.sq.length;
         if (len > 0) payload.sq.flushTail();
-        EnterFlags flags = EnterFlags.GETEVENTS | EnterFlags.EXT_ARG_REG;
+        // EXT_ARG_REG requires EXT_ARG to also be set; the kernel reads `arg` as a byte offset
+        // into the registered wait region and requires `argsz == io_uring_reg_wait.sizeof`.
+        EnterFlags flags = EnterFlags.GETEVENTS | EnterFlags.EXT_ARG | EnterFlags.EXT_ARG_REG;
         if (payload.params.flags & SetupFlags.SQPOLL)
         {
             if (payload.sq.flags & SubmissionQueueFlags.NEED_WAKEUP)
                 flags |= EnterFlags.SQ_WAKEUP;
         }
-        // The "args" pointer is reinterpreted as a wait-arg index in EXT_ARG_REG mode.
+        if (payload.regRing) flags |= EnterFlags.ENTER_REGISTERED_RING;
         immutable r = io_uring_enter(
-            payload.fd, len, want, flags, cast(const(sigset_t*))cast(size_t)regIndex);
+            payload.enterFd, len, want, flags,
+            cast(const(void)*)(cast(size_t)regIndex * io_uring_reg_wait.sizeof),
+            io_uring_reg_wait.sizeof);
         if (_expect(r < 0, false)) return -errno;
         payload.sq.submitted(r);
         return r;
@@ -2707,19 +2719,24 @@ ref SubmissionEntry prepMsgRingCqeFlags(return ref SubmissionEntry entry,
 }
 
 /**
- * Prepares a bundled send (`IORING_OP_SEND` with `IORING_RECVSEND_BUNDLE`). Bundles fan out
- * over the provided buffer ring identified by `bufGroup`: the kernel will send as much data
- * as the ring has available in one submission, generating one CQE per buffer consumed.
+ * Prepares a bundled send (`IORING_OP_SEND` with `IORING_RECVSEND_BUNDLE`). A bundle sends as
+ * much data as the provided-buffer ring has available in one submission, generating one CQE
+ * per buffer consumed; `len` caps the total number of bytes (`0` means unlimited).
+ *
+ * Mirrors liburing's `io_uring_prep_send_bundle`: the provided-buffer group is not selected
+ * here — the caller must set `buf_group` and the `IOSQE_BUFFER_SELECT` flag on the entry.
  *
  * Note: Available from Linux 6.10
  */
 ref SubmissionEntry prepSendBundle(return ref SubmissionEntry entry,
-    int sockfd, MsgFlags flags, ushort bufGroup) @safe
+    int sockfd, size_t len, MsgFlags flags = MsgFlags.NONE) @safe
 {
-    entry.prepSend(sockfd, null, flags);
+    // Mirrors liburing's io_uring_prep_send_bundle: a plain SEND with no buffer pointer plus
+    // the BUNDLE flag. The provided-buffer group (buf_group + IOSQE_BUFFER_SELECT) is left to
+    // the caller, exactly as liburing does.
+    entry.prepRW(Operation.SEND, sockfd, null, cast(uint)len, 0);
+    entry.msg_flags = flags;
     entry.ioprio = cast(ushort)(entry.ioprio | IORING_RECVSEND_BUNDLE);
-    entry.flags = cast(SubmissionEntryFlags)(entry.flags | SubmissionEntryFlags.BUFFER_SELECT);
-    entry.buf_group = bufGroup;
     return entry;
 }
 
@@ -2782,7 +2799,12 @@ struct UringDesc
     private auto mapRings() @trusted
     {
         sq.ringSize = params.sq_off.array + params.sq_entries * uint.sizeof;
-        cq.ringSize = params.cq_off.cqes + params.cq_entries * CompletionEntry.sizeof;
+        // CQE32 rings store 32-byte CQEs, so the kernel doubles the cqes area (see the kernel's
+        // rings_size() / liburing's cq->ring_sz). CQE_MIXED does NOT double — its 32-byte CQEs
+        // each consume two of the regular 16-byte slots.
+        immutable cqeSize = (params.flags & SetupFlags.CQE32)
+            ? 2 * CompletionEntry.sizeof : CompletionEntry.sizeof;
+        cq.ringSize = params.cq_off.cqes + params.cq_entries * cqeSize;
 
         if (params.features & SetupFeatures.SINGLE_MMAP)
         {
@@ -2861,6 +2883,7 @@ struct UringDesc
         cq.ringMask     = *cast(uint*)(cq.ring + params.cq_off.ring_mask);
         cq.koverflow    = cast(uint*)(cq.ring + params.cq_off.overflow);
         cq.shift        = (params.flags & SetupFlags.CQE32) ? 1 : 0;
+        cq.mixed        = (params.flags & SetupFlags.CQE_MIXED) != 0;
         cq.cqes         = (cast(CompletionEntry*)(cq.ring + params.cq_off.cqes))[0..entries << cq.shift];
         cq.kflags       = cast(uint*)(cq.ring + params.cq_off.flags);
         return 0;
@@ -2912,7 +2935,14 @@ struct SubmissionQueue
     void submitted(int submitted) @safe pure
     {
         pragma(inline, true);
-        if (rewind && submitted > 0) localTail = 0;
+        if (!rewind || submitted <= 0) return;
+        if (submitted >= localTail) { localTail = 0; return; }
+        // Partial submit on a SQ_REWIND ring: the kernel rewound its head to 0, so the
+        // SQEs it didn't consume must be compacted down to slot 0 to survive the next submit.
+        immutable rem = localTail - submitted;
+        foreach (i; 0 .. rem)
+            () @trusted { slot(i) = slot(cast(uint)submitted + i); }();
+        localTail = rem;
     }
 
     SubmissionQueueFlags flags() const @safe pure
@@ -2964,8 +2994,19 @@ struct SubmissionQueue
     void put(OP)(auto ref OP op)
         if (!is(OP == SubmissionEntry))
     {
-        assert(!full, "SumbissionQueue is full");
-        () @trusted { slot(localTail++).fill(op); }();
+        if (sqeMixed)
+        {
+            // The opcode isn't known until the op is materialised, so stage into a temp and
+            // route through the 128-aware put() — a NOP128/URING_CMD128 must get two slots.
+            SubmissionEntry e = void;
+            () @trusted { e.fill(op); }();
+            put(e);
+        }
+        else
+        {
+            assert(!full, "SumbissionQueue is full");
+            () @trusted { slot(localTail++).fill(op); }();
+        }
     }
 
     private void putWith(alias FN, ARGS...)(auto ref ARGS args)
@@ -2982,8 +3023,18 @@ struct SubmissionQueue
             is(typeof(FN(slot(localTail), args))),
             "Provided function is not callable with " ~ (Parameters!((ref SubmissionEntry e, ARGS args) {})).stringof);
 
-        assert(!full, "SumbissionQueue is full");
-        () @trusted { FN(slot(localTail++), args); }();
+        if (sqeMixed)
+        {
+            // Stage into a temp: FN may build a 128-byte op, which needs the 128-aware path.
+            SubmissionEntry e = void;
+            () @trusted { FN(e, args); }();
+            put(e);
+        }
+        else
+        {
+            assert(!full, "SumbissionQueue is full");
+            () @trusted { FN(slot(localTail++), args); }();
+        }
     }
 
     uint dropped() const @safe pure { return atomicLoad!(MemoryOrder.raw)(*kdropped); }
@@ -3033,6 +3084,7 @@ struct CompletionQueue
 
     uint ringMask; // constant mask used to determine array index from head/tail
     uint shift; // 1 for CQE32 rings, 0 for 16-byte and CQE_MIXED rings
+    bool mixed; // CQE_MIXED ring: head/tail count 16-byte slots, a 32-byte CQE spans two
 
     // mmap details (for cleanup)
     void* ring;
@@ -3066,7 +3118,17 @@ struct CompletionQueue
         flushHead();
     }
 
-    size_t length() const @safe pure { return tail - localHead; }
+    size_t length() const @safe pure
+    {
+        immutable t = tail;
+        // On non-mixed rings head/tail already count logical CQEs. On CQE_MIXED rings they
+        // count 16-byte slots (a 32-byte CQE spans two), so walk to get the logical count.
+        if (!mixed) return t - localHead;
+        size_t n;
+        for (uint h = localHead; h != t; n++)
+            h += cqeSlots(cqes[(h & ringMask) << shift]);
+        return n;
+    }
 
     /// Peek at entry by index without consuming (0 = front)
     ref const(CompletionEntry) peekAt(size_t i) const @safe pure return
