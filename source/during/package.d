@@ -318,6 +318,15 @@ struct Uring
         return payload.sq.next128();
     }
 
+    version (unittest)
+    const(ubyte)[] debugSubmissionSlotBytes(uint i) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        auto ptr = cast(const ubyte*)payload.sq.sqesPtr
+            + cast(size_t)(i & payload.sq.ringMask) * payload.sq.stride;
+        return ptr[0 .. payload.sq.stride];
+    }
+
     /**
      * If completion queue is full, the new event maybe dropped.
      * This value records number of dropped events.
@@ -2941,7 +2950,7 @@ struct SubmissionQueue
         // SQEs it didn't consume must be compacted down to slot 0 to survive the next submit.
         immutable rem = localTail - submitted;
         foreach (i; 0 .. rem)
-            () @trusted { slot(i) = slot(cast(uint)submitted + i); }();
+            copySlot(i, cast(uint)submitted + i);
         localTail = rem;
     }
 
@@ -3063,6 +3072,29 @@ struct SubmissionQueue
 
         localTail = t + 2;
         return t;
+    }
+
+    private ubyte* slotBytes(uint i) @system pure nothrow @nogc return
+    {
+        return cast(ubyte*)sqesPtr + cast(size_t)(i & ringMask) * stride;
+    }
+
+    private void copySlot(uint dst, uint src) @trusted pure nothrow @nogc
+    {
+        auto d = slotBytes(dst);
+        auto s = slotBytes(src);
+        if (d is s) return;
+
+        if (d < s)
+        {
+            foreach (i; 0 .. stride)
+                d[i] = s[i];
+        }
+        else
+        {
+            foreach_reverse (i; 0 .. stride)
+                d[i] = s[i];
+        }
     }
 }
 
