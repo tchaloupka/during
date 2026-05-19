@@ -9,6 +9,7 @@ version (D_BetterC)
     import tests.fixed_fd;
     import tests.fsync;
     import tests.futex;
+    import tests.helpers;
     import tests.msg;
     import tests.pipe;
     import tests.poll;
@@ -31,6 +32,7 @@ version (D_BetterC)
         runTests!("Fixed-fd tests", tests.fixed_fd);
         runTests!("Fsync tests", tests.fsync);
         runTests!("Futex tests", tests.futex);
+        runTests!("Helper tests", tests.helpers);
         runTests!("Msg tests", tests.msg);
         runTests!("Pipe tests", tests.pipe);
         runTests!("Poll tests", tests.poll);

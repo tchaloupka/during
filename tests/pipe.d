@@ -4,8 +4,16 @@ import during;
 import tests.base;
 
 import core.sys.linux.errno;
-import core.sys.linux.fcntl : O_CLOEXEC;
 import core.sys.posix.unistd : close, read, write;
+
+// O_CLOEXEC was only added to core.sys.posix.fcntl for all platforms in druntime
+// commit 68c97893f8 (2021-07-27), first shipped in DMD 2.098.0. On older frontends
+// the selective import fails, so define it locally there (Linux value, octal
+// 02000000 — identical across x86/x86_64/arm/aarch64).
+static if (__VERSION__ >= 2098)
+    import core.sys.posix.fcntl : O_CLOEXEC;
+else
+    enum O_CLOEXEC = 0x80000;
 
 // Async pipe creation via IORING_OP_PIPE: the kernel populates the int[2] passed in, just
 // like pipe2(2). Verify by writing to fds[1] and reading from fds[0].

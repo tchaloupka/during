@@ -327,7 +327,8 @@ unittest
             // The (ubyte[][], len, bgid, bid) overload registers `len` buffers of equal size
             // starting at mem.ptr — but we only have two contiguous slabs, so use the slice
             // overload, which feeds one buffer-per-slice at the supplied starting id.
-            ubyte[][2] slabs;
+            ubyte[][2] slabs = void; // both elements assigned below; `= void` avoids the
+                                     // druntime `_memset128` call that breaks the betterC link
             slabs[0] = mem[0..BSZ];
             slabs[1] = mem[BSZ..$];
             e.prepProvideBuffers(slabs[], BSZ, BGID, 0);
