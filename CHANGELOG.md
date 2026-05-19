@@ -5,50 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.5.0] - 2026-05-19
 
-### Added
-
-- Linux 7.1 catch-up: `SubmissionEntry.write_stream` byte field, `CQEFlags.F_32`
-  (6.18) and `F_TSTAMP_HW` (6.18) plus `IORING_TIMESTAMP_HW_SHIFT` /
-  `TYPE_SHIFT`, `TimeoutFlags.MULTISHOT` (6.4) and `IMMEDIATE_ARG` (6.18),
-  `PollFlags.ADD_LEVEL` (6.0), `CancelFlags.CANCEL_FD_FIXED` (6.1) /
-  `CANCEL_USERDATA` (6.6) / `CANCEL_OP` (6.6), `IORING_ACCEPT_DONTWAIT` /
-  `_POLL_FIRST` (6.6), `IORING_SEND_VECTORIZED` (7.0),
-  `IORING_MSG_RING_CQE_SKIP` (6.5), `IORING_URING_CMD_FIXED` (6.0) /
-  `_MULTISHOT` (6.18) / `_MASK`, all six `IORING_NOP_*` flags (6.13/6.18),
-  `IORING_RW_ATTR_FLAG_PI` (6.13), `EnterFlags.ABS_TIMER` (6.10) /
-  `NO_IOWAIT` (6.16), `RegisterOpCode.REGISTER_ZCRX_CTRL` (6.16),
-  `SetupParameters.PROVIDED_BUFFER_RING_OFFSET` / `_SHIFT` / `MMAP_MASK`.
-- ZCRX scaffolding: `io_uring_zcrx_rqe`, `io_uring_zcrx_cqe`,
-  `io_uring_zcrx_area_reg`, `IORING_ZCRX_AREA_DMABUF`,
-  `IORING_ZCRX_AREA_SHIFT` / `_MASK`, plus the `io_timespec` struct.
-- `io_uring_napi` struct extended with `opcode` and `op_param` fields to match
-  the kernel 6.18 layout; backward-compatible (zero-initialised callers still
-  get the original register/unregister behaviour). New
-  `IO_URING_NAPI_REGISTER_OP` / `STATIC_ADD_ID` / `STATIC_DEL_ID` opcode
-  constants and `TRACKING_DYNAMIC` / `STATIC` / `INACTIVE` strategy constants.
-
-### Tests
-
-- `tests.api nop inject_result drives custom cqe.res` — sets
-  `IORING_NOP_INJECT_RESULT` + `sqe.len` and asserts the value surfaces in
-  `cqe.res`. Kernel-gated on 6.13.
-- `tests.timeout timeout multishot fires repeatedly` — counts three CQEs
-  from a single `MULTISHOT` timeout and asserts only the last lacks
-  `CQEFlags.MORE`. Kernel-gated on 6.4.
-- `tests.timeout timeout immediate_arg accepts inline nanoseconds` — builds
-  a TIMEOUT SQE by hand with `IMMEDIATE_ARG`, puts the duration in
-  `sqe.addr`, asserts `-ETIME`. Kernel-gated on 6.18.
-- `tests.poll poll add_level on pre-readable eventfd` — arms a level-
-  triggered poll on a pre-readable eventfd, asserts the SQE is accepted
-  and completes. Kernel-gated on 6.0.
-
-## [0.5.0]
-
-Brings the binding up to liburing 2.9 / Linux 6.x parity. 19 new opcodes, 11 new
-register opcodes, 10 new setup flags, 5 new feature bits, plus structural fixes
-for the SQE storage path.
+Brings the binding up to liburing 2.9 / Linux 7.1-rc4 parity (from 0.4.0 ≈ Linux
+5.19): new opcodes, register opcodes, setup flags and feature bits, the
+variable-stride ring storage paths, and liburing 2.9 helper parity.
 
 ### Fixed
 
@@ -60,6 +21,20 @@ for the SQE storage path.
   replaced internally by a `void*` + `entries` + `stride` trio with a
   `slot(uint)` ref accessor; the put / putWith hot path is unchanged at
   the call site.
+- `io_uring_buf_reg` layout corrected for kernel 6.12+ (`pad` → `flags`,
+  added `min_left`); `IOU_PBUF_RING_MMAP` / `_INC` flags added.
+- CQE32 rings sized the cqes mmap for 16-byte CQEs, so `CQE32 | NO_SQARRAY`
+  rings read past the mapping.
+- Waits passing an `io_uring_getevents_arg` never set `IORING_ENTER_EXT_ARG`,
+  so `submitAndWaitMinTimeout` and friends were rejected by the kernel.
+- `submitAndWaitReg` used the wrong `EXT_ARG_REG` enter ABI;
+  `registerWaitReg` passed a non-page-aligned region size.
+- `CompletionQueue.length` counted 16-byte slots instead of logical CQEs on
+  `CQE_MIXED` rings.
+- `put` / `putWith` built 128-byte ops in a single slot on `SQE_MIXED` rings.
+- `SQ_REWIND`: a partial submit dropped the unsubmitted SQEs.
+- `prepSendBundle` crashed on an empty buffer slice; realigned to liburing's
+  `io_uring_prep_send_bundle` signature (now takes a `len` argument).
 
 ### Added
 
@@ -133,6 +108,45 @@ for the SQE storage path.
 - Examples: `examples/zerocopy_echo` (TCP echo over `SEND_ZC`, asserts the
   send + notification two-CQE pattern) and `examples/futex_pingpong` (two
   threads, io_uring `FUTEX_WAIT` woken via legacy `futex(2)` wake).
+- Linux 7.1-rc4 catch-up: `SubmissionEntry.write_stream`, `CQEFlags.F_32` /
+  `F_TSTAMP_HW` plus `IORING_TIMESTAMP_HW_SHIFT` / `TYPE_SHIFT`,
+  `TimeoutFlags.MULTISHOT` / `IMMEDIATE_ARG`, `PollFlags.ADD_LEVEL`,
+  `CancelFlags.CANCEL_FD_FIXED` / `CANCEL_USERDATA` / `CANCEL_OP`,
+  `IORING_ACCEPT_DONTWAIT` / `_POLL_FIRST`, `IORING_SEND_VECTORIZED`,
+  `IORING_MSG_RING_CQE_SKIP`, `IORING_URING_CMD_FIXED` / `_MULTISHOT` /
+  `_MASK`, the `IORING_NOP_*` flags, `IORING_RW_ATTR_FLAG_PI`,
+  `EnterFlags.ABS_TIMER` / `NO_IOWAIT`, `RegisterOpCode.REGISTER_ZCRX_CTRL`,
+  `SetupParameters.PROVIDED_BUFFER_RING_OFFSET` / `_SHIFT` / `MMAP_MASK`.
+- ZCRX scaffolding (`io_uring_zcrx_*`, `IORING_ZCRX_AREA_*`), the `io_timespec`
+  struct, and the `io_uring_napi` `opcode` / `op_param` fields with the
+  `IO_URING_NAPI_*` op and tracking-strategy constants.
+- Completed the `io_uring.h` uapi mirror to v7.1-rc4: `io_uring_attr_pi`,
+  `io_uring_task_restriction`, `io_uring_rsrc_*` / `io_uring_files_update` /
+  `io_uring_recvmsg_out` structs, the zcrx control API, `IORING_MSG_DATA` /
+  `MSG_SEND_FD`, `IORING_REGISTER_USE_REGISTERED_RING`, `IORING_REG_WAIT_TS`.
+- liburing 2.9 helper parity: `prepReadv2` / `prepWritev2`,
+  `prepMultishotAccept` / `prepMultishotAcceptDirect`, `prepRecvMultishot`,
+  `prepRecvmsgMultishot`, `prepPollMultishot`, `prepCancelFd`,
+  `prepFadvise64` / `prepMadvise64`, `prepSocketDirect` /
+  `prepSocketDirectAlloc`, `prepMsgRingFd` / `prepMsgRingFdAlloc`, and the
+  `registerPersonality`, `registerBufRing`, `registerRingFd` wrappers.
+
+### Tests
+
+- `tests.api nop inject_result drives custom cqe.res` — sets
+  `IORING_NOP_INJECT_RESULT` + `sqe.len` and asserts the value surfaces in
+  `cqe.res`. Kernel-gated on 6.13.
+- `tests.timeout timeout multishot fires repeatedly` — counts three CQEs
+  from a single `MULTISHOT` timeout and asserts only the last lacks
+  `CQEFlags.MORE`. Kernel-gated on 6.4.
+- `tests.timeout timeout immediate_arg accepts inline nanoseconds` — builds
+  a TIMEOUT SQE by hand with `IMMEDIATE_ARG`, puts the duration in
+  `sqe.addr`, asserts `-ETIME`. Kernel-gated on 6.18.
+- `tests.poll poll add_level on pre-readable eventfd` — arms a level-
+  triggered poll on a pre-readable eventfd, asserts the SQE is accepted
+  and completes. Kernel-gated on 6.0.
+- Regression tests for the new helpers and for every fix listed above. The
+  suite builds and passes on LDC 1.21+ (DMD frontend 2.091+) and in betterC.
 
 [0.5.0]: https://github.com/tchaloupka/during/compare/v0.4.0...v0.5.0
 
