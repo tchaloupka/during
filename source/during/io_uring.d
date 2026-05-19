@@ -2,8 +2,9 @@
  * io_uring system api definitions.
  *
  * See: https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring.h
+ *      https://github.com/torvalds/linux/blob/master/include/uapi/linux/io_uring/zcrx.h
  *
- * Last changes from: bdb2c48e4b38e6dbe82533b437468999ba3ae498 (20220708)
+ * Last changes from: 5200f5f493f79f14bbdc349e402a40dfb32f23c8 (20260517, v7.1-rc4)
  */
 module during.io_uring;
 
@@ -605,6 +606,14 @@ enum IORING_MSG_RING_CQE_SKIP       = 1U << 0;
 /// `MSG_RING` flag (`sqe->msg_ring_flags`). When set, the kernel passes the value stored in
 /// `sqe->file_index` as the target CQE's flags field. From Linux 6.3.
 enum IORING_MSG_RING_FLAGS_PASS     = 1U << 1;
+
+/// `IORING_OP_MSG_RING` command type (stored in `sqe->addr`) — `enum io_uring_msg_ring_flags`.
+/// `IORING_MSG_DATA`: pass `sqe->len` as the target CQE's `res` and `sqe->off` as its `user_data`.
+enum IORING_MSG_DATA                = 0;
+
+/// `IORING_OP_MSG_RING` command type (stored in `sqe->addr`). `IORING_MSG_SEND_FD`: send a
+/// registered file descriptor to another ring.
+enum IORING_MSG_SEND_FD             = 1;
 
 /// `IORING_OP_URING_CMD` / `URING_CMD128` flag (`sqe->uring_cmd_flags`). Use the registered
 /// buffer addressed by `sqe->buf_index` for the command's data payload. From Linux 6.0.
@@ -1813,6 +1822,11 @@ enum RegisterOpCode : uint
     /// `IORING_REGISTER_BPF_FILTER` (from Linux 6.16)
     /// Register a BPF program that filters completions before they reach userspace.
     REGISTER_BPF_FILTER      = 37,
+
+    /// `IORING_REGISTER_USE_REGISTERED_RING` — not an opcode but a flag OR'd into the opcode
+    /// argument of `io_uring_register(2)` to signal that `fd` is a registered ring index
+    /// (registered via `IORING_REGISTER_RING_FDS`) rather than a real file descriptor.
+    REGISTER_USE_REGISTERED_RING = 1U << 31,
 }
 
 /* io-wq worker categories */
@@ -1956,6 +1970,98 @@ struct io_uring_restriction
     uint[3] resv2;
 }
 
+/**
+ * Argument to `IORING_REGISTER_TASK_RESTRICTIONS` — registers a set of per-task restrictions.
+ * `restrictions` is a flex array of `nr_res` entries.
+ *
+ * Note: Available from Linux 7.0
+ */
+struct io_uring_task_restriction
+{
+    ushort  flags;
+    ushort  nr_res;                     /// number of entries in `restrictions`
+    uint[3] resv;
+    io_uring_restriction[0] restrictions;
+}
+
+static assert(io_uring_task_restriction.sizeof == 16);
+
+/**
+ * PI (protection information) attribute, pointed at by `sqe->attr_ptr` when the request carries
+ * `IORING_RW_ATTR_FLAG_PI` in `sqe->attr_type_mask`.
+ *
+ * Note: Available from Linux 6.13
+ */
+struct io_uring_attr_pi
+{
+    ushort  flags;
+    ushort  app_tag;
+    uint    len;
+    ulong   addr;
+    ulong   seed;
+    ulong   rsvd;
+}
+
+static assert(io_uring_attr_pi.sizeof == 32);
+
+/// Argument to `IORING_REGISTER_FILES_UPDATE` — updates `fds` starting at `offset`.
+struct io_uring_files_update
+{
+    uint    offset;
+    private uint resv;
+    ulong   fds;                        /// `int *` cast to u64
+}
+
+static assert(io_uring_files_update.sizeof == 16);
+
+/// Argument to `IORING_REGISTER_BUFFERS2` / `IORING_REGISTER_FILES2`.
+struct io_uring_rsrc_register
+{
+    uint    nr;
+    uint    flags;                      /// `IORING_RSRC_REGISTER_SPARSE`
+    private ulong resv2;
+    ulong   data;
+    ulong   tags;
+}
+
+static assert(io_uring_rsrc_register.sizeof == 32);
+
+/// Argument to `IORING_REGISTER_FILES_UPDATE` / `IORING_REGISTER_BUFFERS_UPDATE`.
+struct io_uring_rsrc_update
+{
+    uint    offset;
+    private uint resv;
+    ulong   data;
+}
+
+static assert(io_uring_rsrc_update.sizeof == 16);
+
+/// Argument to `IORING_REGISTER_FILES_UPDATE2` / `IORING_REGISTER_BUFFERS_UPDATE` — like
+/// `io_uring_rsrc_update` but carries resource `tags` and an explicit count.
+struct io_uring_rsrc_update2
+{
+    uint    offset;
+    private uint resv;
+    ulong   data;
+    ulong   tags;
+    uint    nr;
+    private uint resv2;
+}
+
+static assert(io_uring_rsrc_update2.sizeof == 32);
+
+/// Header the kernel prepends to the buffer of an `IORING_OP_RECVMSG` request issued with
+/// `IORING_RECVSEND_MULTISHOT`, describing how to locate name/control/payload in the buffer.
+struct io_uring_recvmsg_out
+{
+    uint    namelen;
+    uint    controllen;
+    uint    payloadlen;
+    uint    flags;
+}
+
+static assert(io_uring_recvmsg_out.sizeof == 16);
+
 struct io_uring_buf
 {
     ulong   addr;
@@ -1983,15 +2089,22 @@ struct io_uring_buf_ring
     }
 }
 
+/// `io_uring_buf_reg.flags` — `enum io_uring_register_pbuf_ring_flags`.
+enum IOU_PBUF_RING_MMAP = 1;    /// ring is allocated by the kernel and mmaped by the app
+enum IOU_PBUF_RING_INC  = 2;    /// incremental buffer consumption
+
 /* argument for IORING_(UN)REGISTER_PBUF_RING */
 struct io_uring_buf_reg
 {
     ulong       ring_addr;
     uint        ring_entries;
     ushort      bgid;
-    ushort      pad;
-    ulong[3]    resv;
+    ushort      flags;          /// see `IOU_PBUF_RING_MMAP` / `IOU_PBUF_RING_INC`
+    uint        min_left;       /// minimum free buffers before -ENOBUFS (incremental rings)
+    uint[5]     resv;
 }
+
+static assert(io_uring_buf_reg.sizeof == 40);
 
 /**
  * Argument to `IORING_REGISTER_SYNC_CANCEL`. Synchronously cancels matching in-flight
@@ -2266,6 +2379,50 @@ struct io_uring_zcrx_ifq_reg
     ulong[3]    __resv;
 }
 
+/// `io_uring_zcrx_ifq_reg.flags` — `enum zcrx_reg_flags`.
+enum ZCRX_REG_IMPORT = 1;           /// import an ifq registered by another ring
+enum ZCRX_REG_NODEV  = 2;           /// register without binding to a netdev
+
+/// `enum zcrx_features` — feature bits for zcrx.
+enum ZCRX_FEATURE_RX_PAGE_SIZE = 1 << 0;
+
+/// Subcommand selector for `IORING_REGISTER_ZCRX_CTRL` (`zcrx_ctrl.op`) — `enum zcrx_ctrl_op`.
+enum ZCRX_CTRL_FLUSH_RQ = 0;        /// flush the refill queue
+enum ZCRX_CTRL_EXPORT   = 1;        /// export the zcrx area as a file descriptor
+
+/// `ZCRX_CTRL_FLUSH_RQ` payload (reserved).
+struct zcrx_ctrl_flush_rq
+{
+    ulong[6] __resv;
+}
+
+/// `ZCRX_CTRL_EXPORT` payload — receives the exported zcrx file descriptor.
+struct zcrx_ctrl_export
+{
+    uint     zcrx_fd;
+    uint[11] __resv1;
+}
+
+/// Argument to `IORING_REGISTER_ZCRX_CTRL`. `op` selects the subcommand (`zcrx_ctrl_op`).
+struct zcrx_ctrl
+{
+    uint        zcrx_id;
+    uint        op;                 /// see `zcrx_ctrl_op`
+    ulong[2]    __resv;
+    union
+    {
+        zcrx_ctrl_export    zc_export;
+        zcrx_ctrl_flush_rq  zc_flush;
+    }
+}
+
+static assert(zcrx_ctrl_flush_rq.sizeof == 48);
+static assert(zcrx_ctrl_export.sizeof == 48);
+static assert(zcrx_ctrl.sizeof == 72);
+
+/// `io_uring_reg_wait.flags` bit — when set, `ts` carries a valid wait timeout.
+enum IORING_REG_WAIT_TS = 1U << 0;
+
 /**
  * Wait-registration entry passed to `IORING_REGISTER_MEM_REGION` with
  * `IORING_MEM_REGION_REG_WAIT_ARG` set. Each entry pre-configures a wait timeout (`ts`),
@@ -2324,7 +2481,7 @@ struct io_uring_getevents_arg
 {
     ulong   sigmask;
     uint    sigmask_sz;
-    uint    pad;
+    uint    min_wait_usec;
     ulong   ts;
 }
 

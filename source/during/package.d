@@ -69,6 +69,7 @@ int setup(ref Uring uring, uint entries, ref const SetupParameters params) @safe
     if (r < 0) return -errno;
 
     uring.payload.fd = r;
+    uring.payload.enterFd = r; // until/unless registerRingFd() swaps in a registered index
 
     r = uring.payload.mapRings();
     if (r < 0)
@@ -378,7 +379,8 @@ struct Uring
                     flags |= EnterFlags.SQ_WAKEUP;
                 else return len; // fast poll
             }
-            immutable r = io_uring_enter(payload.fd, len, 0, flags, args);
+            if (payload.regRing) flags |= EnterFlags.ENTER_REGISTERED_RING;
+            immutable r = io_uring_enter(payload.enterFd, len, 0, flags, args);
             if (_expect(r < 0, false)) return -errno;
             payload.sq.submitted(r);
             return r;
@@ -416,7 +418,9 @@ struct Uring
     {
         pragma(inline);
         if (payload.cq.length >= want) return 0; // we don't need to syscall
-        immutable r = io_uring_enter(payload.fd, 0, want, EnterFlags.GETEVENTS, args);
+        EnterFlags flags = EnterFlags.GETEVENTS;
+        if (payload.regRing) flags |= EnterFlags.ENTER_REGISTERED_RING;
+        immutable r = io_uring_enter(payload.enterFd, 0, want, flags, args);
         if (_expect(r < 0, false)) return -errno;
         return 0;
     }
@@ -448,7 +452,8 @@ struct Uring
                 if (_expect(payload.sq.flags & SubmissionQueueFlags.NEED_WAKEUP, false))
                     flags |= EnterFlags.SQ_WAKEUP;
             }
-            immutable r = io_uring_enter(payload.fd, len, want, flags, args);
+            if (payload.regRing) flags |= EnterFlags.ENTER_REGISTERED_RING;
+            immutable r = io_uring_enter(payload.enterFd, len, want, flags, args);
             if (_expect(r < 0, false)) return -errno;
             payload.sq.submitted(r);
             return r;
@@ -643,6 +648,114 @@ struct Uring
     {
         immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_EVENTFD, null, 0);
         if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Registers a personality (a snapshot of the calling task's credentials) with the ring.
+     * The returned id can be set on an SQE via `SubmissionEntry.personality` so the request runs
+     * with those credentials. Mirrors liburing's `io_uring_register_personality`.
+     *
+     * Returns: On success, the personality id (`> 0`). On error, `-errno`.
+     */
+    int registerPersonality() @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_PERSONALITY, null, 0);
+        if (_expect(r < 0, false)) return -errno;
+        return r;
+    }
+
+    /**
+     * Unregisters a personality previously obtained from `registerPersonality`.
+     * Mirrors liburing's `io_uring_unregister_personality`.
+     *
+     * Returns: On success, returns 0. On error, `-errno`.
+     */
+    int unregisterPersonality(int id) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_PERSONALITY, null, id);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Registers a kernel-side provided-buffer ring (`IORING_REGISTER_PBUF_RING`). `reg` must be
+     * filled with the buffer ring address, entry count and group id; `flags` is OR'd into
+     * `reg.flags` (e.g. `IOU_PBUF_RING_INC`). Mirrors liburing's `io_uring_register_buf_ring`.
+     *
+     * Returns: On success, returns 0. On error, `-errno`.
+     */
+    int registerBufRing(scope ref io_uring_buf_reg reg, uint flags = 0) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        reg.flags = cast(ushort)(reg.flags | flags);
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_PBUF_RING, &reg, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Unregisters the provided-buffer ring with group id `bgid`.
+     * Mirrors liburing's `io_uring_unregister_buf_ring`.
+     *
+     * Returns: On success, returns 0. On error, `-errno`.
+     */
+    int unregisterBufRing(int bgid) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        io_uring_buf_reg reg;
+        reg.bgid = cast(ushort)bgid;
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_PBUF_RING, &reg, 1);
+        if (_expect(r < 0, false)) return -errno;
+        return 0;
+    }
+
+    /**
+     * Registers the ring's own file descriptor with the kernel (`IORING_REGISTER_RING_FDS`).
+     * Once registered, `during` transparently passes the registered index plus
+     * `EnterFlags.ENTER_REGISTERED_RING` to every `io_uring_enter(2)`, avoiding the fdget/fdput
+     * cost on each call. Mirrors liburing's `io_uring_register_ring_fd`.
+     *
+     * Returns: On success, returns 0. On error, `-errno` (`-EEXIST` if already registered).
+     */
+    int registerRingFd() @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        if (payload.regRing) return -EEXIST;
+        io_uring_rsrc_update up;
+        up.data = cast(ulong)payload.fd;
+        up.offset = -1U;
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.REGISTER_RING_FDS, &up, 1);
+        if (_expect(r < 0, false)) return -errno;
+        if (r == 1)
+        {
+            payload.enterFd = cast(int)up.offset;
+            payload.regRing = true;
+        }
+        return 0;
+    }
+
+    /**
+     * Reverts `registerRingFd` — subsequent `io_uring_enter(2)` calls use the real ring fd again.
+     * Mirrors liburing's `io_uring_unregister_ring_fd`.
+     *
+     * Returns: On success, returns 0. On error, `-errno` (`-EINVAL` if not registered).
+     */
+    int unregisterRingFd() @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        if (!payload.regRing) return -EINVAL;
+        io_uring_rsrc_update up;
+        up.offset = cast(uint)payload.enterFd;
+        immutable r = io_uring_register(payload.fd, RegisterOpCode.UNREGISTER_RING_FDS, &up, 1);
+        if (_expect(r < 0, false)) return -errno;
+        if (r == 1)
+        {
+            payload.enterFd = payload.fd;
+            payload.regRing = false;
+        }
         return 0;
     }
 
@@ -1037,7 +1150,7 @@ struct Uring
         io_uring_getevents_arg arg;
         arg.sigmask     = cast(ulong)cast(const(void*))sigmask;
         arg.sigmask_sz  = sigmask is null ? 0 : sigset_t.sizeof;
-        arg.pad         = minWaitUsec;          // overlays kernel `min_wait_usec`
+        arg.min_wait_usec = minWaitUsec;
         arg.ts          = cast(ulong)cast(const(void*))&ts;
         return wait!io_uring_getevents_arg(want, &arg);
     }
@@ -1232,6 +1345,32 @@ ref SubmissionEntry prepWritev(V)(return ref SubmissionEntry entry, int fd, ref 
 }
 
 /**
+ * Same as `prepReadv` but additionally sets `rw_flags` (`RWF_*`, e.g. `HIPRI`, `NOWAIT`).
+ * Mirrors liburing's `io_uring_prep_readv2`.
+ */
+ref SubmissionEntry prepReadv2(V)(return ref SubmissionEntry entry, int fd, ref const V buffer, long offset,
+    ReadWriteFlags flags) @trusted
+    if (is(V == iovec[]) || is(V == iovec))
+{
+    entry.prepReadv(fd, buffer, offset);
+    entry.rw_flags = flags;
+    return entry;
+}
+
+/**
+ * Same as `prepWritev` but additionally sets `rw_flags` (`RWF_*`).
+ * Mirrors liburing's `io_uring_prep_writev2`.
+ */
+ref SubmissionEntry prepWritev2(V)(return ref SubmissionEntry entry, int fd, ref const V buffer, long offset,
+    ReadWriteFlags flags) @trusted
+    if ((is(Unqual!V == U[], U) && is(Unqual!U == iovec)) || is(Unqual!V == iovec))
+{
+    entry.prepWritev(fd, buffer, offset);
+    entry.rw_flags = flags;
+    return entry;
+}
+
+/**
  * Prepares `read_fixed` operation.
  *
  * Params:
@@ -1286,6 +1425,18 @@ ref SubmissionEntry prepRecvMsg(return ref SubmissionEntry entry, int fd, ref ms
 {
     entry.prepRW(Operation.RECVMSG, fd, cast(void*)&msg, 1, 0);
     entry.msg_flags = flags;
+    return entry;
+}
+
+/**
+ * Multishot variant of `prepRecvMsg` — keeps posting CQEs for incoming messages until cancelled
+ * or an error occurs. Requires provided buffers. Mirrors liburing's `io_uring_prep_recvmsg_multishot`.
+ */
+ref SubmissionEntry prepRecvmsgMultishot(return ref SubmissionEntry entry, int fd, ref msghdr msg,
+    MsgFlags flags = MsgFlags.NONE) @trusted
+{
+    entry.prepRecvMsg(fd, msg, flags);
+    entry.ioprio = cast(ushort)(entry.ioprio | IORING_RECV_MULTISHOT);
     return entry;
 }
 
@@ -1346,6 +1497,16 @@ ref SubmissionEntry prepPollAdd(return ref SubmissionEntry entry,
     else
         entry.poll_events32 = events;
     return entry;
+}
+
+/**
+ * Multishot variant of `prepPollAdd` — keeps reporting CQEs (each flagged `CQEFlags.MORE`) for
+ * the polled events until cancelled or an error. Mirrors liburing's `io_uring_prep_poll_multishot`.
+ */
+ref SubmissionEntry prepPollMultishot(return ref SubmissionEntry entry,
+    int fd, PollEvents events, PollFlags flags = PollFlags.NONE) @safe
+{
+    return entry.prepPollAdd(fd, events, flags | PollFlags.ADD_MULTI);
 }
 
 /**
@@ -1518,6 +1679,35 @@ ref SubmissionEntry prepAcceptDirect(ADDR)(return ref SubmissionEntry entry, int
 }
 
 /**
+ * Multishot variant of `prepAccept` — keeps accepting incoming connections, posting a CQE per
+ * accepted socket until cancelled or an error. Mirrors liburing's `io_uring_prep_multishot_accept`.
+ *
+ * Note: available from Linux 5.19
+ */
+ref SubmissionEntry prepMultishotAccept(ADDR)(return ref SubmissionEntry entry, int fd, ref ADDR addr,
+    ref socklen_t addrlen, AcceptFlags flags = AcceptFlags.NONE) @trusted
+{
+    entry.prepAccept(fd, addr, addrlen, flags);
+    entry.ioprio = cast(ushort)(entry.ioprio | IORING_ACCEPT_MULTISHOT);
+    return entry;
+}
+
+/**
+ * Same as `prepMultishotAccept`, but accepted fds are installed directly into the fixed file
+ * table; the kernel picks free slots (`IORING_FILE_INDEX_ALLOC`). Mirrors liburing's
+ * `io_uring_prep_multishot_accept_direct`.
+ *
+ * Note: available from Linux 5.19
+ */
+ref SubmissionEntry prepMultishotAcceptDirect(ADDR)(return ref SubmissionEntry entry, int fd, ref ADDR addr,
+    ref socklen_t addrlen, AcceptFlags flags = AcceptFlags.NONE) @trusted
+{
+    entry.prepMultishotAccept(fd, addr, addrlen, flags);
+    entry.file_index = IORING_FILE_INDEX_ALLOC;
+    return entry;
+}
+
+/**
  * Prepares operation that cancels existing async work.
  *
  * This works with any read/write request, accept,send/recvmsg, etc. There’s an important
@@ -1543,6 +1733,18 @@ ref SubmissionEntry prepCancel(D)(return ref SubmissionEntry entry, ref D userDa
 {
     entry.prepRW(Operation.ASYNC_CANCEL, -1, cast(void*)&userData);
     entry.cancel_flags = flags;
+    return entry;
+}
+
+/**
+ * Prepares an async cancel that matches in-flight requests by file descriptor rather than by
+ * `user_data`. Mirrors liburing's `io_uring_prep_cancel_fd`; `IORING_ASYNC_CANCEL_FD` is always
+ * set, additional `CancelFlags` (e.g. `ALL`, `FD_FIXED`) may be passed in `flags`.
+ */
+ref SubmissionEntry prepCancelFd(return ref SubmissionEntry entry, int fd, uint flags = 0) @safe
+{
+    entry.prepRW(Operation.ASYNC_CANCEL, fd, null, 0, 0);
+    entry.cancel_flags = cast(CancelFlags)(flags | CancelFlags.CANCEL_FD);
     return entry;
 }
 
@@ -1675,11 +1877,34 @@ ref SubmissionEntry prepFadvise(return ref SubmissionEntry entry, int fd, long o
 }
 
 /**
+ * 64-bit length variant of `prepFadvise` — `len` is passed in `sqe->addr`, so it is not capped
+ * to 32 bits. Mirrors liburing's `io_uring_prep_fadvise64` (new in liburing 2.9).
+ */
+ref SubmissionEntry prepFadvise64(return ref SubmissionEntry entry, int fd, long offset, ulong len, int advice) @safe
+{
+    entry.prepRW(Operation.FADVISE, fd, null, 0, offset);
+    entry.addr = len;
+    entry.fadvise_advice = advice;
+    return entry;
+}
+
+/**
  * Note: Available from Linux 5.6
  */
 ref SubmissionEntry prepMadvise(return ref SubmissionEntry entry, const(ubyte)[] block, int advice) @trusted
 {
     entry.prepRW(Operation.MADVISE, -1, cast(void*)&block[0], cast(uint)block.length, 0);
+    entry.fadvise_advice = advice;
+    return entry;
+}
+
+/**
+ * 64-bit length variant of `prepMadvise` — the block length is passed in `sqe->off`, so it is
+ * not capped to 32 bits. Mirrors liburing's `io_uring_prep_madvise64` (new in liburing 2.9).
+ */
+ref SubmissionEntry prepMadvise64(return ref SubmissionEntry entry, const(ubyte)[] block, int advice) @trusted
+{
+    entry.prepRW(Operation.MADVISE, -1, cast(void*)&block[0], 0, block.length);
     entry.fadvise_advice = advice;
     return entry;
 }
@@ -1718,6 +1943,27 @@ ref SubmissionEntry prepRecv(return ref SubmissionEntry entry,
     entry.msg_flags = flags;
     entry.buf_group = gid;
     entry.flags |= SubmissionEntryFlags.BUFFER_SELECT;
+    return entry;
+}
+
+/**
+ * Multishot variant of `prepRecv` — keeps posting CQEs for incoming data until cancelled or an
+ * error. Mirrors liburing's `io_uring_prep_recv_multishot`.
+ */
+ref SubmissionEntry prepRecvMultishot(return ref SubmissionEntry entry,
+    int sockfd, ubyte[] buf, MsgFlags flags = MsgFlags.NONE) @trusted
+{
+    entry.prepRecv(sockfd, buf, flags);
+    entry.ioprio = cast(ushort)(entry.ioprio | IORING_RECV_MULTISHOT);
+    return entry;
+}
+
+/// ditto — variant that uses a registered buffer group (the practical multishot setup).
+ref SubmissionEntry prepRecvMultishot(return ref SubmissionEntry entry,
+    int sockfd, ushort gid, uint len, MsgFlags flags = MsgFlags.NONE) @safe
+{
+    entry.prepRecv(sockfd, gid, len, flags);
+    entry.ioprio = cast(ushort)(entry.ioprio | IORING_RECV_MULTISHOT);
     return entry;
 }
 
@@ -1945,6 +2191,31 @@ ref SubmissionEntry prepMsgRing(return ref SubmissionEntry entry,
 }
 
 /**
+ * Sends a (registered) file descriptor `sourceFd` to another ring `fd`, installing it into the
+ * target ring's fixed file table at `targetFd` (or `IORING_FILE_INDEX_ALLOC` to let the kernel
+ * pick a slot). Mirrors liburing's `io_uring_prep_msg_ring_fd`.
+ *
+ * Note: Available from Linux 6.0
+ */
+ref SubmissionEntry prepMsgRingFd(return ref SubmissionEntry entry,
+    int fd, int sourceFd, int targetFd, ulong data, uint flags) @trusted
+{
+    entry.prepRW(Operation.MSG_RING, fd, cast(void*)cast(size_t)IORING_MSG_SEND_FD, 0, data);
+    entry.addr3 = cast(ulong)sourceFd;
+    entry.file_index = (cast(uint)targetFd == IORING_FILE_INDEX_ALLOC)
+        ? IORING_FILE_INDEX_ALLOC : (targetFd + 1);
+    entry.msg_ring_flags = flags;
+    return entry;
+}
+
+/// ditto — variant that always lets the kernel allocate the target slot.
+ref SubmissionEntry prepMsgRingFdAlloc(return ref SubmissionEntry entry,
+    int fd, int sourceFd, ulong data, uint flags) @trusted
+{
+    return entry.prepMsgRingFd(fd, sourceFd, cast(int)IORING_FILE_INDEX_ALLOC, data, flags);
+}
+
+/**
  * Note: Available from Linux 5.19
  */
 ref SubmissionEntry prepGetxattr(return ref SubmissionEntry entry,
@@ -1996,6 +2267,28 @@ ref SubmissionEntry prepSocket(return ref SubmissionEntry entry,
     entry.prepRW(Operation.SOCKET, domain, null, protocol, type);
     entry.rw_flags = cast(ReadWriteFlags)flags;
     return entry;
+}
+
+/**
+ * Same as `prepSocket`, but the created socket is installed directly into the fixed file table
+ * at `fileIndex` (or `IORING_FILE_INDEX_ALLOC` to let the kernel pick a slot). Mirrors
+ * liburing's `io_uring_prep_socket_direct`.
+ */
+ref SubmissionEntry prepSocketDirect(return ref SubmissionEntry entry,
+    int domain, int type, int protocol, uint fileIndex, uint flags) @safe
+{
+    entry.prepRW(Operation.SOCKET, domain, null, protocol, type);
+    entry.rw_flags = cast(ReadWriteFlags)flags;
+    entry.file_index = (fileIndex == IORING_FILE_INDEX_ALLOC)
+        ? IORING_FILE_INDEX_ALLOC : (fileIndex + 1);
+    return entry;
+}
+
+/// ditto — variant that always lets the kernel allocate the fixed file slot.
+ref SubmissionEntry prepSocketDirectAlloc(return ref SubmissionEntry entry,
+    int domain, int type, int protocol, uint flags) @safe
+{
+    return entry.prepSocketDirect(domain, type, protocol, IORING_FILE_INDEX_ALLOC, flags);
 }
 
 /**
@@ -2468,6 +2761,8 @@ struct UringDesc
     nothrow @nogc:
 
     int fd;
+    int enterFd;        // fd (or registered ring index) passed to io_uring_enter(2)
+    bool regRing;       // true once registerRingFd() succeeded
     size_t refs;
     SetupParameters params;
     SubmissionQueue sq;
