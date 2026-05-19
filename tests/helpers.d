@@ -154,6 +154,20 @@ unittest
     assert((e.ioprio & IORING_RECVSEND_BUNDLE) != 0, "BUNDLE flag");
 }
 
+@("prepSendBundleSelect sets buffer selection")
+unittest
+{
+    SubmissionEntry e = void;
+    e.prepSendBundleSelect(7, 8192, 42, MsgFlags.NONE);
+    assert(e.opcode == Operation.SEND, "opcode");
+    assert(e.fd == 7, "fd");
+    assert(e.addr == 0, "bundled send carries no buffer pointer");
+    assert(e.len == 8192, "len is forwarded to sqe->len");
+    assert((e.ioprio & IORING_RECVSEND_BUNDLE) != 0, "BUNDLE flag");
+    assert((e.flags & SubmissionEntryFlags.BUFFER_SELECT) != 0, "buffer select");
+    assert(e.buf_group == 42, "buf group");
+}
+
 // cancelFd matches in-flight requests by file descriptor instead of by user_data.
 @("cancelFd: cancel a poll by fd")
 unittest

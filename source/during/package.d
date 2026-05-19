@@ -2837,6 +2837,19 @@ ref SubmissionEntry prepSendBundle(return ref SubmissionEntry entry,
 }
 
 /**
+ * Convenience variant of `prepSendBundle` for the common provided-buffer-ring case. This keeps
+ * `prepSendBundle` aligned with liburing while still offering a helper that selects `bufGroup`.
+ */
+ref SubmissionEntry prepSendBundleSelect(return ref SubmissionEntry entry,
+    int sockfd, size_t len, ushort bufGroup, MsgFlags flags = MsgFlags.NONE) @safe
+{
+    entry.prepSendBundle(sockfd, len, flags);
+    entry.flags = cast(SubmissionEntryFlags)(entry.flags | SubmissionEntryFlags.BUFFER_SELECT);
+    entry.buf_group = bufGroup;
+    return entry;
+}
+
+/**
  * Attach a destination address to a previously-prepared `prepSend` SQE — turns it into the
  * equivalent of `sendto(2)`. Useful for `SOCK_DGRAM` sockets.
  *
