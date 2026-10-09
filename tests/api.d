@@ -570,3 +570,70 @@ unittest
     assert(io.front.user_data == 3, "leftover NOP completes");
     io.popFront();
 }
+
+@("putWith clears a reused SQE slot before calling the callback")
+unittest
+{
+    Uring io;
+    auto res = io.setup(2);
+    assert(res >= 0, "setup");
+
+    foreach (ud; 0UL .. 2UL)
+        io.putWith!((ref SubmissionEntry e, ulong u) { e.prepNop(); e.user_data = u; })(ud);
+    assert(io.submit(2) == 2);
+    foreach (_; 0 .. 2) io.popFront();
+
+    auto bytes = io.debugSubmissionSlotBytes(0);
+    foreach (ref b; bytes) b = 0xA5;
+
+    io.putWith!((ref SubmissionEntry e)
+    {
+        e.opcode = Operation.NOP;
+        e.fd = -1;
+        e.user_data = 7;
+    });
+
+    auto sqe = cast(const SubmissionEntry*)io.debugSubmissionSlotBytes(0).ptr;
+    assert((*sqe).opcode == Operation.NOP, "opcode");
+    assert((*sqe).fd == -1, "fd");
+    assert((*sqe).user_data == 7, "user_data");
+    assert((*sqe).flags == SubmissionEntryFlags.NONE, "stale flags must be cleared");
+    assert((*sqe).ioprio == 0, "stale ioprio must be cleared");
+    assert((*sqe).addr == 0, "stale addr must be cleared");
+    assert((*sqe).addr3 == 0, "stale addr3 must be cleared");
+}
+
+@("put(custom op) clears a reused SQE slot before fill")
+unittest
+{
+    static struct MinimalNop
+    {
+        Operation opcode;
+        int fd;
+        ulong user_data;
+    }
+
+    Uring io;
+    auto res = io.setup(2);
+    assert(res >= 0, "setup");
+
+    foreach (ud; 0UL .. 2UL)
+        io.putWith!((ref SubmissionEntry e, ulong u) { e.prepNop(); e.user_data = u; })(ud);
+    assert(io.submit(2) == 2);
+    foreach (_; 0 .. 2) io.popFront();
+
+    auto bytes = io.debugSubmissionSlotBytes(0);
+    foreach (ref b; bytes) b = 0x5A;
+
+    MinimalNop op = { opcode: Operation.NOP, fd: -1, user_data: 11 };
+    io.put(op);
+
+    auto sqe = cast(const SubmissionEntry*)io.debugSubmissionSlotBytes(0).ptr;
+    assert((*sqe).opcode == Operation.NOP, "opcode");
+    assert((*sqe).fd == -1, "fd");
+    assert((*sqe).user_data == 11, "user_data");
+    assert((*sqe).flags == SubmissionEntryFlags.NONE, "stale flags must be cleared");
+    assert((*sqe).ioprio == 0, "stale ioprio must be cleared");
+    assert((*sqe).addr == 0, "stale addr must be cleared");
+    assert((*sqe).addr3 == 0, "stale addr3 must be cleared");
+}

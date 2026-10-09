@@ -319,10 +319,10 @@ struct Uring
     }
 
     version (unittest)
-    const(ubyte)[] debugSubmissionSlotBytes(uint i) @trusted
+    ubyte[] debugSubmissionSlotBytes(uint i) @trusted
     in (payload !is null, "Uring hasn't been initialized yet")
     {
-        auto ptr = cast(const ubyte*)payload.sq.sqesPtr
+        auto ptr = cast(ubyte*)payload.sq.sqesPtr
             + cast(size_t)(i & payload.sq.ringMask) * payload.sq.stride;
         return ptr[0 .. payload.sq.stride];
     }
@@ -2994,11 +2994,17 @@ struct SubmissionQueue
     void put()(auto ref SubmissionEntry entry) @trusted pure
     {
         if (sqeMixed && is128Operation(entry.opcode))
-            slot(reserve128Slot()) = entry;
+        {
+            auto idx = reserve128Slot();
+            slot(idx) = entry;
+            clearSlot(idx + 1); // second half of the 128-byte op must not keep stale payload
+        }
         else
         {
             assert(!full, "SumbissionQueue is full");
-            slot(localTail++) = entry;
+            auto idx = localTail++;
+            slot(idx) = entry;
+            clearSlotTail(idx);
         }
     }
 
@@ -3009,14 +3015,16 @@ struct SubmissionQueue
         {
             // The opcode isn't known until the op is materialised, so stage into a temp and
             // route through the 128-aware put() — a NOP128/URING_CMD128 must get two slots.
-            SubmissionEntry e = void;
+            SubmissionEntry e = SubmissionEntry.init;
             () @trusted { e.fill(op); }();
             put(e);
         }
         else
         {
             assert(!full, "SumbissionQueue is full");
-            () @trusted { slot(localTail++).fill(op); }();
+            auto idx = localTail++;
+            clearSlot(idx);
+            () @trusted { slot(idx).fill(op); }();
         }
     }
 
@@ -3037,14 +3045,16 @@ struct SubmissionQueue
         if (sqeMixed)
         {
             // Stage into a temp: FN may build a 128-byte op, which needs the 128-aware path.
-            SubmissionEntry e = void;
+            SubmissionEntry e = SubmissionEntry.init;
             () @trusted { FN(e, args); }();
             put(e);
         }
         else
         {
             assert(!full, "SumbissionQueue is full");
-            () @trusted { FN(slot(localTail++), args); }();
+            auto idx = localTail++;
+            clearSlot(idx);
+            () @trusted { FN(slot(idx), args); }();
         }
     }
 
@@ -3088,6 +3098,20 @@ struct SubmissionQueue
         auto d = slotBytes(dst);
         auto s = slotBytes(src);
         if (d !is s) memcpy(d, s, stride); // distinct slots never overlap
+    }
+
+    private void clearSlot(uint idx) @trusted pure nothrow @nogc
+    {
+        import core.stdc.string : memset;
+        memset(slotBytes(idx), 0, stride);
+    }
+
+    // clears the part of an SQE128 slot past the `SubmissionEntry` header
+    private void clearSlotTail(uint idx) @trusted pure nothrow @nogc
+    {
+        import core.stdc.string : memset;
+        if (stride > SubmissionEntry.sizeof)
+            memset(slotBytes(idx) + SubmissionEntry.sizeof, 0, stride - SubmissionEntry.sizeof);
     }
 }
 
