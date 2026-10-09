@@ -8,7 +8,7 @@ SILLY_DIR = ~/.dub/packages/silly/1.1.1/silly
 SILLY_FILES = -I$(SILLY_DIR) $(SILLY_DIR)/silly.d
 
 ifeq ($(DC),ldc2)
-	DC=ldmd2
+	override DC=ldmd2
 endif
 
 $(SILLY_DIR):

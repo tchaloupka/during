@@ -14,15 +14,25 @@ during_test_src = [
     'tests/api.d',
     'tests/base.d',
     'tests/cancel.d',
+    'tests/epoll_wait.d',
+    'tests/fixed_fd.d',
     'tests/fsync.d',
+    'tests/futex.d',
+    'tests/helpers.d',
     'tests/msg.d',
     'tests/package.d',
+    'tests/pipe.d',
     'tests/poll.d',
     'tests/register.d',
     'tests/rw.d',
     'tests/socket.d',
+    'tests/sqe128.d',
+    'tests/templates.d',
     'tests/thread.d',
-    'tests/timeout.d'
+    'tests/timeout.d',
+    'tests/wait_reg.d',
+    'tests/waitid.d',
+    'tests/zerocopy.d'
 ]
 
 during_lib = static_library(
