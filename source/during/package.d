@@ -1744,7 +1744,7 @@ ref SubmissionEntry prepMultishotAcceptDirect(ADDR)(return ref SubmissionEntry e
 ref SubmissionEntry prepCancel(D)(return ref SubmissionEntry entry, ref D userData, uint flags = 0) @trusted
 {
     entry.prepRW(Operation.ASYNC_CANCEL, -1, cast(void*)&userData);
-    entry.cancel_flags = flags;
+    entry.cancel_flags = cast(CancelFlags)flags;
     return entry;
 }
 
