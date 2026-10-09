@@ -130,6 +130,87 @@ Probe probe() @safe nothrow @nogc
 }
 
 /**
+ * Owns page-aligned memory suitable for `Uring.registerWaitReg`.
+ *
+ * The kernel pins wait-registration regions by page. This helper allocates anonymous mmap
+ * storage sized to whole pages while exposing only the requested number of
+ * `io_uring_reg_wait` entries via `entries`.
+ */
+struct WaitRegRegion
+{
+    io_uring_reg_wait[] entries;
+    private size_t mappingSize;
+    int error;
+
+    @disable this(this);
+
+    ~this() @trusted nothrow @nogc
+    {
+        release();
+    }
+
+    void release() @trusted nothrow @nogc
+    {
+        if (entries.ptr is null) return;
+        munmap(entries.ptr, mappingSize);
+        entries = null;
+        mappingSize = 0;
+    }
+
+    size_t mappingBytes() const @safe pure nothrow @nogc
+    {
+        return mappingSize;
+    }
+
+    T opCast(T)() const @safe pure nothrow @nogc
+        if (is(T == bool))
+    {
+        return entries.ptr !is null;
+    }
+}
+
+/**
+ * Allocate a wait-registration region with `count` usable entries.
+ *
+ * Returns a `WaitRegRegion` with `error == 0` on success. On failure `entries` is empty and
+ * `error` contains `-errno` (or `-EINVAL` for invalid input).
+ */
+WaitRegRegion allocWaitRegRegion(size_t count) @trusted
+{
+    WaitRegRegion region;
+    if (count == 0)
+    {
+        region.error = -EINVAL;
+        return region;
+    }
+
+    immutable pageSize = systemPageSize();
+    if (pageSize == 0 || count > size_t.max / io_uring_reg_wait.sizeof)
+    {
+        region.error = -EINVAL;
+        return region;
+    }
+
+    immutable bytes = roundUpToPage(count * io_uring_reg_wait.sizeof, pageSize);
+    if (bytes == 0)
+    {
+        region.error = -EINVAL;
+        return region;
+    }
+
+    auto ptr = mmap(null, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (ptr == MAP_FAILED)
+    {
+        region.error = -errno;
+        return region;
+    }
+
+    region.entries = (cast(io_uring_reg_wait*)ptr)[0 .. count];
+    region.mappingSize = bytes;
+    return region;
+}
+
+/**
  * Main entry point to work with io_uring.
  *
  * It hides `SubmissionQueue` and `CompletionQueue` behind standard range interface.
@@ -316,6 +397,15 @@ struct Uring
         "Ring was not created with SQE128 or SQE_MIXED")
     {
         return payload.sq.next128();
+    }
+
+    version (unittest)
+    ubyte[] debugSubmissionSlotBytes(uint i) @trusted
+    in (payload !is null, "Uring hasn't been initialized yet")
+    {
+        auto ptr = cast(ubyte*)payload.sq.sqesPtr
+            + cast(size_t)(i & payload.sq.ringMask) * payload.sq.stride;
+        return ptr[0 .. payload.sq.stride];
     }
 
     /**
@@ -1098,13 +1188,19 @@ struct Uring
     in (payload !is null, "Uring hasn't been initialized yet")
     in (reg.length > 0, "empty wait_reg array")
     {
-        import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
-        immutable pageSize = cast(size_t)sysconf(_SC_PAGESIZE);
+        immutable pageSize = systemPageSize();
+        immutable addr = cast(size_t)cast(void*)reg.ptr;
+        if (!(payload.params.flags & SetupFlags.R_DISABLED)) return -EINVAL;
+        if (pageSize == 0 || addr % pageSize != 0) return -EINVAL;
+        if (reg.length > size_t.max / io_uring_reg_wait.sizeof) return -EINVAL;
+        immutable byteLen = reg.length * io_uring_reg_wait.sizeof;
+        immutable regionSize = roundUpToPage(byteLen, pageSize);
+        if (regionSize == 0) return -EINVAL;
 
         io_uring_region_desc desc;
         desc.user_addr   = cast(ulong)cast(void*)reg.ptr;
         // Both user_addr and size must be page-aligned (io_create_region rejects otherwise).
-        desc.size        = (reg.length * io_uring_reg_wait.sizeof + pageSize - 1) & ~(pageSize - 1);
+        desc.size        = regionSize;
         desc.flags       = IORING_MEM_REGION_TYPE_USER;
 
         io_uring_mem_region_reg mr;
@@ -2741,6 +2837,19 @@ ref SubmissionEntry prepSendBundle(return ref SubmissionEntry entry,
 }
 
 /**
+ * Convenience variant of `prepSendBundle` for the common provided-buffer-ring case. This keeps
+ * `prepSendBundle` aligned with liburing while still offering a helper that selects `bufGroup`.
+ */
+ref SubmissionEntry prepSendBundleSelect(return ref SubmissionEntry entry,
+    int sockfd, size_t len, ushort bufGroup, MsgFlags flags = MsgFlags.NONE) @safe
+{
+    entry.prepSendBundle(sockfd, len, flags);
+    entry.flags = cast(SubmissionEntryFlags)(entry.flags | SubmissionEntryFlags.BUFFER_SELECT);
+    entry.buf_group = bufGroup;
+    return entry;
+}
+
+/**
  * Attach a destination address to a previously-prepared `prepSend` SQE — turns it into the
  * equivalent of `sendto(2)`. Useful for `SOCK_DGRAM` sockets.
  *
@@ -2941,7 +3050,7 @@ struct SubmissionQueue
         // SQEs it didn't consume must be compacted down to slot 0 to survive the next submit.
         immutable rem = localTail - submitted;
         foreach (i; 0 .. rem)
-            () @trusted { slot(i) = slot(cast(uint)submitted + i); }();
+            copySlot(i, cast(uint)submitted + i);
         localTail = rem;
     }
 
@@ -2983,11 +3092,18 @@ struct SubmissionQueue
     void put()(auto ref SubmissionEntry entry) @trusted pure
     {
         if (sqeMixed && is128Operation(entry.opcode))
-            slot(reserve128Slot()) = entry;
+        {
+            auto idx = reserve128Slot();
+            clearSlot(idx);
+            clearSlot(idx + 1);
+            slot(idx) = entry;
+        }
         else
         {
             assert(!full, "SumbissionQueue is full");
-            slot(localTail++) = entry;
+            auto idx = localTail++;
+            clearSlot(idx);
+            slot(idx) = entry;
         }
     }
 
@@ -2998,14 +3114,16 @@ struct SubmissionQueue
         {
             // The opcode isn't known until the op is materialised, so stage into a temp and
             // route through the 128-aware put() — a NOP128/URING_CMD128 must get two slots.
-            SubmissionEntry e = void;
+            SubmissionEntry e = SubmissionEntry.init;
             () @trusted { e.fill(op); }();
             put(e);
         }
         else
         {
             assert(!full, "SumbissionQueue is full");
-            () @trusted { slot(localTail++).fill(op); }();
+            auto idx = localTail++;
+            clearSlot(idx);
+            () @trusted { slot(idx).fill(op); }();
         }
     }
 
@@ -3026,14 +3144,16 @@ struct SubmissionQueue
         if (sqeMixed)
         {
             // Stage into a temp: FN may build a 128-byte op, which needs the 128-aware path.
-            SubmissionEntry e = void;
+            SubmissionEntry e = SubmissionEntry.init;
             () @trusted { FN(e, args); }();
             put(e);
         }
         else
         {
             assert(!full, "SumbissionQueue is full");
-            () @trusted { FN(slot(localTail++), args); }();
+            auto idx = localTail++;
+            clearSlot(idx);
+            () @trusted { FN(slot(idx), args); }();
         }
     }
 
@@ -3063,6 +3183,36 @@ struct SubmissionQueue
 
         localTail = t + 2;
         return t;
+    }
+
+    private ubyte* slotBytes(uint i) @system pure nothrow @nogc return
+    {
+        return cast(ubyte*)sqesPtr + cast(size_t)(i & ringMask) * stride;
+    }
+
+    private void copySlot(uint dst, uint src) @trusted pure nothrow @nogc
+    {
+        auto d = slotBytes(dst);
+        auto s = slotBytes(src);
+        if (d is s) return;
+
+        if (d < s)
+        {
+            foreach (i; 0 .. stride)
+                d[i] = s[i];
+        }
+        else
+        {
+            foreach_reverse (i; 0 .. stride)
+                d[i] = s[i];
+        }
+    }
+
+    private void clearSlot(uint idx) @trusted pure nothrow @nogc
+    {
+        auto p = slotBytes(idx);
+        foreach (i; 0 .. stride)
+            p[i] = 0;
     }
 }
 
@@ -3152,6 +3302,20 @@ struct CompletionQueue
 private uint cqeSlots(ref const CompletionEntry cqe) @safe pure nothrow @nogc
 {
     return (cqe.flags & CQEFlags.F_32) ? 2 : 1;
+}
+
+private size_t systemPageSize() @trusted nothrow @nogc
+{
+    import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
+
+    immutable r = sysconf(_SC_PAGESIZE);
+    return r > 0 ? cast(size_t)r : 0;
+}
+
+private size_t roundUpToPage(size_t value, size_t pageSize) @safe pure nothrow @nogc
+{
+    if (pageSize == 0 || value > size_t.max - (pageSize - 1)) return 0;
+    return ((value + pageSize - 1) / pageSize) * pageSize;
 }
 
 // just a helper to use atomicStore more easily with older compilers
