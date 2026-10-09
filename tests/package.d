@@ -17,6 +17,7 @@ version (D_BetterC)
     import tests.rw;
     import tests.socket;
     import tests.sqe128;
+    import tests.templates;
     import tests.thread;
     import tests.timeout;
     import tests.wait_reg;
@@ -40,6 +41,7 @@ version (D_BetterC)
         runTests!("RW tests", tests.rw);
         runTests!("Socket tests", tests.socket);
         runTests!("SQE128 tests", tests.sqe128);
+        runTests!("Template tests", tests.templates);
         runTests!("Thread tests", tests.thread);
         runTests!("Timeout tests", tests.timeout);
         runTests!("Wait-reg tests", tests.wait_reg);

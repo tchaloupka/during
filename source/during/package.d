@@ -788,13 +788,15 @@ struct Uring
         immutable ret = io_uring_register(
             payload.fd,
             type,
-            &r, sizeof(r));
+            &r, r.sizeof);
         if (_expect(ret < 0, false)) return -errno;
         return 0;
     }
 
     /**
      * Generic means to update registered resources.
+     *
+     * Returns: number of updated resources on success, `-errno` on error
      *
      * Note: Available from Linux 5.13
      */
@@ -821,9 +823,9 @@ struct Uring
             tags: cast(ulong)&tags[0],
             nr: cast(uint)data.length,
         };
-        immutable r = io_uring_register(payload.fd, type, &u, sizeof(u));
+        immutable r = io_uring_register(payload.fd, type, &u, u.sizeof);
         if (_expect(r < 0, false)) return -errno;
-        return 0;
+        return r;
     }
 
     /**
