@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-10-09
+
+### Fixed
+
+- `prepCancel` didn't compile: `uint` flags weren't cast to `CancelFlags`.
+  (#19)
+- `Uring.registerRsrc` / `registerRsrcUpdate` didn't compile (C-style
+  `sizeof(x)`). `registerRsrcUpdate` now returns the number of updated
+  resources, like liburing.
+- `SQ_REWIND` compaction copied only the 64-byte `SubmissionEntry` header,
+  dropping the trailing payload of SQE128 slots. Whole slots are copied now.
+- `putWith` and `put(custom op)` didn't clear a reused SQE slot as
+  documented, so stale fields (flags, personality, addresses) could leak into
+  the new request. On SQE128 rings `put(entry)` clears the slot tail, and on
+  `SQE_MIXED` rings 128-byte ops clear their second slot.
+
+### Added
+
+- `prepSendBundleSelect`: `prepSendBundle` plus `IOSQE_BUFFER_SELECT` and
+  `buf_group` for the common provided-buffer-ring case.
+- `WaitRegRegion` / `allocWaitRegRegion`: mmap-backed, page-aligned storage
+  for `Uring.registerWaitReg`.
+
+### Changed
+
+- `Uring.registerWaitReg` returns `-EINVAL` without a syscall when the ring
+  isn't `R_DISABLED` or the slice isn't page-aligned (the kernel would reject
+  it the same way).
+
+### Build
+
+- `make test` and Meson now run all test modules (previously about half).
+  `make DC=ldc2` works, and Makefile artifacts go to `build/` as with dub.
+- Meson project version follows the library version.
+
+### Tests
+
+- Every templated helper is now instantiated by a test — templates aren't
+  compiled until used, so `prepCancel` and `registerRsrc*` could stay broken
+  unnoticed.
+- betterC tests build with DMD 2.098 (no `_memset32` dependency).
+
+[0.6.0]: https://github.com/tchaloupka/during/compare/v0.5.0...v0.6.0
+
 ## [0.5.0] - 2026-05-19
 
 Brings the binding up to liburing 2.9 / Linux 7.1-rc4 parity (from 0.4.0 ≈ Linux

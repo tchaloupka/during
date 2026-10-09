@@ -95,14 +95,14 @@ For more examples, see `tests` and `examples` subfolders or the documentation.
 Just add
 
 ```
-dependency "during" version="~>0.5.0"
+dependency "during" version="~>0.6.0"
 ```
 
 to your `dub.sdl` project file, or
 
 ```
 "dependencies": {
-    "during": "~>0.5.0"
+    "during": "~>0.6.0"
 }
 ```
 
