@@ -62,7 +62,8 @@ unittest
     assert(res >= 0, "Error initializing IO");
 
     // Reserve a single sparse slot in the files table.
-    int[1] sparse = -1;
+    int[1] sparse = void;
+    foreach (ref fd; sparse) fd = -1; // not `= -1`: dmd 2.098 -betterC needs _memset32 for that
     auto rr = io.registerFiles(sparse[]);
     if (rr != 0) return;
     scope (exit) io.unregisterFiles();

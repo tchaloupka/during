@@ -194,7 +194,8 @@ unittest
     auto res = io.setup();
     assert(res >= 0, "Error initializing IO");
 
-    int[8] sparse = -1;
+    int[8] sparse = void;
+    foreach (ref fd; sparse) fd = -1; // not `= -1`: dmd 2.098 -betterC needs _memset32 for that
     auto rr = io.registerFiles(sparse[]);
     if (rr != 0) return;
 

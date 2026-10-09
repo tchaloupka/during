@@ -26,7 +26,8 @@ unittest
     auto res = io.setup();
     assert(res >= 0, "Error initializing IO");
 
-    int[2] fds = [-1, -1];
+    int[2] fds = void;
+    foreach (ref fd; fds) fd = -1; // not `= [-1, -1]`: dmd 2.098 -betterC needs _memset32 for that
     io.putWith!(
         (ref SubmissionEntry e, int[2]* out_)
         {

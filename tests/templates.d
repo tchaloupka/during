@@ -137,7 +137,8 @@ unittest
     assert(() @trusted { return pipe(fds); }() == 0, "pipe failed");
     scope (exit) { close(fds[0]); close(fds[1]); }
 
-    int[2] files = [-1, -1];
+    int[2] files = void;
+    foreach (ref fd; files) fd = -1; // not `= [-1, -1]`: dmd 2.098 -betterC needs _memset32 for that
     ulong[2] tags = [0, 0];
     assert(io.registerRsrc(RegisterOpCode.REGISTER_FILES2, files[], tags[]) == 0, "registerRsrc");
 
