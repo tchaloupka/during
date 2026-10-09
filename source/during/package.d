@@ -138,7 +138,8 @@ Probe probe() @safe nothrow @nogc
  */
 struct WaitRegRegion
 {
-    io_uring_reg_wait[] entries;
+    // owned mapping is private so callers can't reslice it and break `release()`
+    private io_uring_reg_wait[] _entries;
     private size_t mappingSize;
     int error;
 
@@ -149,11 +150,17 @@ struct WaitRegRegion
         release();
     }
 
+    /// Usable wait entries (`count` passed to `allocWaitRegRegion`).
+    inout(io_uring_reg_wait)[] entries() inout @safe pure nothrow @nogc return
+    {
+        return _entries;
+    }
+
     void release() @trusted nothrow @nogc
     {
-        if (entries.ptr is null) return;
-        munmap(entries.ptr, mappingSize);
-        entries = null;
+        if (_entries.ptr is null) return;
+        munmap(_entries.ptr, mappingSize);
+        _entries = null;
         mappingSize = 0;
     }
 
@@ -165,7 +172,7 @@ struct WaitRegRegion
     T opCast(T)() const @safe pure nothrow @nogc
         if (is(T == bool))
     {
-        return entries.ptr !is null;
+        return _entries.ptr !is null;
     }
 }
 
@@ -205,7 +212,7 @@ WaitRegRegion allocWaitRegRegion(size_t count) @trusted
         return region;
     }
 
-    region.entries = (cast(io_uring_reg_wait*)ptr)[0 .. count];
+    region._entries = (cast(io_uring_reg_wait*)ptr)[0 .. count];
     region.mappingSize = bytes;
     return region;
 }
